@@ -6,6 +6,17 @@ import { ServerLogger } from './logger.js';
 const port = Number(process.env.PORT ?? process.env.MULTIPLAYER_PORT ?? 5174);
 const host = process.env.HOST ?? '0.0.0.0';
 const server = createServer((request, response) => {
+  if (request.url === '/') {
+    response.writeHead(200, { 'content-type': 'application/json' });
+    response.end(JSON.stringify({
+      service: 'webgl-rpg-multiplayer',
+      status: 'ok',
+      websocket: 'ready',
+      health: '/health',
+    }));
+    return;
+  }
+
   if (request.url === '/health') {
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ status: 'ok', players: players.size }));

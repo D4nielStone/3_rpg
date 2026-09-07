@@ -115,6 +115,8 @@ O painel de chat usa a mesma conexao multiplayer. Digite a mensagem no campo no 
 
 O relay registra conexoes, desconexoes, mensagens de chat e mensagens invalidas no terminal com nivel (`INFO`, `WARN` ou `ERROR`), timestamp ISO e contexto JSON. A entrada e a saida de cada usuario tambem aparecem no chat como mensagens do servidor.
 
+A URL do Web Service do Render e a URL do relay, nao a pagina do jogo. Abrir essa URL diretamente mostra o status JSON do servidor; o jogo deve ser publicado separadamente como Static Site.
+
 ### Publicar o relay no Render
 
 O arquivo `render.yaml` ja configura o relay como um Web Service Node. No Render, escolha **New > Blueprint** e conecte o repositorio. O Render executara `npm ci`, iniciara `npm run multiplayer` e verificara `/health`.
