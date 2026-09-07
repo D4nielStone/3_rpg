@@ -6,6 +6,12 @@ export class Transform {
   }
 }
 
+export class PlayerController {
+  constructor({ speed = 3 } = {}) {
+    this.speed = speed;
+  }
+}
+
 export class Texture {
   constructor({
     image = null,
@@ -37,5 +43,22 @@ export class MeshRenderer {
     this.colorBuffer = null;
     this.indexBuffer = null;
     this.uvBuffer = null;
+  }
+}
+
+export class LineRenderer {
+  constructor({ sourceEntity, color = [1, 0.85, 0.1], dashLength = 0.25, gapLength = 0.15 } = {}) {
+    this.sourceEntity = sourceEntity;
+    this.color = color;
+    this.dashLength = dashLength;
+    this.gapLength = gapLength;
+    this.target = null;
+    this.vertices = new Float32Array();
+    this.colors = new Float32Array();
+    this.indices = new Uint16Array();
+    this.positionBuffer = null;
+    this.colorBuffer = null;
+    this.indexBuffer = null;
+    this.dirty = true;
   }
 }

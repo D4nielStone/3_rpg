@@ -1,3 +1,7 @@
+export function lerp(start, end, amount) {
+  return start + (end - start) * amount;
+}
+
 export function multiplyMatrices(a, b) {
   const result = new Float32Array(16);
   for (let column = 0; column < 4; column += 1) {

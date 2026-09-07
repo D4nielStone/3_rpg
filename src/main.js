@@ -1,10 +1,17 @@
 import { Camera } from './camera.js';
-import { MeshRenderer, Texture, Transform } from './components.js';
+import {
+  LineRenderer,
+  MeshRenderer,
+  PlayerController,
+  Texture,
+  Transform,
+} from './components.js';
 import { World } from './ecs.js';
 import { loadAsset } from './asset-loader.js';
 import { cubeColors, cubeIndices, cubeUVs, cubeVertices } from './cube.js';
 import { createProgram } from './webgl.js';
-import { RenderSystem, TranslationSystem } from './systems.js';
+import { LineSystem, MovementSystem, RenderSystem } from './systems.js';
+import { InputState } from './input.js';
 import { TextureManager } from './texture-manager.js';
 
 const canvas = document.querySelector('#canvas');
@@ -57,10 +64,11 @@ function setupGL() {
     varying vec3 color;
     varying vec2 vUv;
     uniform sampler2D uTexture;
+    uniform bool useTexture;
 
     void main() {
-      vec4 texel = texture2D(uTexture, vUv);
-      gl_FragColor = vec4(color * texel.rgb, 1.0);
+      vec3 finalColor = useTexture ? texture2D(uTexture, vUv).rgb : vec3(1.0);
+      gl_FragColor = vec4(color * finalColor, 1.0);
     }
   `;
 
@@ -75,9 +83,11 @@ function setupGL() {
     uv: gl.getAttribLocation(program, 'uv'),
     matrix: gl.getUniformLocation(program, 'matrix'),
     uTexture: gl.getUniformLocation(program, 'uTexture'),
+    useTexture: gl.getUniformLocation(program, 'useTexture'),
   };
 
-  const translationSystem = new TranslationSystem();
+  const input = new InputState();
+  const movementSystem = new MovementSystem(input);
   const renderSystem = new RenderSystem(gl, program, locations, camera);
 
   gl.enable(gl.DEPTH_TEST);
@@ -86,12 +96,14 @@ function setupGL() {
   gl.enableVertexAttribArray(locations.uv);
   gl.useProgram(program);
 
-  return { gl, camera, world, textureManager, translationSystem, renderSystem };
+  const lineSystem = new LineSystem(canvas, camera);
+  return { gl, camera, world, textureManager, movementSystem, lineSystem, renderSystem };
 }
 
 function spawnFallbackEntity(world) {
   const entity = world.createEntity();
   world.addComponent(entity, new Transform({ scale: [1.2, 1.2, 1.2] }));
+  world.addComponent(entity, new PlayerController());
   world.addComponent(
     entity,
     new MeshRenderer({
@@ -111,6 +123,7 @@ function spawnFallbackEntity(world) {
 async function loadModelIntoWorld(world, textureManager) {
   const entity = world.createEntity();
   world.addComponent(entity, new Transform({ scale: [1.2, 1.2, 1.2] }));
+  world.addComponent(entity, new PlayerController());
 
   const asset = await loadAsset('/models/test/source/AmongUS[Red].glb', undefined, textureManager);
   const mesh = asset.mesh ?? asset;
@@ -124,31 +137,43 @@ async function loadModelIntoWorld(world, textureManager) {
   return entity;
 }
 
-function renderFrame(gl, world, translationSystem, renderSystem) {
+function renderFrame(gl, world, movementSystem, lineSystem, renderSystem, previousTime = 0) {
   return (time) => {
-    const seconds = time * 0.001;
+    const deltaSeconds = Math.min((time - previousTime) * 0.001, 0.1);
 
     gl.clearColor(0.04, 0.06, 0.1, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    translationSystem.update(world, seconds);
+    movementSystem.update(world, deltaSeconds);
+    lineSystem.update(world);
     renderSystem.render(world);
-    requestAnimationFrame(renderFrame(gl, world, translationSystem, renderSystem));
+    requestAnimationFrame(renderFrame(gl, world, movementSystem, lineSystem, renderSystem, time));
   };
 }
 
 async function start() {
+  status.textContent = 'Carregando modelo 3D...';
   const {
     gl,
     camera,
     world,
     textureManager,
-    translationSystem,
+    movementSystem,
+    lineSystem,
     renderSystem,
   } = setupGL();
+  let playerEntity;
 
   try {
-    const modelEntity = await loadModelIntoWorld(world, textureManager);
-    const transform = world.getComponent(modelEntity, Transform);
+    playerEntity = await Promise.race([
+      loadModelIntoWorld(world, textureManager),
+      new Promise((_, reject) => {
+        window.setTimeout(
+          () => reject(new Error('Tempo limite ao carregar o modelo 3D.')),
+          10000,
+        );
+      }),
+    ]);
+    const transform = world.getComponent(playerEntity, Transform);
     camera.orbitalFollow(transform, {
       distance: 6,
       azimuth: 0,
@@ -156,12 +181,22 @@ async function start() {
       targetHeight: 0.5,
     });
   } catch (error) {
-    const fallbackEntity = spawnFallbackEntity(world);
-    camera.orbitalFollow(world.getComponent(fallbackEntity, Transform));
+    playerEntity = spawnFallbackEntity(world);
+    camera.orbitalFollow(world.getComponent(playerEntity, Transform));
+    status.textContent = 'Modelo 3D indisponível; usando modelo de fallback.';
     console.error(error);
   }
 
-  requestAnimationFrame(renderFrame(gl, world, translationSystem, renderSystem));
+  const lineEntity = world.createEntity();
+  world.addComponent(lineEntity, new LineRenderer({ sourceEntity: playerEntity }));
+
+  status.textContent = status.textContent.includes('fallback')
+    ? status.textContent
+    : 'WebGL ativo: modelo 3D girando. Use WASD para mover.';
+  requestAnimationFrame(renderFrame(gl, world, movementSystem, lineSystem, renderSystem));
 }
 
-start();
+start().catch((error) => {
+  status.textContent = `Erro ao iniciar: ${error.message}`;
+  console.error(error);
+});
