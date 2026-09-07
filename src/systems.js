@@ -92,7 +92,7 @@ export class LineSystem {
       const origin = source
         ? source.position
         : world.getComponent(line.sourceEntity, Transform)?.position;
-      if (!origin || !moveTarget?.position) {
+      if (!origin || !moveTarget) {
         line.vertices = new Float32Array();
         line.colors = new Float32Array();
         line.indices = new Uint16Array();
@@ -100,7 +100,18 @@ export class LineSystem {
         continue;
       }
 
-      moveTarget.position = this.lastClick;
+      if (this.lastClick && this.lastClick !== line.target) {
+        moveTarget.position = this.lastClick;
+        line.target = this.lastClick;
+      }
+      if (!moveTarget.position) {
+        line.vertices = new Float32Array();
+        line.colors = new Float32Array();
+        line.indices = new Uint16Array();
+        line.dirty = true;
+        continue;
+      }
+
       line.target = moveTarget.position;
       const target = line.target;
       const deltaX = target[0] - origin[0];
