@@ -27,7 +27,7 @@ export class MultiplayerSystem {
     }
   }
 
-  connect() {
+  connect({ retry = true } = {}) {
     if (!('WebSocket' in window)) {
       this.onStatus('Multiplayer indisponivel neste navegador.');
       return;
@@ -40,6 +40,9 @@ export class MultiplayerSystem {
     this.socket.addEventListener('close', () => {
       this.onStatus('Multiplayer offline. Inicie o relay para conectar.');
       this.socket = null;
+      if (retry) {
+        window.setTimeout(() => this.connect({ retry }), 3000);
+      }
     });
     this.socket.addEventListener('error', () => this.onStatus('Relay multiplayer indisponivel.'));
   }

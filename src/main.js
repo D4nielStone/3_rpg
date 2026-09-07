@@ -40,8 +40,13 @@ function followPlayer(game, playerEntity) {
 
 function createMultiplayer(game, playerEntity) {
   const localUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:5174`;
+  const configuredUrl = import.meta.env.VITE_MULTIPLAYER_URL?.trim();
+  const multiplayerUrl = (configuredUrl || localUrl)
+    .replace(/^http:/, 'ws:')
+    .replace(/^https:/, 'wss:')
+    .replace(/\/$/, '');
   const multiplayer = new MultiplayerSystem({
-    url: import.meta.env.VITE_MULTIPLAYER_URL || localUrl,
+    url: multiplayerUrl,
     world: game.world,
     onStatus: (message) => {
       status.textContent = `${message} Use WASD para mover.`;
