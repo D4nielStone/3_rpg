@@ -3,11 +3,12 @@ import { NetworkIdentity, NetworkTransform, Transform } from './components.js';
 const MESSAGE_LIMIT = 32;
 
 export class MultiplayerSystem {
-  constructor({ url, world, createRemoteEntity, onStatus = () => {} }) {
+  constructor({ url, world, createRemoteEntity, onStatus = () => {}, onChat = () => {} }) {
     this.url = url;
     this.world = world;
     this.createRemoteEntity = createRemoteEntity;
     this.onStatus = onStatus;
+    this.onChat = onChat;
     this.socket = null;
     this.localEntity = null;
     this.localPeerId = null;
@@ -59,7 +60,34 @@ export class MultiplayerSystem {
 
     if (message.type === 'snapshot' && Array.isArray(message.players)) {
       this.pendingState = message.players.slice(0, MESSAGE_LIMIT);
+      return;
     }
+
+    if (message.type === 'chat' && typeof message.text === 'string') {
+      this.onChat({
+        type: 'chat',
+        peerId: message.peerId,
+        text: message.text,
+        sentAt: message.sentAt,
+      });
+      return;
+    }
+
+    if (message.type === 'system' && typeof message.text === 'string') {
+      this.onChat({
+        type: 'system',
+        text: message.text,
+        sentAt: message.sentAt,
+      });
+    }
+  }
+
+  sendChat(text) {
+    const message = text.trim();
+    if (!message || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+
+    this.socket.send(JSON.stringify({ type: 'chat', text: message }));
+    return true;
   }
 
   update(world, time) {

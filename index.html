@@ -10,6 +10,14 @@
         <main>
             <canvas id="canvas" width="800" height="500"></canvas>
             <p id="status">Inicializando WebGL...</p>
+            <aside id="chat" aria-label="Chat do jogo">
+                <h2>Chat</h2>
+                <ol id="chat-messages" aria-live="polite"></ol>
+                <form id="chat-form">
+                    <input id="chat-input" maxlength="200" autocomplete="off" placeholder="Digite uma mensagem" />
+                    <button type="submit">Enviar</button>
+                </form>
+            </aside>
         </main>
         <script type="module" src="/src/main.js"></script>
     </body>

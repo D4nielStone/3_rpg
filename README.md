@@ -111,6 +111,22 @@ npm run dev
 
 Abra a URL do Vite em duas abas ou navegadores. Cada cliente envia seu `Transform`; o `MultiplayerSystem` cria entidades remotas com `NetworkIdentity` e `NetworkTransform`, e o `NetworkInterpolationSystem` suaviza os snapshots antes da renderizacao. Se o relay nao estiver ativo, o jogo continua funcionando localmente.
 
+O painel de chat usa a mesma conexao multiplayer. Digite a mensagem no campo no canto inferior direito e pressione `Enviar` ou `Enter`. O relay retransmite mensagens com ate 200 caracteres para todos os jogadores conectados.
+
+O relay registra conexoes, desconexoes, mensagens de chat e mensagens invalidas no terminal com nivel (`INFO`, `WARN` ou `ERROR`), timestamp ISO e contexto JSON. A entrada e a saida de cada usuario tambem aparecem no chat como mensagens do servidor.
+
+### Publicar o relay no Render
+
+O arquivo `render.yaml` ja configura o relay como um Web Service Node. No Render, escolha **New > Blueprint** e conecte o repositorio. O Render executara `npm ci`, iniciara `npm run multiplayer` e verificara `/health`.
+
+Depois do deploy, copie a URL do servico, por exemplo `https://webgl-rpg-multiplayer.onrender.com`. No deploy do frontend, defina a variavel de build `VITE_MULTIPLAYER_URL` com o endereco WebSocket correspondente:
+
+```text
+wss://webgl-rpg-multiplayer.onrender.com
+```
+
+Se o frontend tambem estiver no Render, crie um **Static Site** com `npm ci && npm run build`, diretorio publicado `dist` e essa mesma variavel em **Environment**. O relay usa a variavel `PORT` fornecida pelo Render automaticamente.
+
 ## Adicionar um modelo
 
 Coloque o modelo em `public/models/` e carregue-o pelo caminho publico correspondente:

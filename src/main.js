@@ -3,9 +3,15 @@ import { MultiplayerSystem } from './multiplayer.js';
 import { addRemotePlayer, loadPlayer, spawnFallbackPlayer } from './player-factory.js';
 import { createGame } from './game-setup.js';
 import { startGameLoop } from './game-loop.js';
+import { ChatPanel } from './chat.js';
 
 const canvas = document.querySelector('#canvas');
 const status = document.querySelector('#status');
+const chat = new ChatPanel({
+  messagesElement: document.querySelector('#chat-messages'),
+  formElement: document.querySelector('#chat-form'),
+  inputElement: document.querySelector('#chat-input'),
+});
 
 async function loadLocalPlayer(game) {
   try {
@@ -33,14 +39,17 @@ function followPlayer(game, playerEntity) {
 }
 
 function createMultiplayer(game, playerEntity) {
+  const localUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:5174`;
   const multiplayer = new MultiplayerSystem({
-    url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:5174`,
+    url: import.meta.env.VITE_MULTIPLAYER_URL || localUrl,
     world: game.world,
     onStatus: (message) => {
       status.textContent = `${message} Use WASD para mover.`;
     },
+    onChat: (message) => chat.addMessage(message),
     createRemoteEntity: (peerId) => addRemotePlayer(game.world, playerEntity, peerId),
   });
+  chat.connect((message) => multiplayer.sendChat(message));
   multiplayer.setLocalEntity(playerEntity);
   multiplayer.connect();
   return multiplayer;

@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: webgl-rpg-multiplayer
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm run multiplayer
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
