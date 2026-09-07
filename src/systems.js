@@ -43,11 +43,13 @@ export class MovementSystem {
   }
 
   update(world, deltaSeconds) {
+    // So entidades com MoveTarget podem se mover; WASD nao participa mais deste fluxo.
     for (const entity of world.query(Transform, PlayerController, MoveTarget)) {
       const transform = world.getComponent(entity, Transform);
       const controller = world.getComponent(entity, PlayerController);
       const moveTarget = world.getComponent(entity, MoveTarget);
       if (this.input.consumePressed(' ')) {
+        // Space cancela o destino; o LineSystem remove o marcador no mesmo frame.
         moveTarget.position = null;
         continue;
       }
@@ -80,6 +82,7 @@ export class LineSystem {
     this.camera = camera;
     this.lastClick = null;
     this.pointerHeld = false;
+    // Pointer Events funcionam para mouse, toque e caneta com a mesma implementacao.
     const updateTarget = (event) => {
       this.lastClick = camera.screenToGround(event.clientX, event.clientY, canvas);
     };
@@ -129,7 +132,9 @@ export class LineSystem {
       const vertices = [];
       const colors = [];
       const indices = [];
+      // O seno anima apenas a altura visual; o destino real continua no chao.
       const height = target[1] + 0.04 + Math.sin(time * 0.006) * 0.2;
+      // O anel usa triangulos para que a espessura seja consistente no WebGL.
       const innerRadius = Math.max(0, line.radius - line.thickness);
 
       for (let index = 0; index < line.segments; index += 1) {

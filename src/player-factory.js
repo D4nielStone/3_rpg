@@ -28,6 +28,7 @@ function createPatternTexture() {
 }
 
 function addController(world, entity) {
+  // Componentes comuns a jogador local e fallback ficam centralizados aqui.
   world.addComponent(entity, new Transform());
   world.addComponent(entity, new PlayerController());
   world.addComponent(entity, new MoveTarget());
@@ -67,6 +68,7 @@ export async function loadPlayer(world, textureManager) {
 }
 
 export function addRemotePlayer(world, sourceEntity, peerId) {
+  // Jogadores remotos reutilizam a malha, mas recebem transformacao pela rede.
   const entity = world.createEntity();
   world.addComponent(entity, new Transform());
   world.addComponent(entity, new NetworkIdentity({ peerId }));

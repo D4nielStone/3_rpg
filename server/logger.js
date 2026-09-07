@@ -16,6 +16,7 @@ export class ServerLogger {
   }
 
   write(level, message, context) {
+    // Contexto estruturado facilita filtrar os logs no painel do Render.
     const timestamp = new Date().toISOString();
     const details = Object.keys(context).length > 0
       ? ` ${JSON.stringify(context)}`

@@ -7,6 +7,7 @@ import { ChatPanel } from './chat.js';
 
 const canvas = document.querySelector('#canvas');
 const status = document.querySelector('#status');
+// O chat e a cena sao inicializados uma unica vez; os sistemas fazem o trabalho por frame.
 const chat = new ChatPanel({
   messagesElement: document.querySelector('#chat-messages'),
   formElement: document.querySelector('#chat-form'),
@@ -14,6 +15,7 @@ const chat = new ChatPanel({
 });
 
 async function loadLocalPlayer(game) {
+  // O fallback permite testar a movimentacao mesmo quando o modelo demora ou falha.
   try {
     const entity = await Promise.race([
       loadPlayer(game.world, game.textureManager),
@@ -39,6 +41,7 @@ function followPlayer(game, playerEntity) {
 }
 
 function createMultiplayer(game, playerEntity) {
+  // Em producao, a URL vem do Render; localmente usamos o relay na porta 5174.
   const localUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:5174`;
   const configuredUrl = import.meta.env.VITE_MULTIPLAYER_URL?.trim();
   const multiplayerUrl = (configuredUrl || (import.meta.env.PROD ? '' : localUrl))
@@ -67,6 +70,7 @@ async function start() {
 
   followPlayer(game, playerEntity);
   const lineEntity = game.world.createEntity();
+  // Entidade visual separada: o jogador continua sendo controlado apenas pelo ECS.
   game.world.addComponent(lineEntity, new LineRenderer({
     sourceEntity: playerEntity,
     radius: 0.35,

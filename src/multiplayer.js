@@ -28,6 +28,7 @@ export class MultiplayerSystem {
   }
 
   connect({ retry = true } = {}) {
+    // Em producao o relay pode acordar depois; por isso a conexao tenta novamente.
     if (!this.url) {
       this.onStatus('URL do relay multiplayer nao configurada.');
       return;
@@ -67,6 +68,7 @@ export class MultiplayerSystem {
     }
 
     if (message.type === 'snapshot' && Array.isArray(message.players)) {
+      // O snapshot apenas agenda dados; a criacao/remoção ECS ocorre em update().
       this.pendingState = message.players.slice(0, MESSAGE_LIMIT);
       return;
     }

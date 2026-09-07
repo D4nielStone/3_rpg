@@ -15,6 +15,7 @@ export function startGameLoop({
 
     gl.clearColor(0.04, 0.06, 0.1, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // A ordem importa: movimento local, rede, interpolacao, marcador e renderizacao.
     movementSystem.update(world, deltaSeconds);
     multiplayerSystem.update(world, time);
     networkInterpolationSystem.update(world, deltaSeconds);

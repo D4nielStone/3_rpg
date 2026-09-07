@@ -68,6 +68,7 @@ export class MeshRenderer {
 }
 
 export class LineRenderer {
+  // radius controla o tamanho; thickness controla a largura do anel.
   constructor({
     sourceEntity,
     color = [0.1, 0.45, 1],

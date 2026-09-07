@@ -52,6 +52,7 @@ function resizeCanvas(gl, camera, canvas) {
 }
 
 export function createGame(canvas, status) {
+  // Este modulo monta as dependencias da cena; regras de jogo ficam nos sistemas.
   const gl = canvas.getContext('webgl');
   if (!gl) {
     status.textContent = 'WebGL não está disponível neste navegador.';

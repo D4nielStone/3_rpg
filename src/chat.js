@@ -20,6 +20,7 @@ export class ChatPanel {
   }
 
   addMessage({ type = 'chat', peerId, text, sentAt = Date.now() }) {
+    // textContent impede que mensagens recebidas sejam interpretadas como HTML.
     const item = document.createElement('li');
     const author = document.createElement('strong');
     const time = document.createElement('time');

@@ -45,6 +45,7 @@ function getUserLabel(peerId) {
 }
 
 function broadcastSnapshot() {
+  // O relay mantem somente o estado temporario dos jogadores conectados.
   const snapshot = JSON.stringify({
     type: 'snapshot',
     players: [...players.values()],
@@ -69,6 +70,7 @@ socketServer.on('connection', (socket) => {
     position: [0, 0, 0],
     rotation: [0, 0, 0],
   });
+  // Identidade curta aparece no chat; o UUID completo fica apenas nos logs.
   logger.info(`${userLabel} entrou no servidor`, { peerId });
   socket.send(JSON.stringify({ type: 'welcome', peerId }));
   broadcast({
