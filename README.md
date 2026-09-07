@@ -56,6 +56,9 @@ npm run preview
 ```text
 src/
   main.js          Inicializacao da aplicacao e loop principal
+  game-setup.js    Criacao do WebGL, mundo ECS e sistemas
+  player-factory.js Criacao de jogadores locais e remotos
+  game-loop.js     Ordem de atualizacao e renderizacao por frame
   ecs.js           Entidades, componentes e consultas do ECS
   components.js    Transform, MeshRenderer e Texture
   systems.js       Sistemas de movimento e renderizacao
