@@ -1,10 +1,27 @@
-/*apenas adicionando algum estilo básico.*/
-canvas {
+html,
+body,
+main {
   width: 100%;
   height: 100%;
 }
+
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
 body {
   margin: 0;
-  padding: 0;
   overflow: hidden;
+}
+
+#status {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  margin: 0;
+  color: white;
+  font-family: sans-serif;
+  text-shadow: 0 1px 3px black;
 }

@@ -17,6 +17,21 @@ import { TextureManager } from './texture-manager.js';
 const canvas = document.querySelector('#canvas');
 const status = document.querySelector('#status');
 
+function resizeCanvas(gl, camera) {
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  const width = Math.max(1, Math.floor(canvas.clientWidth * pixelRatio));
+  const height = Math.max(1, Math.floor(canvas.clientHeight * pixelRatio));
+
+  if (canvas.width === width && canvas.height === height) {
+    return;
+  }
+
+  canvas.width = width;
+  canvas.height = height;
+  gl.viewport(0, 0, width, height);
+  camera.setAspect(width / height);
+}
+
 function createPatternTexture() {
   const textureCanvas = document.createElement('canvas');
   textureCanvas.width = 64;
@@ -73,7 +88,9 @@ function setupGL() {
   `;
 
   const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
-  const camera = new Camera({ aspect: canvas.width / canvas.height });
+  const camera = new Camera();
+  resizeCanvas(gl, camera);
+  window.addEventListener('resize', () => resizeCanvas(gl, camera));
   const world = new World();
   const textureManager = new TextureManager(gl);
 
