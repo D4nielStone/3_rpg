@@ -38,8 +38,34 @@ export function rotationY(angle) {
   ]);
 }
 
+export function rotationZ(angle) {
+  const cosine = Math.cos(angle);
+  const sine = Math.sin(angle);
+  return new Float32Array([
+    cosine, sine, 0, 0, -sine, cosine, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
+  ]);
+}
+
 export function translation(x, y, z) {
   return new Float32Array([
     1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1,
+  ]);
+}
+
+export function scale(sx, sy, sz) {
+  return new Float32Array([
+    sx, 0, 0, 0, 0, sy, 0, 0, 0, 0, sz, 0, 0, 0, 0, 1,
+  ]);
+}
+
+export function orthographic(left, right, bottom, top, near, far) {
+  const lr = 1 / (left - right);
+  const bt = 1 / (bottom - top);
+  const nf = 1 / (near - far);
+  return new Float32Array([
+    -2 * lr, 0, 0, 0,
+    0, -2 * bt, 0, 0,
+    0, 0, 2 * nf, 0,
+    (left + right) * lr, (top + bottom) * bt, (far + near) * nf, 1,
   ]);
 }

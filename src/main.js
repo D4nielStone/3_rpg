@@ -1,12 +1,9 @@
-import { cubeColors, cubeIndices, cubeVertices } from './cube.js';
-import {
-  multiplyMatrices,
-  perspective,
-  rotationX,
-  rotationY,
-  translation,
-} from './math.js';
-import { createBuffer, createProgram } from './webgl.js';
+import { Camera } from './camera.js';
+import { Transform } from './components.js';
+import { World } from './ecs.js';
+import { loadOBJ } from './obj-loader.js';
+import { createProgram } from './webgl.js';
+import { RenderSystem, RotationSystem } from './systems.js';
 
 const canvas = document.querySelector('#canvas');
 const status = document.querySelector('#status');
@@ -39,37 +36,46 @@ const fragmentShaderSource = `
 `;
 
 const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
-const positionBuffer = createBuffer(gl, gl.ARRAY_BUFFER, cubeVertices);
-const colorBuffer = createBuffer(gl, gl.ARRAY_BUFFER, cubeColors);
-const indexBuffer = createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, cubeIndices);
-const positionLocation = gl.getAttribLocation(program, 'position');
-const colorLocation = gl.getAttribLocation(program, 'vertexColor');
-const matrixLocation = gl.getUniformLocation(program, 'matrix');
-const projection = perspective(Math.PI / 4, canvas.width / canvas.height, 0.1, 100);
-const view = translation(0, 0, -5);
+const camera = new Camera({ aspect: canvas.width / canvas.height });
+const world = new World();
+
+const locations = {
+  position: gl.getAttribLocation(program, 'position'),
+  color: gl.getAttribLocation(program, 'vertexColor'),
+  matrix: gl.getUniformLocation(program, 'matrix'),
+};
+const rotationSystem = new RotationSystem();
+const renderSystem = new RenderSystem(gl, program, locations, camera);
 
 gl.enable(gl.DEPTH_TEST);
-gl.enableVertexAttribArray(positionLocation);
-gl.enableVertexAttribArray(colorLocation);
+gl.enableVertexAttribArray(locations.position);
+gl.enableVertexAttribArray(locations.color);
 gl.useProgram(program);
-gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
 function render(time) {
   const seconds = time * 0.001;
-  const model = multiplyMatrices(rotationY(seconds), rotationX(seconds * 0.7));
-  const matrix = multiplyMatrices(projection, multiplyMatrices(view, model));
 
   gl.clearColor(0.04, 0.06, 0.1, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.uniformMatrix4fv(matrixLocation, false, matrix);
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-  gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
-  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-  gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
-  gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0);
+  rotationSystem.update(world, seconds);
+  renderSystem.render(world);
   requestAnimationFrame(render);
 }
 
-status.textContent = 'WebGL ativo: cubo 3D girando.';
-requestAnimationFrame(render);
+async function start() {
+  try {
+    const modelEntity = world.createEntity();
+    world.addComponent(modelEntity, new Transform({ scale: [1.2, 1.2, 1.2] }));
+    world.addComponent(
+      modelEntity,
+      await loadOBJ('/models/test/source/AmongUS[Red].glb'),
+    );
+    status.textContent = 'WebGL ativo: modelo OBJ girando.';
+    requestAnimationFrame(render);
+  } catch (error) {
+    status.textContent = error.message;
+    console.error(error);
+  }
+}
+
+start();
