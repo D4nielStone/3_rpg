@@ -28,6 +28,11 @@ export class MultiplayerSystem {
   }
 
   connect({ retry = true } = {}) {
+    if (!this.url) {
+      this.onStatus('URL do relay multiplayer nao configurada.');
+      return;
+    }
+
     if (!('WebSocket' in window)) {
       this.onStatus('Multiplayer indisponivel neste navegador.');
       return;

@@ -41,7 +41,7 @@ function followPlayer(game, playerEntity) {
 function createMultiplayer(game, playerEntity) {
   const localUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:5174`;
   const configuredUrl = import.meta.env.VITE_MULTIPLAYER_URL?.trim();
-  const multiplayerUrl = (configuredUrl || localUrl)
+  const multiplayerUrl = (configuredUrl || (import.meta.env.PROD ? '' : localUrl))
     .replace(/^http:/, 'ws:')
     .replace(/^https:/, 'wss:')
     .replace(/\/$/, '');

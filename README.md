@@ -129,7 +129,13 @@ wss://webgl-rpg-multiplayer.onrender.com
 
 Se o frontend tambem estiver no Render, crie um **Static Site** com `npm ci && npm run build`, diretorio publicado `dist` e essa mesma variavel em **Environment**. O relay usa a variavel `PORT` fornecida pelo Render automaticamente.
 
-Depois de criar ou alterar `VITE_MULTIPLAYER_URL`, faca um novo deploy do Static Site, pois variaveis `VITE_*` sao incorporadas durante o build. Use a URL do relay sem uma barra final, por exemplo `wss://webgl-rpg-multiplayer.onrender.com`. O cliente tambem converte automaticamente `https://` para `wss://` e tenta reconectar a cada 3 segundos.
+Depois de criar ou alterar `VITE_MULTIPLAYER_URL`, faca um novo deploy do Static Site, pois variaveis `VITE_*` sao incorporadas durante o build. Use **a URL do servico do relay**, e nao a URL do frontend, sem porta e sem barra final:
+
+```text
+VITE_MULTIPLAYER_URL=wss://webgl-rpg-multiplayer.onrender.com
+```
+
+O cliente tambem converte automaticamente `https://` para `wss://` e tenta reconectar a cada 3 segundos. Sem essa variavel em producao, o jogo exibira uma mensagem de configuracao em vez de tentar `frontend.onrender.com:5174`.
 
 ## Adicionar um modelo
 
