@@ -1,7 +1,8 @@
 import { Camera } from './camera.js';
-import { Transform } from './components.js';
+import { MeshRenderer, Transform } from './components.js';
 import { World } from './ecs.js';
-import { loadOBJ } from './obj-loader.js';
+import { loadAsset } from './asset-loader.js';
+import { cubeColors, cubeIndices, cubeVertices } from './cube.js';
 import { createProgram } from './webgl.js';
 import { RenderSystem, RotationSystem } from './systems.js';
 
@@ -66,15 +67,29 @@ async function start() {
   try {
     const modelEntity = world.createEntity();
     world.addComponent(modelEntity, new Transform({ scale: [1.2, 1.2, 1.2] }));
-    world.addComponent(
-      modelEntity,
-      await loadOBJ('/models/test/source/AmongUS[Red].glb'),
-    );
-    status.textContent = 'WebGL ativo: modelo OBJ girando.';
+
+    const mesh = await loadAsset('/models/test/source/AmongUS[Red].glb');
+    if (!(mesh instanceof MeshRenderer)) {
+      throw new Error('Asset carregado não é uma malha renderizável.');
+    }
+
+    world.addComponent(modelEntity, mesh);
+    status.textContent = 'WebGL ativo: modelo carregado no ECS.';
     requestAnimationFrame(render);
   } catch (error) {
-    status.textContent = error.message;
+    const fallbackEntity = world.createEntity();
+    world.addComponent(fallbackEntity, new Transform({ scale: [1.2, 1.2, 1.2] }));
+    world.addComponent(
+      fallbackEntity,
+      new MeshRenderer({
+        vertices: cubeVertices,
+        colors: cubeColors,
+        indices: cubeIndices,
+      }),
+    );
+    status.textContent = `Modelo não carregado; usando cubo de fallback. ${error.message}`;
     console.error(error);
+    requestAnimationFrame(render);
   }
 }
 
