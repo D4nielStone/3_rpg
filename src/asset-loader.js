@@ -1,4 +1,4 @@
-import { MeshRenderer } from './components.js';
+import { MeshRenderer, Texture } from './components.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Color } from 'three';
 
@@ -57,7 +57,7 @@ export async function loadOBJ(url) {
   });
 }
 
-export async function loadGLTF(url) {
+export async function loadGLTF(url, textureManager = null) {
   const loader = new GLTFLoader();
   const gltf = await loader.loadAsync(url);
   const meshes = [];
@@ -75,7 +75,9 @@ export async function loadGLTF(url) {
   const mergedVertices = [];
   const mergedColors = [];
   const mergedIndices = [];
+  const mergedUVs = [];
   let vertexOffset = 0;
+  let texture = null;
 
   for (const mesh of meshes) {
     const geometry = mesh.geometry.clone();
@@ -87,11 +89,18 @@ export async function loadGLTF(url) {
       continue;
     }
 
-    const materialColor = mesh.material && mesh.material.color
-      ? mesh.material.color
-      : new Color(0.95, 0.55, 0.2);
+    const material = mesh.material;
+    const materialColor = material && material.color ? material.color : new Color(0.95, 0.55, 0.2);
     const colorAttribute = nonIndexed.getAttribute('color');
+    const uvAttribute = nonIndexed.getAttribute('uv');
     const indexAttribute = nonIndexed.getIndex();
+
+    if (!texture && material && material.map && material.map.image) {
+      texture = new Texture({ image: material.map.image, name: 'gltf-material' });
+      if (textureManager && texture.image) {
+        texture.glTexture = textureManager.ensure(texture.image, texture.name);
+      }
+    }
 
     for (let i = 0; i < positionAttribute.count; i += 1) {
       mergedVertices.push(
@@ -108,6 +117,10 @@ export async function loadGLTF(url) {
         );
       } else {
         mergedColors.push(materialColor.r, materialColor.g, materialColor.b);
+      }
+
+      if (uvAttribute) {
+        mergedUVs.push(uvAttribute.getX(i), uvAttribute.getY(i));
       }
     }
 
@@ -128,11 +141,16 @@ export async function loadGLTF(url) {
     throw new Error(`Não foi possível converter o GLTF/GLB em mesh renderizável: ${url}`);
   }
 
-  return new MeshRenderer({
-    vertices: new Float32Array(mergedVertices),
-    colors: new Float32Array(mergedColors),
-    indices: new Uint16Array(mergedIndices),
-  });
+  return {
+    mesh: new MeshRenderer({
+      vertices: new Float32Array(mergedVertices),
+      colors: new Float32Array(mergedColors),
+      indices: new Uint16Array(mergedIndices),
+      uvs: mergedUVs.length ? new Float32Array(mergedUVs) : null,
+      texture,
+    }),
+    texture,
+  };
 }
 
 const loaders = new Map();
@@ -142,7 +160,7 @@ export function registerAssetLoader(format, loader) {
   return loader;
 }
 
-export async function loadAsset(url, formatOverride) {
+export async function loadAsset(url, formatOverride, textureManager = null) {
   const format = (formatOverride ?? url.split('?')[0].match(/\.([a-z0-9]+)$/i)?.[1] ?? '').toLowerCase();
   const loader = loaders.get(format);
 
@@ -150,14 +168,18 @@ export async function loadAsset(url, formatOverride) {
     throw new Error(`Formato de asset não suportado: ${format || 'desconhecido'} (${url})`);
   }
 
-  const result = await loader(url);
+  const result = await loader(url, textureManager);
 
   if (result instanceof MeshRenderer) {
+    return { mesh: result, texture: null };
+  }
+
+  if (result && typeof result === 'object' && result.mesh instanceof MeshRenderer) {
     return result;
   }
 
   if (result && typeof result === 'object') {
-    return result;
+    return { mesh: result, texture: null };
   }
 
   throw new Error(`Loader retornou um valor inválido para: ${url}`);

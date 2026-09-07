@@ -7,6 +7,12 @@ export const cubeVertices = new Float32Array([
   -1, -1, -1, -1, -1, 1, -1, 1, 1, -1, 1, -1,
 ]);
 
+export const cubeUVs = new Float32Array(Array.from({ length: cubeVertices.length / 3 }, (_, index) => {
+  const u = index % 2 === 0 ? 0 : 1;
+  const v = Math.floor(index / 2) % 2 === 0 ? 0 : 1;
+  return [u, v];
+}).flat());
+
 export const cubeColors = new Float32Array([
   0.95, 0.25, 0.3, 0.95, 0.25, 0.3, 0.95, 0.45, 0.3, 0.95, 0.45, 0.3,
   0.2, 0.55, 0.95, 0.2, 0.55, 0.95, 0.35, 0.7, 0.95, 0.35, 0.7, 0.95,
