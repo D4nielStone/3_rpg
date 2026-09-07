@@ -86,7 +86,7 @@ Os sistemas consultam as entidades pelos componentes necessarios e atualizam ou 
 
 ## Movimentacao
 
-Clique no terreno para criar um destino. O jogador segue o caminho tracejado usando o `MovementSystem`. Pressione `Space` para cancelar o destino e remover o caminho. A camera orbital acompanha o `Transform` do jogador.
+Clique no terreno para criar um destino. Um circulo azul marca a posicao e o jogador segue ate ela usando o `MovementSystem`. Pressione `Space` para cancelar o destino e remover o marcador. A camera orbital acompanha o `Transform` do jogador.
 
 ## Multiplayer
 

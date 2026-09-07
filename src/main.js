@@ -67,7 +67,11 @@ async function start() {
 
   followPlayer(game, playerEntity);
   const lineEntity = game.world.createEntity();
-  game.world.addComponent(lineEntity, new LineRenderer({ sourceEntity: playerEntity }));
+  game.world.addComponent(lineEntity, new LineRenderer({
+    sourceEntity: playerEntity,
+    radius: 0.35,
+    thickness: 0.06,
+  }));
 
   const multiplayerSystem = createMultiplayer(game, playerEntity);
 

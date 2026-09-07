@@ -68,11 +68,18 @@ export class MeshRenderer {
 }
 
 export class LineRenderer {
-  constructor({ sourceEntity, color = [1, 0.85, 0.1], dashLength = 0.25, gapLength = 0.15 } = {}) {
+  constructor({
+    sourceEntity,
+    color = [0.1, 0.45, 1],
+    radius = 0.35,
+    thickness = 0.06,
+    segments = 32,
+  } = {}) {
     this.sourceEntity = sourceEntity;
     this.color = color;
-    this.dashLength = dashLength;
-    this.gapLength = gapLength;
+    this.radius = radius;
+    this.thickness = thickness;
+    this.segments = segments;
     this.target = null;
     this.vertices = new Float32Array();
     this.colors = new Float32Array();

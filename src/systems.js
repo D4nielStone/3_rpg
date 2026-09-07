@@ -79,20 +79,32 @@ export class LineSystem {
     this.canvas = canvas;
     this.camera = camera;
     this.lastClick = null;
-    canvas.addEventListener('click', (event) => {
+    this.pointerHeld = false;
+    const updateTarget = (event) => {
       this.lastClick = camera.screenToGround(event.clientX, event.clientY, canvas);
+    };
+
+    canvas.addEventListener('pointerdown', (event) => {
+      this.pointerHeld = true;
+      canvas.setPointerCapture?.(event.pointerId);
+      updateTarget(event);
+    });
+    canvas.addEventListener('pointermove', (event) => {
+      if (this.pointerHeld) updateTarget(event);
+    });
+    canvas.addEventListener('pointerup', () => {
+      this.pointerHeld = false;
+    });
+    canvas.addEventListener('pointercancel', () => {
+      this.pointerHeld = false;
     });
   }
 
-  update(world) {
+  update(world, time = 0) {
     for (const entity of world.query(LineRenderer)) {
       const line = world.getComponent(entity, LineRenderer);
       const moveTarget = world.getComponent(line.sourceEntity, MoveTarget);
-      const source = world.getComponent(entity, Transform);
-      const origin = source
-        ? source.position
-        : world.getComponent(line.sourceEntity, Transform)?.position;
-      if (!origin || !moveTarget) {
+      if (!moveTarget) {
         line.vertices = new Float32Array();
         line.colors = new Float32Array();
         line.indices = new Uint16Array();
@@ -114,25 +126,31 @@ export class LineSystem {
 
       line.target = moveTarget.position;
       const target = line.target;
-      const deltaX = target[0] - origin[0];
-      const deltaZ = target[2] - origin[2];
-      const distance = Math.hypot(deltaX, deltaZ);
-      const directionX = distance === 0 ? 0 : deltaX / distance;
-      const directionZ = distance === 0 ? 0 : deltaZ / distance;
       const vertices = [];
       const colors = [];
       const indices = [];
-      const step = line.dashLength + line.gapLength;
+      const height = target[1] + 0.04 + Math.sin(time * 0.006) * 0.2;
+      const innerRadius = Math.max(0, line.radius - line.thickness);
 
-      for (let start = 0; start < distance; start += step) {
-        const end = Math.min(start + line.dashLength, distance);
+      for (let index = 0; index < line.segments; index += 1) {
+        const angle = (index / line.segments) * Math.PI * 2;
+        const nextAngle = ((index + 1) / line.segments) * Math.PI * 2;
         const first = vertices.length / 3;
         vertices.push(
-          origin[0] + directionX * start, origin[1] + 0.03, origin[2] + directionZ * start,
-          origin[0] + directionX * end, origin[1] + 0.03, origin[2] + directionZ * end,
+          target[0] + Math.cos(angle) * line.radius, height,
+          target[2] + Math.sin(angle) * line.radius,
+          target[0] + Math.cos(angle) * innerRadius, height,
+          target[2] + Math.sin(angle) * innerRadius,
+          target[0] + Math.cos(nextAngle) * line.radius, height,
+          target[2] + Math.sin(nextAngle) * line.radius,
+          target[0] + Math.cos(nextAngle) * innerRadius, height,
+          target[2] + Math.sin(nextAngle) * innerRadius,
         );
-        colors.push(...line.color, ...line.color);
-        indices.push(first, first + 1);
+        colors.push(...line.color, ...line.color, ...line.color, ...line.color);
+        indices.push(
+          first, first + 1, first + 2,
+          first + 1, first + 3, first + 2,
+        );
       }
 
       line.vertices = new Float32Array(vertices);
@@ -264,7 +282,7 @@ export class RenderSystem {
       gl.bindBuffer(gl.ARRAY_BUFFER, line.colorBuffer);
       gl.vertexAttribPointer(locations.color, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, line.indexBuffer);
-      gl.drawElements(gl.LINES, line.indices.length, gl.UNSIGNED_SHORT, 0);
+      gl.drawElements(gl.TRIANGLES, line.indices.length, gl.UNSIGNED_SHORT, 0);
     }
   }
 }
