@@ -11,9 +11,30 @@ import {
   MeshRenderer,
   LineRenderer,
   PlayerController,
+  NetworkTransform,
   Texture,
   Transform,
 } from './components.js';
+
+export class NetworkInterpolationSystem {
+  update(world, deltaSeconds) {
+    for (const entity of world.query(Transform, NetworkTransform)) {
+      const transform = world.getComponent(entity, Transform);
+      const networkTransform = world.getComponent(entity, NetworkTransform);
+      if (!networkTransform.targetPosition) continue;
+
+      const amount = 1 - Math.exp(-networkTransform.interpolation * deltaSeconds);
+      for (let index = 0; index < 3; index += 1) {
+        transform.position[index] +=
+          (networkTransform.targetPosition[index] - transform.position[index]) * amount;
+      }
+      if (networkTransform.targetRotation) {
+        transform.rotation[1] +=
+          (networkTransform.targetRotation[1] - transform.rotation[1]) * amount;
+      }
+    }
+  }
+}
 
 export class MovementSystem {
   constructor(input) {

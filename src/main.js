@@ -2,6 +2,8 @@ import { Camera } from './camera.js';
 import {
   LineRenderer,
   MeshRenderer,
+  NetworkIdentity,
+  NetworkTransform,
   PlayerController,
   Texture,
   Transform,
@@ -10,9 +12,15 @@ import { World } from './ecs.js';
 import { loadAsset } from './asset-loader.js';
 import { cubeColors, cubeIndices, cubeUVs, cubeVertices } from './cube.js';
 import { createProgram } from './webgl.js';
-import { LineSystem, MovementSystem, RenderSystem } from './systems.js';
+import {
+  LineSystem,
+  MovementSystem,
+  NetworkInterpolationSystem,
+  RenderSystem,
+} from './systems.js';
 import { InputState } from './input.js';
 import { TextureManager } from './texture-manager.js';
+import { MultiplayerSystem } from './multiplayer.js';
 
 const canvas = document.querySelector('#canvas');
 const status = document.querySelector('#status');
@@ -114,7 +122,16 @@ function setupGL() {
   gl.useProgram(program);
 
   const lineSystem = new LineSystem(canvas, camera);
-  return { gl, camera, world, textureManager, movementSystem, lineSystem, renderSystem };
+  return {
+    gl,
+    camera,
+    world,
+    textureManager,
+    movementSystem,
+    networkInterpolationSystem: new NetworkInterpolationSystem(),
+    lineSystem,
+    renderSystem,
+  };
 }
 
 function spawnFallbackEntity(world) {
@@ -154,16 +171,36 @@ async function loadModelIntoWorld(world, textureManager) {
   return entity;
 }
 
-function renderFrame(gl, world, movementSystem, lineSystem, renderSystem, previousTime = 0) {
+function renderFrame(
+  gl,
+  world,
+  movementSystem,
+  networkInterpolationSystem,
+  multiplayerSystem,
+  lineSystem,
+  renderSystem,
+  previousTime = 0,
+) {
   return (time) => {
     const deltaSeconds = Math.min((time - previousTime) * 0.001, 0.1);
 
     gl.clearColor(0.04, 0.06, 0.1, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     movementSystem.update(world, deltaSeconds);
+    multiplayerSystem.update(world, time);
+    networkInterpolationSystem.update(world, deltaSeconds);
     lineSystem.update(world);
     renderSystem.render(world);
-    requestAnimationFrame(renderFrame(gl, world, movementSystem, lineSystem, renderSystem, time));
+    requestAnimationFrame(renderFrame(
+      gl,
+      world,
+      movementSystem,
+      networkInterpolationSystem,
+      multiplayerSystem,
+      lineSystem,
+      renderSystem,
+      time,
+    ));
   };
 }
 
@@ -175,6 +212,7 @@ async function start() {
     world,
     textureManager,
     movementSystem,
+    networkInterpolationSystem,
     lineSystem,
     renderSystem,
   } = setupGL();
@@ -207,10 +245,39 @@ async function start() {
   const lineEntity = world.createEntity();
   world.addComponent(lineEntity, new LineRenderer({ sourceEntity: playerEntity }));
 
+  const multiplayerSystem = new MultiplayerSystem({
+    url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:5175`,
+    world,
+    onStatus: (message) => {
+      status.textContent = `${message} Use WASD para mover.`;
+    },
+    createRemoteEntity: (peerId) => {
+      const remoteEntity = world.createEntity();
+      const localMesh = world.getComponent(playerEntity, MeshRenderer);
+      const localTexture = world.getComponent(playerEntity, Texture);
+      world.addComponent(remoteEntity, new Transform({ position: [0, 0, 0] }));
+      world.addComponent(remoteEntity, new NetworkIdentity({ peerId }));
+      world.addComponent(remoteEntity, new NetworkTransform());
+      world.addComponent(remoteEntity, localMesh);
+      if (localTexture) world.addComponent(remoteEntity, localTexture);
+      return remoteEntity;
+    },
+  });
+  multiplayerSystem.setLocalEntity(playerEntity);
+  multiplayerSystem.connect();
+
   status.textContent = status.textContent.includes('fallback')
     ? status.textContent
     : 'WebGL ativo: modelo 3D girando. Use WASD para mover.';
-  requestAnimationFrame(renderFrame(gl, world, movementSystem, lineSystem, renderSystem));
+  requestAnimationFrame(renderFrame(
+    gl,
+    world,
+    movementSystem,
+    networkInterpolationSystem,
+    multiplayerSystem,
+    lineSystem,
+    renderSystem,
+  ));
 }
 
 start().catch((error) => {

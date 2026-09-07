@@ -92,6 +92,22 @@ O modelo carregado recebe o componente `PlayerController`. Use as teclas abaixo 
 
 O `MovementSystem` usa o tempo entre frames, entao a velocidade permanece consistente mesmo com variacoes no FPS. A camera orbital acompanha o `Transform` do jogador.
 
+## Multiplayer
+
+O multiplayer usa um relay WebSocket separado. Em um terminal, inicie o relay:
+
+```bash
+npm run multiplayer
+```
+
+Em outro terminal, inicie o Vite:
+
+```bash
+npm run dev
+```
+
+Abra a URL do Vite em duas abas ou navegadores. Cada cliente envia seu `Transform`; o `MultiplayerSystem` cria entidades remotas com `NetworkIdentity` e `NetworkTransform`, e o `NetworkInterpolationSystem` suaviza os snapshots antes da renderizacao. Se o relay nao estiver ativo, o jogo continua funcionando localmente.
+
 ## Adicionar um modelo
 
 Coloque o modelo em `public/models/` e carregue-o pelo caminho publico correspondente:

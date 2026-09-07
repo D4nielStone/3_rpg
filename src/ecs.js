@@ -23,6 +23,12 @@ export class World {
     return this.components.get(componentType)?.get(entity);
   }
 
+  removeEntity(entity) {
+    for (const componentMap of this.components.values()) {
+      componentMap.delete(entity);
+    }
+  }
+
   query(...componentTypes) {
     const firstType = componentTypes[0];
     const firstComponents = this.components.get(firstType) ?? new Map();

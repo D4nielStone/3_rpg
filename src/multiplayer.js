@@ -1,0 +1,108 @@
+import { NetworkIdentity, NetworkTransform, Transform } from './components.js';
+
+const MESSAGE_LIMIT = 32;
+
+export class MultiplayerSystem {
+  constructor({ url, world, createRemoteEntity, onStatus = () => {} }) {
+    this.url = url;
+    this.world = world;
+    this.createRemoteEntity = createRemoteEntity;
+    this.onStatus = onStatus;
+    this.socket = null;
+    this.localEntity = null;
+    this.localPeerId = null;
+    this.remoteEntities = new Map();
+    this.lastSentAt = 0;
+    this.pendingState = null;
+  }
+
+  setLocalEntity(entity) {
+    this.localEntity = entity;
+    if (this.localPeerId) {
+      this.world.addComponent(entity, new NetworkIdentity({
+        peerId: this.localPeerId,
+        isLocal: true,
+      }));
+    }
+  }
+
+  connect() {
+    if (!('WebSocket' in window)) {
+      this.onStatus('Multiplayer indisponivel neste navegador.');
+      return;
+    }
+
+    this.onStatus('Conectando ao multiplayer...');
+    this.socket = new WebSocket(this.url);
+    this.socket.addEventListener('open', () => this.onStatus('Multiplayer conectado.'));
+    this.socket.addEventListener('message', (event) => this.handleMessage(event.data));
+    this.socket.addEventListener('close', () => {
+      this.onStatus('Multiplayer offline. Inicie o relay para conectar.');
+      this.socket = null;
+    });
+    this.socket.addEventListener('error', () => this.onStatus('Relay multiplayer indisponivel.'));
+  }
+
+  handleMessage(rawMessage) {
+    let message;
+    try {
+      message = JSON.parse(rawMessage);
+    } catch {
+      return;
+    }
+
+    if (message.type === 'welcome') {
+      this.localPeerId = message.peerId;
+      if (this.localEntity) this.setLocalEntity(this.localEntity);
+      return;
+    }
+
+    if (message.type === 'snapshot' && Array.isArray(message.players)) {
+      this.pendingState = message.players.slice(0, MESSAGE_LIMIT);
+    }
+  }
+
+  update(world, time) {
+    this.applySnapshot(world);
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN || !this.localEntity) return;
+    if (time - this.lastSentAt < 50) return;
+
+    const transform = world.getComponent(this.localEntity, Transform);
+    if (!transform) return;
+    this.socket.send(JSON.stringify({
+      type: 'state',
+      position: transform.position,
+      rotation: transform.rotation,
+    }));
+    this.lastSentAt = time;
+  }
+
+  applySnapshot(world) {
+    if (!this.pendingState) return;
+    const activePeers = new Set();
+
+    for (const player of this.pendingState) {
+      if (!player.peerId || player.peerId === this.localPeerId) continue;
+      activePeers.add(player.peerId);
+      let entity = this.remoteEntities.get(player.peerId);
+      if (!entity) {
+        entity = this.createRemoteEntity(player.peerId);
+        this.remoteEntities.set(player.peerId, entity);
+      }
+
+      const networkTransform = world.getComponent(entity, NetworkTransform);
+      if (networkTransform) {
+        networkTransform.targetPosition = player.position;
+        networkTransform.targetRotation = player.rotation;
+      }
+    }
+
+    for (const [peerId, entity] of this.remoteEntities) {
+      if (!activePeers.has(peerId)) {
+        world.removeEntity(entity);
+        this.remoteEntities.delete(peerId);
+      }
+    }
+    this.pendingState = null;
+  }
+}
