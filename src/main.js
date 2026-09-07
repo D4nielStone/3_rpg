@@ -49,7 +49,7 @@ function createMultiplayer(game, playerEntity) {
     url: multiplayerUrl,
     world: game.world,
     onStatus: (message) => {
-      status.textContent = `${message} Use WASD para mover.`;
+      status.textContent = `${message} Clique para mover; Space cancela.`;
     },
     onChat: (message) => chat.addMessage(message),
     createRemoteEntity: (peerId) => addRemotePlayer(game.world, playerEntity, peerId),
@@ -73,7 +73,7 @@ async function start() {
 
   status.textContent = usedFallback
     ? 'Modelo 3D indisponível; usando modelo de fallback.'
-    : 'WebGL ativo: modelo 3D girando. Use WASD para mover.';
+    : 'WebGL ativo: clique para mover. Space cancela o destino.';
   startGameLoop({ ...game, multiplayerSystem });
 }
 

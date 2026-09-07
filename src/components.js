@@ -12,6 +12,12 @@ export class PlayerController {
   }
 }
 
+export class MoveTarget {
+  constructor() {
+    this.position = null;
+  }
+}
+
 export class NetworkIdentity {
   constructor({ peerId, isLocal = false } = {}) {
     this.peerId = peerId;

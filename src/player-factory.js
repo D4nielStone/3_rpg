@@ -1,6 +1,7 @@
 import { loadAsset } from './asset-loader.js';
 import {
   MeshRenderer,
+  MoveTarget,
   NetworkIdentity,
   NetworkTransform,
   PlayerController,
@@ -29,6 +30,7 @@ function createPatternTexture() {
 function addController(world, entity) {
   world.addComponent(entity, new Transform({ scale: [1.2, 1.2, 1.2] }));
   world.addComponent(entity, new PlayerController());
+  world.addComponent(entity, new MoveTarget());
 }
 
 export function spawnFallbackPlayer(world) {

@@ -10,6 +10,7 @@ import { createBuffer, createTexture } from './webgl.js';
 import {
   MeshRenderer,
   LineRenderer,
+  MoveTarget,
   PlayerController,
   NetworkTransform,
   Texture,
@@ -42,25 +43,32 @@ export class MovementSystem {
   }
 
   update(world, deltaSeconds) {
-    for (const entity of world.query(Transform, PlayerController)) {
+    for (const entity of world.query(Transform, PlayerController, MoveTarget)) {
       const transform = world.getComponent(entity, Transform);
       const controller = world.getComponent(entity, PlayerController);
-      let x = 0;
-      let z = 0;
+      const moveTarget = world.getComponent(entity, MoveTarget);
+      if (this.input.consumePressed(' ')) {
+        moveTarget.position = null;
+        continue;
+      }
+      if (!moveTarget.position) continue;
 
-      if (this.input.isPressed('a', 'arrowleft')) x -= 1;
-      if (this.input.isPressed('d', 'arrowright')) x += 1;
-      if (this.input.isPressed('w', 'arrowup')) z -= 1;
-      if (this.input.isPressed('s', 'arrowdown')) z += 1;
+      const deltaX = moveTarget.position[0] - transform.position[0];
+      const deltaZ = moveTarget.position[2] - transform.position[2];
+      const distanceToTarget = Math.hypot(deltaX, deltaZ);
+      if (distanceToTarget <= 0.05) {
+        transform.position[0] = moveTarget.position[0];
+        transform.position[2] = moveTarget.position[2];
+        moveTarget.position = null;
+        continue;
+      }
 
-      const length = Math.hypot(x, z);
-      if (length === 0) continue;
-
-      x /= length;
-      z /= length;
+      const x = deltaX / distanceToTarget;
+      const z = deltaZ / distanceToTarget;
       const distance = controller.speed * deltaSeconds;
-      transform.position[0] += x * distance;
-      transform.position[2] += z * distance;
+      const step = Math.min(distance, distanceToTarget);
+      transform.position[0] += x * step;
+      transform.position[2] += z * step;
       transform.rotation[1] = Math.atan2(x, z);
     }
   }
@@ -79,11 +87,12 @@ export class LineSystem {
   update(world) {
     for (const entity of world.query(LineRenderer)) {
       const line = world.getComponent(entity, LineRenderer);
+      const moveTarget = world.getComponent(line.sourceEntity, MoveTarget);
       const source = world.getComponent(entity, Transform);
       const origin = source
         ? source.position
         : world.getComponent(line.sourceEntity, Transform)?.position;
-      if (!origin || !this.lastClick) {
+      if (!origin || !moveTarget?.position) {
         line.vertices = new Float32Array();
         line.colors = new Float32Array();
         line.indices = new Uint16Array();
@@ -91,7 +100,8 @@ export class LineSystem {
         continue;
       }
 
-      line.target = this.lastClick;
+      moveTarget.position = this.lastClick;
+      line.target = moveTarget.position;
       const target = line.target;
       const deltaX = target[0] - origin[0];
       const deltaZ = target[2] - origin[2];

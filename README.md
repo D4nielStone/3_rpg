@@ -86,14 +86,7 @@ Os sistemas consultam as entidades pelos componentes necessarios e atualizam ou 
 
 ## Movimentacao
 
-O modelo carregado recebe o componente `PlayerController`. Use as teclas abaixo para mover o personagem:
-
-- `W` ou seta para cima: frente
-- `S` ou seta para baixo: tras
-- `A` ou seta para esquerda: esquerda
-- `D` ou seta para direita: direita
-
-O `MovementSystem` usa o tempo entre frames, entao a velocidade permanece consistente mesmo com variacoes no FPS. A camera orbital acompanha o `Transform` do jogador.
+Clique no terreno para criar um destino. O jogador segue o caminho tracejado usando o `MovementSystem`. Pressione `Space` para cancelar o destino e remover o caminho. A camera orbital acompanha o `Transform` do jogador.
 
 ## Multiplayer
 
