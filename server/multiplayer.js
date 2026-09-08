@@ -14,6 +14,7 @@ import {
 const port = Number(process.env.PORT ?? process.env.MULTIPLAYER_PORT ?? 5174);
 const host = process.env.HOST ?? '0.0.0.0';
 const frontendOrigin = process.env.FRONTEND_ORIGIN ?? 'https://webgl-rpg-frontend.onrender.com';
+let databaseReady = false;
 
 function setCorsHeaders(request, response) {
   const origin = request.headers.origin;
@@ -47,7 +48,9 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  if (request.method === 'POST' && ['/api/register', '/api/login'].includes(request.url)) {
+  const requestPath = new URL(request.url, `http://${request.headers.host ?? 'localhost'}`).pathname;
+
+  if (request.method === 'POST' && ['/api/register', '/api/login'].includes(requestPath)) {
     try {
       const body = await readJson(request);
       const nickname = typeof body.nickname === 'string' ? body.nickname.trim() : '';
@@ -56,7 +59,7 @@ const server = createServer(async (request, response) => {
         sendJson(response, 400, { error: 'Nickname ou senha invalidos.' });
         return;
       }
-      if (request.url === '/api/register') {
+      if (requestPath === '/api/register') {
         if (await playerStore.findUser(nickname)) {
           sendJson(response, 409, { error: 'Nickname indisponivel.' });
           return;
@@ -83,8 +86,8 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  if (request.url === '/') {
-    response.writeHead(200, { 'content-type': 'application/json' });
+  if (requestPath === '/') {
+    response.writeHead(200, { 'content-type': 'application/json', connection: 'close' });
     response.end(JSON.stringify({
       service: 'webgl-rpg-multiplayer',
       status: 'ok',
@@ -94,9 +97,15 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  if (request.url === '/health') {
-    response.writeHead(200, { 'content-type': 'application/json' });
-    response.end(JSON.stringify({ status: 'ok', players: players.size }));
+  if (requestPath === '/health') {
+    const body = JSON.stringify({ status: databaseReady ? 'ok' : 'starting', players: players.size });
+    response.writeHead(databaseReady ? 200 : 503, {
+      'content-type': 'application/json',
+      'content-length': Buffer.byteLength(body),
+      connection: 'close',
+    });
+    if (request.method === 'HEAD') response.end();
+    else response.end(body);
     return;
   }
 
@@ -288,6 +297,7 @@ socketServer.on('connection', async (socket, request) => {
 
 playerStore.ready
   .then(() => {
+    databaseReady = true;
     server.listen(port, host, () => {
       logger.info(`Multiplayer relay ouvindo em ws://${host}:${port}`);
     });
