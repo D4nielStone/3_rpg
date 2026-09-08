@@ -174,7 +174,14 @@ export class MultiplayerSystem {
 
   sendAttack() {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
-    this.socket.send(JSON.stringify({ type: 'attack' }));
+    this.socket.send(JSON.stringify({ type: 'attack', mode: this.combatMode ?? 'melee' }));
+    return true;
+  }
+
+  setCombatMode(mode) {
+    this.combatMode = mode;
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify({ type: 'combat-mode', mode }));
     return true;
   }
 
@@ -237,6 +244,7 @@ export class MultiplayerSystem {
     for (const player of this.pendingState) {
       if (player.peerId === this.localPeerId) {
         this.localPlayerDead = Boolean(player.dead);
+        this.combatMode = player.combatMode ?? 'melee';
         if (!this.localStateRestored && Array.isArray(player.position) && Array.isArray(player.rotation)) {
           const transform = world.getComponent(this.localEntity, Transform);
           if (transform) {

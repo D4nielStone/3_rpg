@@ -70,6 +70,7 @@ export class EnemyArea {
   }
 
   attack(player, now) {
+    if (player.combatMode !== 'melee') return { hit: false };
     const weapon = player.getMainWeapon();
     if (!weapon) return { hit: false };
 
@@ -89,7 +90,7 @@ export class EnemyArea {
     if (!target || !player.canAttack(now)) return { hit: false };
 
     target.setTarget(player);
-    target.receiveDamage(weapon.damage);
+    target.receiveDamage(weapon.damage + player.strength);
     if (target.hp <= 0) {
       this.removeEnemy(target.id);
       return { hit: true, rewards: target.getDrop() };

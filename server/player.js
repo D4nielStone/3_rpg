@@ -32,6 +32,10 @@ export class Player {
     hp = 20,
     mana = 20,
     money = 0,
+    strength = 1,
+    accuracy = 1,
+    magic = 1,
+    combatMode = 'melee',
     level = 1,
     xp = 0,
     maxXp,
@@ -42,6 +46,12 @@ export class Player {
     this.peerId = peerId;
     this.nickname = nickname;
     this.money = Number(money);
+    this.strength = Math.max(1, Number(strength) || 1);
+    this.accuracy = Math.max(1, Number(accuracy) || 1);
+    this.magic = Math.max(1, Number(magic) || 1);
+    this.combatMode = ['melee', 'ranged', 'magic'].includes(combatMode)
+      ? combatMode
+      : 'melee';
     this.level = Math.max(1, Math.floor(Number(level)));
     this.maxHp = calculateMaxAttribute(20, this.level);
     this.maxMana = calculateMaxAttribute(20, this.level);
@@ -66,6 +76,12 @@ export class Player {
   getMainWeapon() {
     return this.inventory.find((item) => item.type === 'weapon' && item.slot === 'main')
       ?? null;
+  }
+
+  setCombatMode(mode) {
+    if (!['melee', 'ranged', 'magic'].includes(mode)) return false;
+    this.combatMode = mode;
+    return true;
   }
 
   canAttack(now) {
@@ -124,6 +140,10 @@ export class Player {
       mana: this.mana,
       maxMana: this.maxMana,
       money: this.money,
+      strength: this.strength,
+      accuracy: this.accuracy,
+      magic: this.magic,
+      combatMode: this.combatMode,
       level: this.level,
       xp: this.xp,
       maxXp: this.maxXp,

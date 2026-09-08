@@ -23,6 +23,12 @@ const accountMessage = document.querySelector('#account-message');
 const registerButton = document.querySelector('#register-button');
 const deathScreen = document.querySelector('#death-screen');
 const respawnButton = document.querySelector('#respawn-button');
+const menuButton = document.querySelector('#menu-button');
+const attributesMenu = document.querySelector('#attributes-menu');
+const strengthValue = document.querySelector('#player-strength-value');
+const accuracyValue = document.querySelector('#player-accuracy-value');
+const magicValue = document.querySelector('#player-magic-value');
+const combatModeButtons = [...document.querySelectorAll('[data-combat-mode]')];
 let gameStarted = false;
 
 function updateLoading(message, title = 'Carregando cena') {
@@ -50,6 +56,24 @@ const playerStatus = new PlayerStatus({
   goldValue: document.querySelector('#player-gold-value'),
 });
 playerStatus.update({ level: 1, hp: 20, maxHp: 20, mana: 20, maxMana: 20, xp: 0, maxXp: 4 });
+function updatePlayerAttributes({ strength = 1, accuracy = 1, magic = 1 } = {}) {
+  strengthValue.textContent = String(strength);
+  accuracyValue.textContent = String(accuracy);
+  magicValue.textContent = String(magic);
+}
+
+function updateCombatMode(mode = 'melee') {
+  combatModeButtons.forEach((button) => {
+    button.classList.toggle('combat-mode-selected', button.dataset.combatMode === mode);
+  });
+}
+
+updatePlayerAttributes();
+updateCombatMode();
+menuButton.addEventListener('click', () => {
+  const isHidden = attributesMenu.classList.toggle('attributes-menu-hidden');
+  menuButton.setAttribute('aria-expanded', String(!isHidden));
+});
 // O chat e a cena sao inicializados uma unica vez; os sistemas fazem o trabalho por frame.
 const chat = new ChatPanel({
   messagesElement: document.querySelector('#chat-messages'),
@@ -121,7 +145,11 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
     onStatus: (message) => {
       status.textContent = `${message} Clique para mover; Space cancela.`;
     },
-    onPlayerState: (player) => playerStatus.update(player),
+    onPlayerState: (player) => {
+      playerStatus.update(player);
+      updatePlayerAttributes(player);
+      updateCombatMode(player.combatMode);
+    },
     onDeath: () => deathScreen.classList.remove('death-screen-hidden'),
     onRespawn: () => deathScreen.classList.add('death-screen-hidden'),
     onChat: (message) => chat.addMessage(message),
@@ -129,6 +157,9 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
     createEnemyEntity: (enemy) => addRemoteEnemy(game.world, enemyAssets, enemy),
   });
   chat.connect((message) => multiplayer.sendChat(message));
+  combatModeButtons.forEach((button) => {
+    button.addEventListener('click', () => multiplayer.setCombatMode(button.dataset.combatMode));
+  });
   multiplayer.setLocalEntity(playerEntity);
   multiplayer.connect();
   return multiplayer;

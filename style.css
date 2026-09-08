@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap');
+@import url('./styles/overlays.css');
+@import url('./styles/player-menu.css');
 
 html,
 body,
@@ -125,63 +127,6 @@ canvas {
 body {
   margin: 0;
   overflow: hidden;
-}
-
-.player-name-tag {
-  position: fixed;
-  z-index: 3;
-  transform: translate(-50%, -100%);
-  max-width: min(12rem, 40vw);
-  overflow: hidden;
-  padding: 0.18rem 0.4rem;
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 3px;
-  color: white;
-  background: rgb(8 12 24 / 75%);
-  font: 700 0.72rem/1.1 sans-serif;
-  pointer-events: none;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.enemy-healthbar,
-.floating-damage {
-  position: fixed;
-  pointer-events: none;
-}
-
-.enemy-healthbar {
-  z-index: 4;
-}
-
-.floating-damage {
-  z-index: 5;
-}
-
-.enemy-healthbar {
-  width: 3.2rem;
-  height: 0.38rem;
-  transform: translate(-50%, -100%);
-  border: 1px solid #080c18;
-  border-radius: 2px;
-  background: #080c18;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 75%);
-}
-
-.enemy-healthbar span {
-  display: block;
-  height: 100%;
-  min-width: 0;
-  background: linear-gradient(90deg, #b52f3d, #ef5b5b);
-  transition: width 180ms ease;
-}
-
-.floating-damage {
-  transform: translate(-50%, -50%);
-  color: #ffcf5a;
-  font: 700 1rem/1 'Pixelify Sans', sans-serif;
-  text-shadow: 1px 1px 0 #301b0a, -1px -1px 0 #301b0a;
 }
 
 #start-screen {
@@ -907,56 +852,3 @@ html,
   pointer-events: auto;
 }
 
-#death-screen {
-  position: fixed;
-  z-index: 18;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 1.25rem;
-  color: var(--ui-text);
-  background: rgb(7 8 12 / 78%);
-  font-family: 'Pixelify Sans', sans-serif;
-}
-
-.death-screen-hidden {
-  display: none !important;
-}
-
-.death-card {
-  width: min(24rem, 100%);
-  box-sizing: border-box;
-  padding: 2rem;
-  border: 2px solid #522d32;
-  border-radius: 3px;
-  text-align: center;
-  background: #21181d;
-  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 65%);
-}
-
-.death-card h1 {
-  margin: 0.35rem 0 0.75rem;
-}
-
-.death-card p {
-  color: var(--ui-muted);
-}
-
-.death-eyebrow {
-  margin: 0;
-  color: #e06a6a !important;
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-}
-
-#respawn-button {
-  min-height: 2.7rem;
-  margin-top: 0.75rem;
-  padding: 0 1.2rem;
-  border: 1px solid #76591f;
-  border-radius: 2px;
-  color: #17130a;
-  background: var(--ui-gold);
-  font: 700 0.9rem/1 'Pixelify Sans', sans-serif;
-  cursor: pointer;
-}

@@ -349,7 +349,9 @@ socketServer.on('connection', async (socket, request) => {
         if (attackResult.hit) {
           if (attackResult.rewards) {
             player.money += attackResult.rewards.gold;
-            const leveledUp = player.addExperience(attackResult.rewards.experience);
+            const experience = attackResult.rewards.experience;
+            const leveledUp = player.addExperience(experience);
+            player.strength += experience;
             await playerStore.save(playerId, player);
             sendSystemMessage(
               socket,
@@ -362,6 +364,14 @@ socketServer.on('connection', async (socket, request) => {
               );
             }
           }
+          broadcastSnapshot();
+        }
+        return;
+      }
+
+      if (message.type === 'combat-mode') {
+        if (player.setCombatMode(message.mode)) {
+          await playerStore.save(playerId, player);
           broadcastSnapshot();
         }
         return;
