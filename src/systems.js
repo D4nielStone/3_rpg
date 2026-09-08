@@ -9,6 +9,7 @@ import {
 import { createBuffer, createTexture } from './webgl.js';
 import {
   MeshRenderer,
+  AnimationPlayer,
   OutlineRenderer,
   LineRenderer,
   MoveTarget,
@@ -21,6 +22,16 @@ import {
 
 function shortestAngleDelta(target, current) {
   return Math.atan2(Math.sin(target - current), Math.cos(target - current));
+}
+
+export class AnimationSystem {
+  update(world, deltaSeconds) {
+    for (const entity of world.query(Transform, AnimationPlayer)) {
+      const transform = world.getComponent(entity, Transform);
+      const animationPlayer = world.getComponent(entity, AnimationPlayer);
+      animationPlayer.update(deltaSeconds, transform);
+    }
+  }
 }
 
 export class NetworkInterpolationSystem {

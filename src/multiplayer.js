@@ -4,10 +4,12 @@ import {
   NameTag,
   NetworkIdentity,
   NetworkTransform,
+  MoveTarget,
   Transform,
 } from './components.js';
 
 const MESSAGE_LIMIT = 32;
+const COMBAT_DISTANCE = 1;
 
 export class MultiplayerSystem {
   constructor({
@@ -19,6 +21,8 @@ export class MultiplayerSystem {
     onStatus = () => {},
     onChat = () => {},
     onPlayerState = () => {},
+    onDeath = () => {},
+    onRespawn = () => {},
   }) {
     this.url = url;
     this.world = world;
@@ -28,6 +32,8 @@ export class MultiplayerSystem {
     this.onStatus = onStatus;
     this.onChat = onChat;
     this.onPlayerState = onPlayerState;
+    this.onDeath = onDeath;
+    this.onRespawn = onRespawn;
     this.socket = null;
     this.localEntity = null;
     this.localPeerId = null;
@@ -36,6 +42,9 @@ export class MultiplayerSystem {
     this.lastSentAt = 0;
     this.pendingState = null;
     this.localStateRestored = false;
+    this.localPlayerDead = false;
+    this.attackTargetEntity = null;
+    this.lastAttackRequestAt = 0;
   }
 
   setLocalEntity(entity) {
@@ -93,6 +102,20 @@ export class MultiplayerSystem {
       return;
     }
 
+    if (message.type === 'death') {
+      this.localPlayerDead = true;
+      this.onDeath();
+      return;
+    }
+
+    if (message.type === 'respawned') {
+      // O próximo snapshot contém a posição inicial restaurada pelo servidor.
+      this.localStateRestored = false;
+      this.localPlayerDead = false;
+      this.onRespawn();
+      return;
+    }
+
     if (message.type === 'snapshot' && Array.isArray(message.players)) {
       // O snapshot apenas agenda dados; a criacao/remoção ECS ocorre em update().
       this.pendingState = message.players.slice(0, MESSAGE_LIMIT);
@@ -128,15 +151,27 @@ export class MultiplayerSystem {
     return true;
   }
 
+  sendRespawn() {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify({ type: 'respawn' }));
+    return true;
+  }
+
   sendAttack() {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
     this.socket.send(JSON.stringify({ type: 'attack' }));
     return true;
   }
 
+  setAttackTarget(entity) {
+    this.attackTargetEntity = entity;
+  }
+
   update(world, time) {
     this.applySnapshot(world);
+    this.updateAttackTarget(world, time);
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN || !this.localEntity) return;
+    if (this.localPlayerDead) return;
     if (this.input?.consumePressed('f')) {
       this.sendAttack();
     }
@@ -152,12 +187,41 @@ export class MultiplayerSystem {
     this.lastSentAt = time;
   }
 
+  updateAttackTarget(world, time) {
+    if (!this.attackTargetEntity) return;
+    const targetTransform = world.getComponent(this.attackTargetEntity, Transform);
+    const playerTransform = world.getComponent(this.localEntity, Transform);
+    const moveTarget = world.getComponent(this.localEntity, MoveTarget);
+    if (!targetTransform || !playerTransform || !moveTarget) {
+      this.attackTargetEntity = null;
+      if (moveTarget) moveTarget.position = null;
+      return;
+    }
+
+    const deltaX = targetTransform.position[0] - playerTransform.position[0];
+    const deltaZ = targetTransform.position[2] - playerTransform.position[2];
+    const distance = Math.hypot(deltaX, deltaZ);
+    if (distance > COMBAT_DISTANCE) {
+      moveTarget.position = [
+        targetTransform.position[0] - deltaX / distance * COMBAT_DISTANCE,
+        targetTransform.position[1],
+        targetTransform.position[2] - deltaZ / distance * COMBAT_DISTANCE,
+      ];
+    } else {
+      moveTarget.position = null;
+    }
+    if (distance <= 1 && time - this.lastAttackRequestAt >= 200) {
+      if (this.sendAttack()) this.lastAttackRequestAt = time;
+    }
+  }
+
   applySnapshot(world) {
     if (!this.pendingState) return;
     const activePeers = new Set();
 
     for (const player of this.pendingState) {
       if (player.peerId === this.localPeerId) {
+        this.localPlayerDead = Boolean(player.dead);
         if (!this.localStateRestored && Array.isArray(player.position) && Array.isArray(player.rotation)) {
           const transform = world.getComponent(this.localEntity, Transform);
           if (transform) {

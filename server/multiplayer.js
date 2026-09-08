@@ -200,6 +200,13 @@ function resolvePlayerTarget(selector, requesterPeerId, requesterPlayerId) {
   return null;
 }
 
+function getPlayerIdByPeerId(peerId) {
+  for (const [playerId, session] of activeGuestSessions) {
+    if (session.peerId === peerId) return playerId;
+  }
+  return null;
+}
+
 function broadcastSnapshot() {
   // O relay mantem somente o estado temporario dos jogadores conectados.
   const snapshot = JSON.stringify({
@@ -254,6 +261,7 @@ socketServer.on('connection', async (socket, request) => {
     sentAt: Date.now(),
   });
   broadcastSnapshot();
+  if (player.dead) socket.send(JSON.stringify({ type: 'death' }));
 
   socket.on('message', async (rawMessage) => {
     try {
@@ -320,6 +328,7 @@ socketServer.on('connection', async (socket, request) => {
       }
 
       if (message.type === 'attack') {
+        if (player.dead) return;
         let attackResult = { hit: false };
         for (const area of enemyAreas) {
           attackResult = area.attack(player, Date.now());
@@ -341,6 +350,16 @@ socketServer.on('connection', async (socket, request) => {
         return;
       }
 
+      if (message.type === 'respawn') {
+        if (!player.dead) return;
+        player.respawn();
+        await playerStore.save(playerId, player);
+        socket.send(JSON.stringify({ type: 'respawned' }));
+        broadcastSnapshot();
+        return;
+      }
+
+      if (player.dead) return;
       if (message.type !== 'state' || !isVector(message.position) || !isVector(message.rotation)) {
         logger.warn('Mensagem inválida ignorada', { peerId, type: message.type });
         return;
@@ -377,7 +396,7 @@ playerStore.ready
     const initialSpawnAt = Date.now();
     for (const area of enemyAreas) area.update(initialSpawnAt, [], 0);
     let previousUpdateAt = initialSpawnAt;
-    setInterval(() => {
+    setInterval(async () => {
       const now = Date.now();
       const deltaSeconds = Math.min((now - previousUpdateAt) / 1000, 0.25);
       previousUpdateAt = now;
@@ -385,6 +404,17 @@ playerStore.ready
       for (const area of enemyAreas) {
         const result = area.update(now, players.values(), deltaSeconds);
         changed = result.changed || changed;
+        for (const deadPlayer of result.deadPlayers) {
+          const deadPlayerId = getPlayerIdByPeerId(deadPlayer.peerId);
+          const session = activeGuestSessions.get(deadPlayerId);
+          if (deadPlayerId) await playerStore.save(deadPlayerId, deadPlayer);
+          if (session?.socket.readyState === 1) {
+            session.socket.send(JSON.stringify({
+              type: 'death',
+              sentAt: Date.now(),
+            }));
+          }
+        }
       }
       if (changed) broadcastSnapshot();
     }, 50);

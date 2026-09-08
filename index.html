@@ -33,6 +33,14 @@
                 <p id="loading-message">Preparando o mundo...</p>
             </div>
         </section>
+        <section id="death-screen" class="death-screen-hidden" aria-labelledby="death-title">
+            <div class="death-card">
+                <p class="death-eyebrow">FIM DA BATALHA</p>
+                <h1 id="death-title">Você morreu</h1>
+                <p>O ouro foi perdido e 10% do XP foi removido.</p>
+                <button id="respawn-button" type="button">Voltar ao início</button>
+            </div>
+        </section>
         <main>
             <canvas id="canvas" width="800" height="500"></canvas>
             <nav id="ui-scale-controls" aria-label="Tamanho da interface">
@@ -43,13 +51,13 @@
             <section id="player-status" aria-label="Status do jogador">
                 <div class="status-row status-health">
                     <span class="status-label">VIDA</span>
-                    <span id="player-hp-value">100/100</span>
+                    <span id="player-hp-value">20/20</span>
                 </div>
                 <div class="status-bar"><span id="player-hp-bar"></span></div>
                 <div class="status-row"><span class="status-label"></span></div>
                 <div class="status-row status-mana">
                     <span class="status-label">MANA</span>
-                    <span id="player-mana-value">50/50</span>
+                    <span id="player-mana-value">20/20</span>
                 </div>
                 <div class="status-bar"><span id="player-mana-bar"></span></div>
                 <div class="status-row"><span class="status-label"></span></div>

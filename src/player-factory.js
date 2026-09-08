@@ -1,6 +1,7 @@
 import { loadAsset } from './asset-loader.js';
 import {
   MeshRenderer,
+  AnimationPlayer,
   MoveTarget,
   NetworkIdentity,
   NetworkTransform,
@@ -33,6 +34,7 @@ function createPatternTexture() {
 function addController(world, entity) {
   // Componentes comuns a jogador local e fallback ficam centralizados aqui.
   world.addComponent(entity, new Transform());
+  world.addComponent(entity, new AnimationPlayer());
   world.addComponent(entity, new PlayerController());
   world.addComponent(entity, new MoveTarget());
 }
@@ -63,6 +65,10 @@ export async function loadPlayer(world, textureManager) {
     textureManager,
   );
   world.addComponent(entity, asset.mesh ?? asset);
+  world.addComponent(entity, new AnimationPlayer({
+    animations: asset.animations,
+    mixer: asset.animationMixer,
+  }));
   world.addComponent(entity, asset.texture ?? new Texture({
     image: createPatternTexture(),
     name: 'fallback-texture',

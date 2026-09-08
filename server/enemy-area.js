@@ -24,6 +24,7 @@ export class EnemyArea {
   update(time, players = [], deltaSeconds = 1) {
     let changed = false;
     const damagedPlayers = [];
+    const deadPlayers = [];
     const activePlayers = [...players];
     for (const enemy of this.enemies.values()) {
       const previousPosition = [...enemy.position];
@@ -36,6 +37,10 @@ export class EnemyArea {
         || previousPosition[2] !== enemy.position[2];
     }
 
+    for (const player of activePlayers) {
+      if (player.hp <= 0 && player.die()) deadPlayers.push(player);
+    }
+
     if (this.enemies.size < this.maxEnemies && time - this.lastSpawnAt >= this.spawnIntervalMs) {
       const enemy = new Enemy({
         type: this.enemyType,
@@ -45,7 +50,11 @@ export class EnemyArea {
       this.lastSpawnAt = time;
       changed = true;
     }
-    return { changed: changed || damagedPlayers.length > 0, damagedPlayers };
+    return {
+      changed: changed || damagedPlayers.length > 0 || deadPlayers.length > 0,
+      damagedPlayers,
+      deadPlayers,
+    };
   }
 
   randomPosition() {

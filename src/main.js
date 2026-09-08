@@ -21,6 +21,8 @@ const guestButton = document.querySelector('#guest-button');
 const nicknameInput = document.querySelector('#nickname');
 const accountMessage = document.querySelector('#account-message');
 const registerButton = document.querySelector('#register-button');
+const deathScreen = document.querySelector('#death-screen');
+const respawnButton = document.querySelector('#respawn-button');
 let gameStarted = false;
 
 function updateLoading(message, title = 'Carregando cena') {
@@ -47,7 +49,7 @@ const playerStatus = new PlayerStatus({
   levelValue: document.querySelector('#player-level-value'),
   goldValue: document.querySelector('#player-gold-value'),
 });
-playerStatus.update({ level: 1, hp: 100, maxHp: 100, mana: 100, maxMana: 100, xp: 0, maxXp: 4 });
+playerStatus.update({ level: 1, hp: 20, maxHp: 20, mana: 20, maxMana: 20, xp: 0, maxXp: 4 });
 // O chat e a cena sao inicializados uma unica vez; os sistemas fazem o trabalho por frame.
 const chat = new ChatPanel({
   messagesElement: document.querySelector('#chat-messages'),
@@ -120,6 +122,8 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
       status.textContent = `${message} Clique para mover; Space cancela.`;
     },
     onPlayerState: (player) => playerStatus.update(player),
+    onDeath: () => deathScreen.classList.remove('death-screen-hidden'),
+    onRespawn: () => deathScreen.classList.add('death-screen-hidden'),
     onChat: (message) => chat.addMessage(message),
     createRemoteEntity: (peerId, nickname, level) => addRemotePlayer(game.world, playerEntity, peerId, nickname, level),
     createEnemyEntity: (enemy) => addRemoteEnemy(game.world, enemyAssets, enemy),
@@ -164,10 +168,14 @@ async function start() {
   // createMap(game.world);
 
   const multiplayerSystem = createMultiplayer(game, playerEntity, enemyAssets);
+  respawnButton.addEventListener('click', () => multiplayerSystem.sendRespawn());
   game.enemyHoverSystem.onSelect = (entity) => {
     if (entity && game.world.getComponent(entity, EnemyIdentity)) {
+      multiplayerSystem.setAttackTarget(entity);
       multiplayerSystem.sendAttack();
+      return;
     }
+    multiplayerSystem.setAttackTarget(null);
   };
 
   status.textContent = usedFallback

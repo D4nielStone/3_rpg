@@ -32,7 +32,6 @@ export function addRemoteEnemy(world, enemyAssets, enemy) {
 
   const entity = world.createEntity();
   world.addComponent(entity, new Transform({ position: enemy.position }));
-  world.getComponent(entity, Transform).scale = [0.3, 0.3, 0.3];
   world.addComponent(entity, new EnemyIdentity({
     enemyId: enemy.id,
     type: enemy.type,

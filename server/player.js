@@ -21,14 +21,16 @@ function calculateMaxXp(level) {
   return Math.ceil(level * (level / 100 + 3));
 }
 
+function calculateMaxAttribute(baseValue, level) {
+  return Math.round(baseValue * 1.2 ** (level - 1));
+}
+
 export class Player {
   constructor({
     peerId,
     nickname = 'Guest',
-    hp = 100,
-    maxHp = 100,
-    mana = 100,
-    maxMana = 100,
+    hp = 20,
+    mana = 20,
     money = 0,
     level = 1,
     xp = 0,
@@ -39,12 +41,13 @@ export class Player {
   } = {}) {
     this.peerId = peerId;
     this.nickname = nickname;
-    this.hp = Number(hp);
-    this.maxHp = Number(maxHp);
-    this.mana = Number(mana);
-    this.maxMana = Number(maxMana);
     this.money = Number(money);
     this.level = Math.max(1, Math.floor(Number(level)));
+    this.maxHp = calculateMaxAttribute(20, this.level);
+    this.maxMana = calculateMaxAttribute(20, this.level);
+    this.hp = Math.min(this.maxHp, Math.max(0, Number(hp)));
+    this.dead = this.hp <= 0;
+    this.mana = Math.min(this.maxMana, Math.max(0, Number(mana)));
     this.xp = Number(xp);
     this.maxXp = calculateMaxXp(this.level);
     this.position = copyVector(position, DEFAULT_POSITION);
@@ -86,9 +89,29 @@ export class Player {
       this.xp -= this.maxXp;
       this.level += 1;
       this.maxXp = calculateMaxXp(this.level);
+      this.maxHp = calculateMaxAttribute(20, this.level);
+      this.maxMana = calculateMaxAttribute(20, this.level);
+      this.hp = this.maxHp;
+      this.mana = this.maxMana;
       leveledUp = true;
     }
     return leveledUp;
+  }
+
+  die() {
+    if (this.dead) return false;
+    this.hp = 0;
+    this.money = 0;
+    this.xp = Math.floor(this.xp * 0.9);
+    this.dead = true;
+    return true;
+  }
+
+  respawn() {
+    this.hp = this.maxHp;
+    this.dead = false;
+    this.position = [...DEFAULT_POSITION];
+    this.rotation = [...DEFAULT_ROTATION];
   }
 
   toSnapshot() {
@@ -96,6 +119,7 @@ export class Player {
       peerId: this.peerId,
       nickname: this.nickname,
       hp: this.hp,
+      dead: this.dead,
       maxHp: this.maxHp,
       mana: this.mana,
       maxMana: this.maxMana,

@@ -2,6 +2,7 @@ import { Camera } from './camera.js';
 import { World } from './ecs.js';
 import {
   LineSystem,
+  AnimationSystem,
   MovementSystem,
   NetworkInterpolationSystem,
   RenderSystem,
@@ -109,6 +110,7 @@ export function createGame(canvas, status) {
     world,
     textureManager,
     input,
+    animationSystem: new AnimationSystem(),
     movementSystem: new MovementSystem(input),
     networkInterpolationSystem: new NetworkInterpolationSystem(),
     lineSystem: new LineSystem(canvas, camera),

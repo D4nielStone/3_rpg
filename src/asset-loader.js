@@ -1,6 +1,6 @@
 import { MeshRenderer, Texture } from './components.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { Color } from 'three';
+import { AnimationMixer, Color } from 'three';
 
 function parseIndex(value, length) {
   const index = Number.parseInt(value, 10);
@@ -150,6 +150,8 @@ export async function loadGLTF(url, textureManager = null) {
       texture,
     }),
     texture,
+    animations: gltf.animations,
+    animationMixer: gltf.animations.length ? new AnimationMixer(gltf.scene) : null,
   };
 }
 

@@ -896,3 +896,57 @@ html,
   visibility: visible;
   pointer-events: auto;
 }
+
+#death-screen {
+  position: fixed;
+  z-index: 18;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  color: var(--ui-text);
+  background: rgb(7 8 12 / 78%);
+  font-family: 'Pixelify Sans', sans-serif;
+}
+
+.death-screen-hidden {
+  display: none !important;
+}
+
+.death-card {
+  width: min(24rem, 100%);
+  box-sizing: border-box;
+  padding: 2rem;
+  border: 2px solid #522d32;
+  border-radius: 3px;
+  text-align: center;
+  background: #21181d;
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 65%);
+}
+
+.death-card h1 {
+  margin: 0.35rem 0 0.75rem;
+}
+
+.death-card p {
+  color: var(--ui-muted);
+}
+
+.death-eyebrow {
+  margin: 0;
+  color: #e06a6a !important;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+}
+
+#respawn-button {
+  min-height: 2.7rem;
+  margin-top: 0.75rem;
+  padding: 0 1.2rem;
+  border: 1px solid #76591f;
+  border-radius: 2px;
+  color: #17130a;
+  background: var(--ui-gold);
+  font: 700 0.9rem/1 'Pixelify Sans', sans-serif;
+  cursor: pointer;
+}

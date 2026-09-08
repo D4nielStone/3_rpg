@@ -42,7 +42,8 @@ export class Enemy {
 
   updateChase(players, deltaSeconds) {
     this.attackCooldown = Math.max(0, this.attackCooldown - deltaSeconds);
-    let target = players.find((player) => player.peerId === this.targetPeerId) ?? null;
+    let target = players.find((player) =>
+      !player.dead && player.peerId === this.targetPeerId) ?? null;
     let targetDistance = target
       ? Math.hypot(
         target.position[0] - this.position[0],
@@ -52,6 +53,7 @@ export class Enemy {
 
     for (const player of players) {
       if (target) break;
+      if (player.dead) continue;
       const distance = Math.hypot(
         player.position[0] - this.position[0],
         player.position[2] - this.position[2],
