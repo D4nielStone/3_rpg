@@ -8,6 +8,7 @@ export class EnemyArea {
     depth = 25,
     maxEnemies = 5,
     enemyType = 'rat',
+    areaLevel = 1,
     spawnIntervalMs = 3000,
   } = {}) {
     this.id = id;
@@ -16,6 +17,7 @@ export class EnemyArea {
     this.depth = depth;
     this.maxEnemies = maxEnemies;
     this.enemyType = enemyType;
+    this.areaLevel = areaLevel;
     this.spawnIntervalMs = spawnIntervalMs;
     this.enemies = new Map();
     this.lastSpawnAt = 0;
@@ -25,7 +27,7 @@ export class EnemyArea {
     let changed = false;
     const damagedPlayers = [];
     const deadPlayers = [];
-    const activePlayers = [...players];
+    const activePlayers = [...players].filter((player) => this.contains(player.position));
     for (const enemy of this.enemies.values()) {
       const previousPosition = [...enemy.position];
       const previousAlerted = enemy.alerted;
@@ -44,6 +46,7 @@ export class EnemyArea {
     if (this.enemies.size < this.maxEnemies && time - this.lastSpawnAt >= this.spawnIntervalMs) {
       const enemy = new Enemy({
         type: this.enemyType,
+        level: this.areaLevel,
         position: this.randomPosition(),
       });
       this.enemies.set(enemy.id, enemy);
@@ -63,6 +66,11 @@ export class EnemyArea {
       this.center[1],
       this.center[2] + (Math.random() - 0.5) * this.depth,
     ];
+  }
+
+  contains(position) {
+    return Math.abs(position[0] - this.center[0]) <= this.width / 2
+      && Math.abs(position[2] - this.center[2]) <= this.depth / 2;
   }
 
   removeEnemy(enemyId) {

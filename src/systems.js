@@ -10,6 +10,7 @@ import { createBuffer, createTexture } from './webgl.js';
 import {
   MeshRenderer,
   AnimationPlayer,
+  ShadowRenderer,
   OutlineRenderer,
   LineRenderer,
   MoveTarget,
@@ -18,6 +19,7 @@ import {
   Texture,
   Transform,
   Water,
+  EnemyAreaRenderer,
 } from './components.js';
 
 function shortestAngleDelta(target, current) {
@@ -194,12 +196,14 @@ export class RenderSystem {
     this.program = program;
     this.locations = locations;
     this.camera = camera;
+    this.lightDirection = [-0.45, -1, -0.35];
   }
 
   prepareMesh(mesh) {
     if (!mesh.positionBuffer) {
       mesh.positionBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, mesh.vertices);
       mesh.colorBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, mesh.colors);
+      mesh.normalBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, mesh.normals);
       if (mesh.uvs) mesh.uvBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, mesh.uvs);
       mesh.indexBuffer = createBuffer(this.gl, this.gl.ELEMENT_ARRAY_BUFFER, mesh.indices);
     } else if (mesh.dirty) {
@@ -207,6 +211,14 @@ export class RenderSystem {
       this.gl.bufferData(this.gl.ARRAY_BUFFER, mesh.vertices, this.gl.DYNAMIC_DRAW);
     }
     mesh.dirty = false;
+  }
+
+  prepareShadow(shadow) {
+    if (shadow.positionBuffer) return;
+    shadow.positionBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, shadow.vertices);
+    shadow.colorBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, shadow.colors);
+    shadow.normalBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, shadow.normals);
+    shadow.indexBuffer = createBuffer(this.gl, this.gl.ELEMENT_ARRAY_BUFFER, shadow.indices);
   }
 
   prepareTexture(texture) {
@@ -308,6 +320,43 @@ export class RenderSystem {
     const { gl, locations } = this;
     const view = this.camera.getViewMatrix();
     const projection = this.camera.getProjectionMatrix();
+    const [lightX, lightY, lightZ] = this.lightDirection;
+    gl.uniform3f(locations.lightDirection, lightX, lightY, lightZ);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enableVertexAttribArray(locations.normal);
+
+    for (const entity of world.query(Transform, ShadowRenderer)) {
+      const transform = world.getComponent(entity, Transform);
+      const shadow = world.getComponent(entity, ShadowRenderer);
+      this.prepareShadow(shadow);
+      const shadowTransform = {
+        ...transform,
+        position: [
+          transform.position[0] - lightX * 0.18,
+          transform.position[1],
+          transform.position[2] - lightZ * 0.18,
+        ],
+        scale: [transform.scale[0] * 1.1, transform.scale[1], transform.scale[2] * 1.1],
+      };
+      const shadowModel = this.getModelMatrix(shadowTransform);
+      gl.uniformMatrix4fv(locations.modelMatrix, false, shadowModel);
+      gl.uniformMatrix4fv(locations.matrix, false, multiplyMatrices(
+        projection,
+        multiplyMatrices(view, shadowModel),
+      ));
+      gl.uniform1f(locations.isShadow, 1);
+      gl.uniform1f(locations.useTexture, 0);
+      gl.uniform1f(locations.isWater, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, shadow.positionBuffer);
+      gl.vertexAttribPointer(locations.position, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, shadow.colorBuffer);
+      gl.vertexAttribPointer(locations.color, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, shadow.normalBuffer);
+      gl.vertexAttribPointer(locations.normal, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shadow.indexBuffer);
+      gl.drawElements(gl.TRIANGLES, shadow.indices.length, gl.UNSIGNED_SHORT, 0);
+    }
 
     for (const entity of world.query(Transform, MeshRenderer)) {
       const transform = world.getComponent(entity, Transform);
@@ -323,6 +372,13 @@ export class RenderSystem {
       );
 
       gl.uniformMatrix4fv(locations.matrix, false, matrix);
+      gl.uniformMatrix4fv(locations.modelMatrix, false, this.getModelMatrix(transform));
+      gl.uniform3f(locations.lightDirection, -0.45, -1.0, -0.35);
+      gl.uniform1f(locations.isShadow, 0);
+        gl.uniform1f(locations.isEnemyArea, 0);
+        gl.uniform1f(locations.isEnemyArea, 0);
+        const enemyArea = world.getComponent(entity, EnemyAreaRenderer);
+        gl.uniform1f(locations.isEnemyArea, enemyArea ? 1 : 0);
       gl.uniform1f(locations.useTexture, texture ? 1 : 0);
       gl.uniform1f(locations.isWater, water ? 1 : 0);
       gl.uniform1f(locations.time, time);
@@ -330,6 +386,8 @@ export class RenderSystem {
       gl.vertexAttribPointer(locations.position, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.colorBuffer);
       gl.vertexAttribPointer(locations.color, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalBuffer);
+      gl.vertexAttribPointer(locations.normal, 3, gl.FLOAT, false, 0, 0);
 
       if (mesh.uvs && texture) {
         gl.activeTexture(gl.TEXTURE0);
@@ -344,11 +402,14 @@ export class RenderSystem {
     }
 
     for (const entity of world.query(LineRenderer)) {
+      gl.disableVertexAttribArray(locations.normal);
+      gl.vertexAttrib3f(locations.normal, 0, 1, 0);
       const line = world.getComponent(entity, LineRenderer);
       this.prepareLine(line);
       if (line.indices.length === 0) continue;
 
       gl.uniformMatrix4fv(locations.matrix, false, multiplyMatrices(projection, view));
+      gl.uniform1f(locations.isShadow, 0);
       gl.uniform1f(locations.useTexture, 0);
       gl.uniform1f(locations.isWater, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, line.positionBuffer);
@@ -360,6 +421,8 @@ export class RenderSystem {
     }
 
     for (const entity of world.query(Transform, OutlineRenderer)) {
+      gl.disableVertexAttribArray(locations.normal);
+      gl.vertexAttrib3f(locations.normal, 0, 1, 0);
       const transform = world.getComponent(entity, Transform);
       const outline = world.getComponent(entity, OutlineRenderer);
       this.prepareOutline(outline, transform, time);
@@ -367,6 +430,7 @@ export class RenderSystem {
       if (outline.indices.length === 0) continue;
 
       gl.uniformMatrix4fv(locations.matrix, false, multiplyMatrices(projection, view));
+      gl.uniform1f(locations.isShadow, 0);
       gl.uniform1f(locations.useTexture, 0);
       gl.uniform1f(locations.isWater, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, outline.positionBuffer);

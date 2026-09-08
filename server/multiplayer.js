@@ -126,7 +126,36 @@ const enemyAreas = [new EnemyArea({
   depth: 25,
   maxEnemies: 5,
   enemyType: 'rat',
+  areaLevel: 1,
+}), new EnemyArea({
+  id: 'second-rat-area',
+  center: [35, 0, 0],
+  width: 25,
+  depth: 25,
+  maxEnemies: 5,
+  enemyType: 'rat',
+  areaLevel: 2,
 })];
+const MIN_LEVEL_FOR_HIGHER_AREA = 3;
+
+function findPlayerArea(position) {
+  return enemyAreas.find((area) => area.contains(position)) ?? null;
+}
+
+function promotePlayerToAreaTwo(player) {
+  if (player.level < MIN_LEVEL_FOR_HIGHER_AREA || player.area?.id !== 'starting-rat-area') {
+    return false;
+  }
+
+  const area = enemyAreas.find((item) => item.id === 'second-rat-area');
+  player.position = [...area.center];
+  player.area = {
+    id: area.id,
+    name: 'Área dos Ratos 2',
+    level: area.areaLevel,
+  };
+  return true;
+}
 
 function getConnectionIdentity(requestUrl) {
   try {
@@ -278,6 +307,12 @@ socketServer.on('connection', async (socket, request) => {
       const player = players.get(peerId);
       if (!player) return;
 
+      if (message.type === 'ranking-request') {
+        const ranking = await playerStore.getRanking();
+        socket.send(JSON.stringify({ type: 'ranking', players: ranking }));
+        return;
+      }
+
       if (message.type === 'chat' && isChatMessage(message.text)) {
         const text = message.text.trim();
         const command = parseAdminCommand(text);
@@ -304,7 +339,9 @@ socketServer.on('connection', async (socket, request) => {
           let messageText;
           if (command.type === 'xp') {
             const leveledUp = target.player.addExperience(command.amount);
+            const promoted = leveledUp && promotePlayerToAreaTwo(target.player);
             messageText = `+${command.amount} XP para ${target.player.nickname}${leveledUp ? '. Level aumentado.' : '.'}`;
+            if (promoted) messageText += ' Teletransportado para a Área dos Ratos 2.';
             if (leveledUp) {
               const targetSession = activeGuestSessions.get(target.playerId);
               sendSystemMessage(
@@ -355,6 +392,7 @@ socketServer.on('connection', async (socket, request) => {
             player.money += attackResult.rewards.gold;
             const experience = attackResult.rewards.experience;
             const leveledUp = player.addExperience(experience);
+            const promoted = leveledUp && promotePlayerToAreaTwo(player);
             await playerStore.save(playerId, player);
             sendSystemMessage(
               socket,
@@ -365,6 +403,9 @@ socketServer.on('connection', async (socket, request) => {
                 socket,
                 `Você subiu para o level ${player.level}! Vida e mana restauradas para 100%.`,
               );
+            }
+            if (promoted) {
+              sendSystemMessage(socket, 'Você alcançou o nível 3 e foi teletransportado para a Área dos Ratos 2.');
             }
           } else {
             await playerStore.save(playerId, player);
@@ -406,6 +447,38 @@ socketServer.on('connection', async (socket, request) => {
         logger.warn('Mensagem inválida ignorada', { peerId, type: message.type });
         return;
       }
+      const currentArea = enemyAreas[0];
+      const outsideCurrentArea = Math.abs(message.position[0] - currentArea.center[0]) > currentArea.width / 2
+        || Math.abs(message.position[2] - currentArea.center[2]) > currentArea.depth / 2;
+      if (outsideCurrentArea && player.level < MIN_LEVEL_FOR_HIGHER_AREA) {
+        socket.send(JSON.stringify({
+          type: 'area-blocked',
+          position: [...player.position],
+          rotation: [...player.rotation],
+        }));
+        sendSystemMessage(
+          socket,
+          `Acesso bloqueado. Você precisa do nível ${MIN_LEVEL_FOR_HIGHER_AREA} para entrar em uma área superior.`,
+        );
+        return;
+      }
+      const destinationArea = findPlayerArea(message.position);
+      if (!destinationArea) {
+        sendSystemMessage(socket, 'Você está fora de uma área disponível.');
+        return;
+      }
+      if (destinationArea.areaLevel > 1 && player.level < MIN_LEVEL_FOR_HIGHER_AREA) {
+        sendSystemMessage(
+          socket,
+          `Acesso bloqueado. Você precisa do nível ${MIN_LEVEL_FOR_HIGHER_AREA} para entrar nesta área.`,
+        );
+        return;
+      }
+      player.area = {
+        id: destinationArea.id,
+        name: destinationArea.id === 'second-rat-area' ? 'Área dos Ratos 2' : 'Área dos Ratos',
+        level: destinationArea.areaLevel,
+      };
       player.setTransform(message.position, message.rotation);
       await playerStore.save(playerId, player);
       broadcastSnapshot();

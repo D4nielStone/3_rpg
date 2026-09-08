@@ -144,4 +144,12 @@ export class Camera {
       targetHeight,
     };
   }
+
+  zoom(amount, { minDistance = 2, maxDistance = 14 } = {}) {
+    if (!this.orbit) return;
+    this.orbit.distance = Math.min(
+      maxDistance,
+      Math.max(minDistance, this.orbit.distance + amount),
+    );
+  }
 }

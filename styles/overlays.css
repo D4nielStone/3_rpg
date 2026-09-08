@@ -48,3 +48,25 @@
   font: 700 1rem/1 'Pixelify Sans', sans-serif;
   text-shadow: 1px 1px 0 #301b0a, -1px -1px 0 #301b0a;
 }
+
+@media (max-width: 640px) {
+  .player-name-tag {
+    max-width: 8rem;
+    padding: 0.14rem 0.3rem;
+    font-size: 0.62rem;
+  }
+
+  .enemy-healthbar {
+    width: 2.7rem;
+    height: 0.34rem;
+  }
+
+  .floating-damage {
+    font-size: 0.9rem;
+  }
+
+  .death-card {
+    width: calc(100vw - 2rem);
+    padding: 1.35rem;
+  }
+}

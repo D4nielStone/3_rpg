@@ -16,7 +16,7 @@ const ENEMY_TYPES = {
 };
 
 export class Enemy {
-  constructor({ id = randomUUID(), type = 'rat', position = [0, 0, 0] } = {}) {
+  constructor({ id = randomUUID(), type = 'rat', level, position = [0, 0, 0] } = {}) {
     const definition = ENEMY_TYPES[type];
     if (!definition) throw new Error(`Tipo de inimigo desconhecido: ${type}`);
 
@@ -24,7 +24,7 @@ export class Enemy {
     this.type = type;
     this.name = definition.name;
     this.model = definition.model;
-    this.level = definition.level;
+    this.level = Math.max(1, Number(level) || definition.level);
     this.hp = definition.maxHp;
     this.maxHp = definition.maxHp;
     this.defense = Math.max(0, Number(definition.defense) || 0);

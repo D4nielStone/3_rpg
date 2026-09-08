@@ -43,6 +43,7 @@ export class Player {
     accuracy = 1,
     magic = 1,
     combatMode = 'melee',
+    area = { id: 'starting-rat-area', name: 'Área dos Ratos', level: 1 },
     level = 1,
     xp = 0,
     maxXp,
@@ -62,6 +63,7 @@ export class Player {
     this.combatMode = ['melee', 'ranged', 'magic'].includes(combatMode)
       ? combatMode
       : 'melee';
+    this.area = { ...area };
     this.level = Math.max(1, Math.floor(Number(level)));
     this.maxHp = calculateMaxAttribute(20, this.level);
     this.maxMana = calculateMaxAttribute(20, this.level);
@@ -124,6 +126,29 @@ export class Player {
     return leveledUp;
   }
 
+  loseExperiencePercent(percent) {
+    const loss = Math.min(100, Math.max(0, Number(percent) || 0));
+    let totalExperience = this.xp;
+    for (let level = 1; level < this.level; level += 1) {
+      totalExperience += calculateMaxXp(level);
+    }
+
+    totalExperience = Math.floor(totalExperience * (1 - loss / 100));
+    this.level = 1;
+    this.xp = totalExperience;
+    this.maxXp = calculateMaxXp(this.level);
+    while (this.xp >= this.maxXp) {
+      this.xp -= this.maxXp;
+      this.level += 1;
+      this.maxXp = calculateMaxXp(this.level);
+    }
+
+    this.maxHp = calculateMaxAttribute(20, this.level);
+    this.maxMana = calculateMaxAttribute(20, this.level);
+    this.hp = Math.min(this.hp, this.maxHp);
+    this.mana = Math.min(this.mana, this.maxMana);
+  }
+
   addStrengthExperience(amount) {
     const experience = Number(amount);
     if (!Number.isFinite(experience) || experience <= 0) return false;
@@ -151,7 +176,7 @@ export class Player {
     if (this.dead) return false;
     this.hp = 0;
     this.money = 0;
-    this.xp = Math.floor(this.xp * 0.9);
+    this.loseExperiencePercent(45);
     this.dead = true;
     return true;
   }
@@ -179,6 +204,7 @@ export class Player {
       accuracy: this.accuracy,
       magic: this.magic,
       combatMode: this.combatMode,
+      area: { ...this.area },
       level: this.level,
       xp: this.xp,
       maxXp: this.maxXp,

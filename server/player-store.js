@@ -80,6 +80,20 @@ export class PlayerStore {
     return result.rows[0] ?? null;
   }
 
+  async getRanking(limit = 10) {
+    await this.ready;
+    const result = await this.pool.query(`
+      SELECT
+        state->>'nickname' AS nickname,
+        COALESCE((state->>'level')::int, 1) AS level,
+        COALESCE((state->>'xp')::int, 0) AS xp
+      FROM players
+      ORDER BY level DESC, xp DESC, nickname ASC
+      LIMIT $1
+    `, [limit]);
+    return result.rows;
+  }
+
   async save(guestId, player) {
     await this.ready;
     await this.pool.query(`

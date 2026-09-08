@@ -74,6 +74,7 @@ export async function loadGLTF(url, textureManager = null) {
 
   const mergedVertices = [];
   const mergedColors = [];
+  const mergedNormals = [];
   const mergedIndices = [];
   const mergedUVs = [];
   const animationEntries = [];
@@ -101,6 +102,7 @@ export async function loadGLTF(url, textureManager = null) {
     const material = mesh.material;
     const materialColor = material && material.color ? material.color : new Color(0.95, 0.55, 0.2);
     const colorAttribute = nonIndexed.getAttribute('color');
+    const normalAttribute = nonIndexed.getAttribute('normal');
     const uvAttribute = nonIndexed.getAttribute('uv');
     const indexAttribute = nonIndexed.getIndex();
 
@@ -135,6 +137,16 @@ export async function loadGLTF(url, textureManager = null) {
         mergedColors.push(materialColor.r, materialColor.g, materialColor.b);
       }
 
+      if (normalAttribute) {
+        mergedNormals.push(
+          normalAttribute.getX(i),
+          normalAttribute.getY(i),
+          normalAttribute.getZ(i),
+        );
+      } else {
+        mergedNormals.push(0, 1, 0);
+      }
+
       if (uvAttribute) {
         mergedUVs.push(uvAttribute.getX(i), uvAttribute.getY(i));
       }
@@ -160,6 +172,7 @@ export async function loadGLTF(url, textureManager = null) {
   const renderMesh = new MeshRenderer({
       vertices: new Float32Array(mergedVertices),
       colors: new Float32Array(mergedColors),
+      normals: new Float32Array(mergedNormals),
       indices: new Uint16Array(mergedIndices),
       uvs: mergedUVs.length ? new Float32Array(mergedUVs) : null,
       texture,

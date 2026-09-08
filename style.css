@@ -572,6 +572,8 @@ body {
     left: max(0.75rem, env(safe-area-inset-left));
     width: min(13rem, calc(100vw - 1.5rem));
     padding: 0.65rem;
+    max-height: calc(100dvh - 1.5rem);
+    overflow-y: auto;
   }
 
   #chat {
@@ -719,7 +721,7 @@ html,
   gap: 0.65rem;
   padding: 0.65rem;
   border: 1px solid #424954;
-  border-radius: 8px;
+  border-radius: 2px;
   background: #1b2027;
   box-shadow: 0 0.8rem 2rem rgb(0 0 0 / 48%), inset 0 1px rgb(255 255 255 / 7%);
 }

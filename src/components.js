@@ -193,6 +193,33 @@ export class OutlineRenderer {
   }
 }
 
+export class ShadowRenderer {
+  constructor({ radius = [0.7, 0.4], segments = 24 } = {}) {
+    const [radiusX, radiusZ] = radius;
+    const vertices = [0, 0.01, 0];
+    const colors = [0.02, 0.02, 0.02];
+    const normals = [0, 1, 0];
+    const indices = [];
+    for (let index = 0; index <= segments; index += 1) {
+      const angle = index / segments * Math.PI * 2;
+      vertices.push(Math.cos(angle) * radiusX, 0.01, Math.sin(angle) * radiusZ);
+      colors.push(0.02, 0.02, 0.02);
+      normals.push(0, 1, 0);
+      if (index > 0) indices.push(0, index, index + 1);
+    }
+    this.vertices = new Float32Array(vertices);
+    this.colors = new Float32Array(colors);
+    this.normals = new Float32Array(normals);
+    this.indices = new Uint16Array(indices);
+    this.positionBuffer = null;
+    this.colorBuffer = null;
+    this.normalBuffer = null;
+    this.indexBuffer = null;
+  }
+}
+
+export class EnemyAreaRenderer {}
+
 export class Texture {
   constructor({
     image = null,
@@ -214,10 +241,14 @@ export class Texture {
 }
 
 export class MeshRenderer {
-  constructor({ vertices, colors, indices, uvs = null, texture = null }) {
+  constructor({ vertices, colors, indices, normals = null, uvs = null, texture = null }) {
     this.vertices = vertices;
     this.colors = colors;
     this.indices = indices;
+    this.normals = normals ?? new Float32Array(vertices.length).fill(0);
+    if (!normals) {
+      for (let index = 1; index < this.normals.length; index += 3) this.normals[index] = 1;
+    }
     this.uvs = uvs;
     this.texture = texture;
     this.positionBuffer = null;

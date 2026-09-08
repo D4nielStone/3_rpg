@@ -29,6 +29,11 @@ const strengthValue = document.querySelector('#player-strength-value');
 const accuracyValue = document.querySelector('#player-accuracy-value');
 const magicValue = document.querySelector('#player-magic-value');
 const combatModeButtons = [...document.querySelectorAll('[data-combat-mode]')];
+const rankingButton = document.querySelector('#ranking-button');
+const rankingMenu = document.querySelector('#ranking-menu');
+const rankingList = document.querySelector('#ranking-list');
+const onlinePlayersPanel = document.querySelector('#online-players-panel');
+const onlinePlayersList = document.querySelector('#online-players-list');
 let gameStarted = false;
 
 function updateLoading(message, title = 'Carregando cena') {
@@ -74,12 +79,46 @@ function updateCombatMode(mode = 'melee') {
   });
 }
 
+function renderOnlinePlayers(players = []) {
+  onlinePlayersList.replaceChildren();
+  players.forEach((player) => {
+    const item = document.createElement('li');
+    const nickname = document.createElement('span');
+    const level = document.createElement('strong');
+    nickname.textContent = player.nickname ?? 'Guest';
+    level.textContent = `LVL ${player.level ?? 1}`;
+    item.append(nickname, level);
+    onlinePlayersList.append(item);
+  });
+}
+
+window.addEventListener('keydown', (event) => {
+  if (event.key !== 'Tab') return;
+  event.preventDefault();
+  onlinePlayersPanel.classList.toggle('online-players-hidden');
+});
+
 updatePlayerAttributes();
 updateCombatMode();
 menuButton.addEventListener('click', () => {
   const isHidden = attributesMenu.classList.toggle('attributes-menu-hidden');
+  rankingMenu.classList.add('attributes-menu-hidden');
+  rankingButton.setAttribute('aria-expanded', 'false');
   menuButton.setAttribute('aria-expanded', String(!isHidden));
 });
+
+function renderRanking(players = []) {
+  rankingList.replaceChildren();
+  players.forEach((player, index) => {
+    const item = document.createElement('li');
+    const name = document.createElement('span');
+    const score = document.createElement('strong');
+    name.textContent = `${index + 1}. ${player.nickname ?? 'Guest'}`;
+    score.textContent = `LVL ${player.level} | XP ${player.xp}`;
+    item.append(name, score);
+    rankingList.append(item);
+  });
+}
 // O chat e a cena sao inicializados uma unica vez; os sistemas fazem o trabalho por frame.
 const chat = new ChatPanel({
   messagesElement: document.querySelector('#chat-messages'),
@@ -155,9 +194,12 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
       playerStatus.update(player);
       updatePlayerAttributes(player);
       updateCombatMode(player.combatMode);
+      status.textContent = `Área: ${player.area?.name ?? 'Área dos Ratos'} (Nível ${player.area?.level ?? 1}). Clique para mover; Space cancela.`;
     },
     onDeath: () => deathScreen.classList.remove('death-screen-hidden'),
     onRespawn: () => deathScreen.classList.add('death-screen-hidden'),
+    onRanking: renderRanking,
+    onOnlinePlayers: renderOnlinePlayers,
     onChat: (message) => chat.addMessage(message),
     createRemoteEntity: (peerId, nickname, level) => addRemotePlayer(game.world, playerEntity, peerId, nickname, level),
     createEnemyEntity: (enemy) => addRemoteEnemy(game.world, enemyAssets, enemy),
@@ -165,6 +207,13 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
   chat.connect((message) => multiplayer.sendChat(message));
   combatModeButtons.forEach((button) => {
     button.addEventListener('click', () => multiplayer.setCombatMode(button.dataset.combatMode));
+  });
+  rankingButton.addEventListener('click', () => {
+    const isHidden = rankingMenu.classList.toggle('attributes-menu-hidden');
+    attributesMenu.classList.add('attributes-menu-hidden');
+    menuButton.setAttribute('aria-expanded', 'false');
+    rankingButton.setAttribute('aria-expanded', String(!isHidden));
+    if (!isHidden) multiplayer.requestRanking();
   });
   multiplayer.setLocalEntity(playerEntity);
   multiplayer.connect();

@@ -23,6 +23,8 @@ export class MultiplayerSystem {
     onPlayerState = () => {},
     onDeath = () => {},
     onRespawn = () => {},
+    onRanking = () => {},
+    onOnlinePlayers = () => {},
   }) {
     this.url = url;
     this.world = world;
@@ -34,6 +36,8 @@ export class MultiplayerSystem {
     this.onPlayerState = onPlayerState;
     this.onDeath = onDeath;
     this.onRespawn = onRespawn;
+    this.onRanking = onRanking;
+    this.onOnlinePlayers = onOnlinePlayers;
     this.socket = null;
     this.localEntity = null;
     this.localPeerId = null;
@@ -129,10 +133,34 @@ export class MultiplayerSystem {
       return;
     }
 
+    if (message.type === 'area-blocked') {
+      const transform = this.localEntity
+        ? this.world.getComponent(this.localEntity, Transform)
+        : null;
+      const moveTarget = this.localEntity
+        ? this.world.getComponent(this.localEntity, MoveTarget)
+        : null;
+      if (transform && Array.isArray(message.position)) transform.position = [...message.position];
+      if (transform && Array.isArray(message.rotation)) transform.rotation = [...message.rotation];
+      if (moveTarget) moveTarget.position = null;
+      this.onChat({
+        type: 'system',
+        text: 'Acesso bloqueado: alcance o nível 3 para entrar em uma área superior.',
+        sentAt: Date.now(),
+      });
+      return;
+    }
+
     if (message.type === 'snapshot' && Array.isArray(message.players)) {
       // O snapshot apenas agenda dados; a criacao/remoção ECS ocorre em update().
       this.pendingState = message.players.slice(0, MESSAGE_LIMIT);
+      this.onOnlinePlayers(this.pendingState);
       this.pendingEnemies = Array.isArray(message.enemies) ? message.enemies : [];
+      return;
+    }
+
+    if (message.type === 'ranking' && Array.isArray(message.players)) {
+      this.onRanking(message.players);
       return;
     }
 
@@ -161,6 +189,12 @@ export class MultiplayerSystem {
     if (!message || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
 
     this.socket.send(JSON.stringify({ type: 'chat', text: message }));
+    return true;
+  }
+
+  requestRanking() {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify({ type: 'ranking-request' }));
     return true;
   }
 
