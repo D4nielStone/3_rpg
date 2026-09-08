@@ -4,8 +4,8 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>WebGL RPG Multiplayer</title>
-      <script type="module" crossorigin src="/assets/index--WXXD66T.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-BITY4pnJ.css">
+      <script type="module" crossorigin src="/assets/index-BFYg1V27.js"></script>
+      <link rel="stylesheet" crossorigin href="/assets/index-C5jQll69.css">
     </head>
     <body>
         <section id="start-screen" aria-labelledby="start-title">
@@ -20,6 +20,7 @@
                     <input id="password" name="password" type="password" minlength="4" autocomplete="current-password" required placeholder="Mínimo de 4 caracteres" />
                     <p id="account-message" class="account-message" role="alert"></p>
                     <button class="start-primary" type="submit">Entrar</button>
+                    <button id="register-button" class="start-register" type="button">Criar conta</button>
                 </form>
                 <div class="start-divider"><span>ou</span></div>
                 <button id="guest-button" class="start-guest" type="button">Continuar como guest</button>
@@ -53,7 +54,6 @@
             </section>
             <aside id="chat" aria-label="Chat do jogo">
                 <header class="chat-header">
-                    <h2>Chat</h2>
                     <button id="chat-toggle" type="button" aria-label="Ocultar chat" aria-expanded="true">-</button>
                 </header>
                 <div id="chat-content">

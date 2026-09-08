@@ -9,6 +9,7 @@ import {
 import { InputState } from './input.js';
 import { TextureManager } from './texture-manager.js';
 import { createProgram } from './webgl.js';
+import { NameTagSystem } from './name-tags.js';
 
 const vertexShaderSource = `
   precision mediump float;
@@ -108,6 +109,7 @@ export function createGame(canvas, status) {
     movementSystem: new MovementSystem(new InputState()),
     networkInterpolationSystem: new NetworkInterpolationSystem(),
     lineSystem: new LineSystem(canvas, camera),
+    nameTagSystem: new NameTagSystem(canvas, camera),
     renderSystem: new RenderSystem(gl, program, locations, camera),
   };
 }

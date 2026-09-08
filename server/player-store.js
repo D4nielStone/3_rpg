@@ -50,7 +50,7 @@ export class PlayerStore {
       'SELECT state FROM players WHERE guest_id = $1',
       [guestId],
     );
-    return new Player({ peerId, nickname, ...(result.rows[0]?.state ?? {}) });
+    return new Player({ peerId, ...(result.rows[0]?.state ?? {}), nickname });
   }
 
   async registerUser(id, nickname, passwordHash) {

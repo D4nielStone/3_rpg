@@ -150,7 +150,7 @@ export class MultiplayerSystem {
       activePeers.add(player.peerId);
       let entity = this.remoteEntities.get(player.peerId);
       if (!entity) {
-        entity = this.createRemoteEntity(player.peerId);
+        entity = this.createRemoteEntity(player.peerId, player.nickname);
         this.remoteEntities.set(player.peerId, entity);
       }
 

@@ -33,6 +33,16 @@ export class NetworkTransform {
   }
 }
 
+export class NameTag {
+  constructor({ text = 'Guest' } = {}) {
+    this.text = text;
+    this.element = document.createElement('span');
+    this.element.className = 'player-name-tag';
+    this.element.textContent = text;
+    document.body.append(this.element);
+  }
+}
+
 export class Texture {
   constructor({
     image = null,

@@ -3,10 +3,67 @@ import { randomUUID } from 'node:crypto';
 import { WebSocketServer } from 'ws';
 import { ServerLogger } from './logger.js';
 import { PlayerStore } from './player-store.js';
+import {
+  createAccountId,
+  createSession,
+  hashPassword,
+  validateCredentials,
+  verifyPassword,
+} from './auth.js';
 
 const port = Number(process.env.PORT ?? process.env.MULTIPLAYER_PORT ?? 5174);
 const host = process.env.HOST ?? '0.0.0.0';
-const server = createServer((request, response) => {
+async function readJson(request) {
+  let body = '';
+  for await (const chunk of request) {
+    body += chunk;
+    if (body.length > 16_384) throw new Error('Payload too large');
+  }
+  return JSON.parse(body || '{}');
+}
+
+function sendJson(response, statusCode, body) {
+  response.writeHead(statusCode, { 'content-type': 'application/json' });
+  response.end(JSON.stringify(body));
+}
+
+const server = createServer(async (request, response) => {
+  if (request.method === 'POST' && ['/api/register', '/api/login'].includes(request.url)) {
+    try {
+      const body = await readJson(request);
+      const nickname = typeof body.nickname === 'string' ? body.nickname.trim() : '';
+      const password = body.password;
+      if (!validateCredentials(nickname, password)) {
+        sendJson(response, 400, { error: 'Nickname ou senha invalidos.' });
+        return;
+      }
+      if (request.url === '/api/register') {
+        if (await playerStore.findUser(nickname)) {
+          sendJson(response, 409, { error: 'Nickname indisponivel.' });
+          return;
+        }
+        const user = { id: createAccountId(), nickname };
+        await playerStore.registerUser(user.id, nickname, await hashPassword(password));
+        const session = createSession(user);
+        sessions.set(session.token, session);
+        sendJson(response, 201, { token: session.token, nickname });
+        return;
+      }
+      const user = await playerStore.findUser(nickname);
+      if (!user || !(await verifyPassword(password, user.password_hash))) {
+        sendJson(response, 401, { error: 'Credenciais invalidas.' });
+        return;
+      }
+      const session = createSession(user);
+      sessions.set(session.token, session);
+      sendJson(response, 200, { token: session.token, nickname: user.nickname });
+    } catch (error) {
+      logger.warn('Falha na autenticacao', { error: error.message });
+      sendJson(response, 400, { error: 'Nao foi possivel processar a solicitacao.' });
+    }
+    return;
+  }
+
   if (request.url === '/') {
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({
@@ -30,16 +87,22 @@ const server = createServer((request, response) => {
 const socketServer = new WebSocketServer({ server });
 const players = new Map();
 const activeGuestSessions = new Map();
+const sessions = new Map();
 const logger = new ServerLogger();
 const playerStore = new PlayerStore();
 
-function getGuestId(requestUrl) {
+function getConnectionIdentity(requestUrl) {
   try {
-    const guestId = new URL(requestUrl, 'ws://localhost').searchParams.get('guestId');
-    return /^[0-9a-f-]{36}$/i.test(guestId ?? '') ? guestId : randomUUID();
+    const params = new URL(requestUrl, 'ws://localhost').searchParams;
+    const token = params.get('token');
+    const session = token ? sessions.get(token) : null;
+    if (session) return { id: session.userId, nickname: session.nickname };
+    const guestId = params.get('guestId');
+    if (/^[0-9a-f-]{36}$/i.test(guestId ?? '')) return { id: guestId, nickname: 'Guest' };
   } catch {
-    return randomUUID();
+    return null;
   }
+  return { id: randomUUID(), nickname: 'Guest' };
 }
 
 function isVector(value) {
@@ -76,21 +139,26 @@ function broadcast(message) {
 
 socketServer.on('connection', async (socket, request) => {
   const peerId = randomUUID();
-  const guestId = getGuestId(request.url);
+  const identity = getConnectionIdentity(request.url);
+  if (!identity) {
+    socket.close(4001, 'Authentication required');
+    return;
+  }
+  const playerId = identity.id;
   const userLabel = getUserLabel(peerId);
-  if (activeGuestSessions.has(guestId)) {
-    logger.warn('Conexao duplicada recusada', { peerId, guestId });
+  if (activeGuestSessions.has(playerId)) {
+    logger.warn('Conexao duplicada recusada', { peerId, playerId });
     socket.close(4008, 'Guest already connected');
     return;
   }
-  activeGuestSessions.set(guestId, { peerId, socket });
+  activeGuestSessions.set(playerId, { peerId, socket });
 
   let player;
   try {
-    player = await playerStore.get(guestId, peerId);
+    player = await playerStore.get(playerId, peerId, identity.nickname);
   } catch (error) {
     logger.error('Falha ao carregar jogador', { peerId, error: error.message });
-    activeGuestSessions.delete(guestId);
+    activeGuestSessions.delete(playerId);
     socket.close(1011, 'Database unavailable');
     return;
   }
@@ -130,7 +198,7 @@ socketServer.on('connection', async (socket, request) => {
         return;
       }
       player.setTransform(message.position, message.rotation);
-      await playerStore.save(guestId, player);
+      await playerStore.save(playerId, player);
       broadcastSnapshot();
     } catch (error) {
       logger.warn('Falha ao processar mensagem do jogador', { peerId, error: error.message });
@@ -138,10 +206,10 @@ socketServer.on('connection', async (socket, request) => {
   });
 
   socket.on('close', async () => {
-    const activeSession = activeGuestSessions.get(guestId);
-    if (activeSession?.peerId === peerId) activeGuestSessions.delete(guestId);
+    const activeSession = activeGuestSessions.get(playerId);
+    if (activeSession?.peerId === peerId) activeGuestSessions.delete(playerId);
     const player = players.get(peerId);
-    if (player) playerStore.save(guestId, player).catch((error) => {
+    if (player) playerStore.save(playerId, player).catch((error) => {
       logger.error('Falha ao salvar jogador', { peerId, error: error.message });
     });
     players.delete(peerId);

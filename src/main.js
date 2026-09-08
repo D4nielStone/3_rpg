@@ -1,4 +1,4 @@
-import { LineRenderer, Transform } from './components.js';
+import { LineRenderer, NameTag, Transform } from './components.js';
 import { MultiplayerSystem } from './multiplayer.js';
 import { addRemotePlayer, loadPlayer, spawnFallbackPlayer } from './player-factory.js';
 import { createGame } from './game-setup.js';
@@ -18,6 +18,7 @@ const accountForm = document.querySelector('#account-form');
 const guestButton = document.querySelector('#guest-button');
 const nicknameInput = document.querySelector('#nickname');
 const accountMessage = document.querySelector('#account-message');
+const registerButton = document.querySelector('#register-button');
 let gameStarted = false;
 
 function updateLoading(message, title = 'Carregando cena') {
@@ -85,9 +86,11 @@ function createMultiplayer(game, playerEntity) {
     .replace(/^http:/, 'ws:')
     .replace(/^https:/, 'wss:')
     .replace(/\/$/, '');
+  const sessionToken = window.sessionStorage.getItem('webgl-rpg-session-token');
   const guestId = getGuestId();
   const url = multiplayerUrl ? new URL(multiplayerUrl) : null;
-  url?.searchParams.set('guestId', guestId);
+  if (sessionToken) url?.searchParams.set('token', sessionToken);
+  else url?.searchParams.set('guestId', guestId);
   const multiplayer = new MultiplayerSystem({
     url: url?.toString() ?? '',
     world: game.world,
@@ -96,7 +99,7 @@ function createMultiplayer(game, playerEntity) {
     },
     onPlayerState: (player) => playerStatus.update(player),
     onChat: (message) => chat.addMessage(message),
-    createRemoteEntity: (peerId) => addRemotePlayer(game.world, playerEntity, peerId),
+    createRemoteEntity: (peerId, nickname) => addRemotePlayer(game.world, playerEntity, peerId, nickname),
   });
   chat.connect((message) => multiplayer.sendChat(message));
   multiplayer.setLocalEntity(playerEntity);
@@ -121,6 +124,9 @@ async function start() {
   updateLoading('Carregando cenário e personagem...');
   createWater(game.world);
   const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game);
+  game.world.addComponent(playerEntity, new NameTag({
+    text: window.localStorage.getItem('webgl-rpg-nickname') ?? 'Guest',
+  }));
 
   updateLoading('Finalizando cena...');
   followPlayer(game, playerEntity);
@@ -144,8 +150,35 @@ async function start() {
   startGameLoop({ ...game, multiplayerSystem });
 }
 
-function beginGame(nickname) {
+async function authenticateAccount(nickname, password, mode = 'login') {
+  const configuredUrl = import.meta.env.VITE_MULTIPLAYER_URL?.trim();
+  const httpUrl = (configuredUrl || `${window.location.protocol}//${window.location.hostname}:5174`)
+    .replace(/^wss:/, 'https:')
+    .replace(/^ws:/, 'http:')
+    .replace(/\/$/, '');
+  const response = await fetch(`${httpUrl}/api/${mode}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ nickname, password }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error ?? 'Falha na autenticacao.');
+  window.sessionStorage.setItem('webgl-rpg-session-token', result.token);
+  return result.nickname;
+}
+
+async function beginGame(nickname, password = null, mode = 'login') {
   if (gameStarted) return;
+  if (password) {
+    try {
+      nickname = await authenticateAccount(nickname, password, mode);
+    } catch (error) {
+      accountMessage.textContent = error.message;
+      return;
+    }
+  } else {
+    window.sessionStorage.removeItem('webgl-rpg-session-token');
+  }
   gameStarted = true;
   window.localStorage.setItem('webgl-rpg-nickname', nickname);
   startScreen.classList.add('start-screen-hidden');
@@ -167,10 +200,20 @@ accountForm.addEventListener('submit', (event) => {
     accountMessage.textContent = 'Use um nickname com 2 caracteres e uma senha com 4.';
     return;
   }
-  beginGame(nickname);
+  beginGame(nickname, password);
 });
 
 guestButton.addEventListener('click', () => {
   const guestNickname = `Guest-${window.crypto.randomUUID().slice(0, 4).toUpperCase()}`;
   beginGame(guestNickname);
+});
+
+registerButton.addEventListener('click', () => {
+  const nickname = nicknameInput.value.trim();
+  const password = document.querySelector('#password').value;
+  if (nickname.length < 2 || password.length < 8) {
+    accountMessage.textContent = 'Use nickname valido e senha com pelo menos 8 caracteres.';
+    return;
+  }
+  beginGame(nickname, password, 'register');
 });
