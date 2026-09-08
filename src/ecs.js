@@ -25,6 +25,8 @@ export class World {
 
   removeEntity(entity) {
     for (const componentMap of this.components.values()) {
+      const component = componentMap.get(entity);
+      component?.dispose?.();
       componentMap.delete(entity);
     }
   }

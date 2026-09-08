@@ -41,6 +41,10 @@ export class NameTag {
     this.element.textContent = text;
     document.body.append(this.element);
   }
+
+  dispose() {
+    this.element.remove();
+  }
 }
 
 export class Texture {
