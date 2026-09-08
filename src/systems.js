@@ -26,10 +26,11 @@ function shortestAngleDelta(target, current) {
 
 export class AnimationSystem {
   update(world, deltaSeconds) {
+    const updatedMixers = new Set();
     for (const entity of world.query(Transform, AnimationPlayer)) {
       const transform = world.getComponent(entity, Transform);
       const animationPlayer = world.getComponent(entity, AnimationPlayer);
-      animationPlayer.update(deltaSeconds, transform);
+      animationPlayer.update(deltaSeconds, transform, updatedMixers);
     }
   }
 }
@@ -196,20 +197,16 @@ export class RenderSystem {
   }
 
   prepareMesh(mesh) {
-    if (mesh.positionBuffer) {
-      return;
+    if (!mesh.positionBuffer) {
+      mesh.positionBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, mesh.vertices);
+      mesh.colorBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, mesh.colors);
+      if (mesh.uvs) mesh.uvBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, mesh.uvs);
+      mesh.indexBuffer = createBuffer(this.gl, this.gl.ELEMENT_ARRAY_BUFFER, mesh.indices);
+    } else if (mesh.dirty) {
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, mesh.positionBuffer);
+      this.gl.bufferData(this.gl.ARRAY_BUFFER, mesh.vertices, this.gl.DYNAMIC_DRAW);
     }
-
-    mesh.positionBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, mesh.vertices);
-    mesh.colorBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, mesh.colors);
-    if (mesh.uvs) {
-      mesh.uvBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, mesh.uvs);
-    }
-    mesh.indexBuffer = createBuffer(
-      this.gl,
-      this.gl.ELEMENT_ARRAY_BUFFER,
-      mesh.indices,
-    );
+    mesh.dirty = false;
   }
 
   prepareTexture(texture) {

@@ -1,6 +1,6 @@
 import { MeshRenderer, Texture } from './components.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { AnimationMixer, Color } from 'three';
+import { AnimationMixer, Color, SkinnedMesh, Vector3 } from 'three';
 
 function parseIndex(value, length) {
   const index = Number.parseInt(value, 10);
@@ -76,18 +76,27 @@ export async function loadGLTF(url, textureManager = null) {
   const mergedColors = [];
   const mergedIndices = [];
   const mergedUVs = [];
+  const animationEntries = [];
   let vertexOffset = 0;
   let texture = null;
+  gltf.scene.updateMatrixWorld(true);
 
   for (const mesh of meshes) {
     const geometry = mesh.geometry.clone();
-    geometry.applyMatrix4(mesh.matrixWorld);
     const nonIndexed = geometry.toNonIndexed();
     const positionAttribute = nonIndexed.getAttribute('position');
 
     if (!positionAttribute) {
       continue;
     }
+
+    const skinnedMesh = mesh.isSkinnedMesh
+      ? new SkinnedMesh(nonIndexed, mesh.material)
+      : null;
+    if (skinnedMesh) {
+      skinnedMesh.bind(mesh.skeleton, mesh.bindMatrix);
+    }
+    animationEntries.push({ mesh, positionAttribute, skinnedMesh, vertexOffset });
 
     const material = mesh.material;
     const materialColor = material && material.color ? material.color : new Color(0.95, 0.55, 0.2);
@@ -103,10 +112,17 @@ export async function loadGLTF(url, textureManager = null) {
     }
 
     for (let i = 0; i < positionAttribute.count; i += 1) {
-      mergedVertices.push(
+      const position = new Vector3(
         positionAttribute.getX(i),
         positionAttribute.getY(i),
         positionAttribute.getZ(i),
+      );
+      if (skinnedMesh) skinnedMesh.getVertexPosition(i, position);
+      position.applyMatrix4(mesh.matrixWorld);
+      mergedVertices.push(
+        position.x,
+        position.y,
+        position.z,
       );
 
       if (colorAttribute) {
@@ -141,17 +157,41 @@ export async function loadGLTF(url, textureManager = null) {
     throw new Error(`Não foi possível converter o GLTF/GLB em mesh renderizável: ${url}`);
   }
 
-  return {
-    mesh: new MeshRenderer({
+  const renderMesh = new MeshRenderer({
       vertices: new Float32Array(mergedVertices),
       colors: new Float32Array(mergedColors),
       indices: new Uint16Array(mergedIndices),
       uvs: mergedUVs.length ? new Float32Array(mergedUVs) : null,
       texture,
-    }),
+  });
+
+  const animationUpdate = () => {
+    gltf.scene.updateMatrixWorld(true);
+    const position = new Vector3();
+    for (const entry of animationEntries) {
+      for (let index = 0; index < entry.positionAttribute.count; index += 1) {
+        position.set(
+          entry.positionAttribute.getX(index),
+          entry.positionAttribute.getY(index),
+          entry.positionAttribute.getZ(index),
+        );
+        if (entry.skinnedMesh) entry.skinnedMesh.getVertexPosition(index, position);
+        position.applyMatrix4(entry.mesh.matrixWorld);
+        const offset = (entry.vertexOffset + index) * 3;
+        renderMesh.vertices[offset] = position.x;
+        renderMesh.vertices[offset + 1] = position.y;
+        renderMesh.vertices[offset + 2] = position.z;
+      }
+    }
+    renderMesh.dirty = true;
+  };
+
+  return {
+    mesh: renderMesh,
     texture,
     animations: gltf.animations,
     animationMixer: gltf.animations.length ? new AnimationMixer(gltf.scene) : null,
+    animationUpdate,
   };
 }
 
@@ -159,7 +199,7 @@ const loaders = new Map();
 
 // Mantém os caminhos dos assets da cena fora da lógica de inicialização.
 const GAME_ASSETS = {
-  enemies: ['/models/rat/scene.glb'],
+  enemies: ['/models/test/source/AmongUS[Red].glb'],
 };
 
 export function registerAssetLoader(format, loader) {

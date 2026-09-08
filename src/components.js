@@ -9,18 +9,19 @@ export class Transform {
 import { LoopOnce, LoopRepeat } from 'three';
 
 export class AnimationPlayer {
-  constructor({ animations = {}, mixer = null, initialAnimation = null, speed = 1 } = {}) {
+  constructor({ animations = {}, mixer = null, onUpdate = null, initialAnimation = null, speed = 1 } = {}) {
     this.animations = Array.isArray(animations)
       ? Object.fromEntries(animations.map((animation) => [animation.name, animation]))
       : animations;
     this.mixer = mixer;
+    this.onUpdate = onUpdate;
     this.action = null;
     this.currentAnimation = null;
     this.elapsed = 0;
     this.speed = Math.max(0, Number(speed) || 0);
     this.playing = false;
     const firstAnimation = initialAnimation ?? Object.keys(this.animations)[0];
-    if (firstAnimation) this.play(firstAnimation);
+    if (firstAnimation !== undefined) this.play(firstAnimation);
   }
 
   play(name, { loop = true, reset = true } = {}) {
@@ -55,11 +56,15 @@ export class AnimationPlayer {
     this.elapsed = 0;
   }
 
-  update(deltaSeconds, transform) {
-    if (!this.playing || !this.currentAnimation) return;
+  update(deltaSeconds, transform, updatedMixers = null) {
+    if (!this.playing || this.currentAnimation === null) return;
     const animation = this.animations[this.currentAnimation];
     if (this.mixer) {
-      this.mixer.update(deltaSeconds * this.speed);
+      if (!updatedMixers || !updatedMixers.has(this.mixer)) {
+        this.mixer.update(deltaSeconds * this.speed);
+        updatedMixers?.add(this.mixer);
+      }
+      this.onUpdate?.();
       return;
     }
     const duration = Math.max(0, Number(animation.duration) || 0);
@@ -215,6 +220,7 @@ export class MeshRenderer {
     this.colorBuffer = null;
     this.indexBuffer = null;
     this.uvBuffer = null;
+    this.dirty = false;
   }
 }
 

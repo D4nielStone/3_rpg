@@ -68,6 +68,7 @@ export async function loadPlayer(world, textureManager) {
   world.addComponent(entity, new AnimationPlayer({
     animations: asset.animations,
     mixer: asset.animationMixer,
+    onUpdate: asset.animationUpdate,
   }));
   world.addComponent(entity, asset.texture ?? new Texture({
     image: createPatternTexture(),

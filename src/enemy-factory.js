@@ -1,6 +1,7 @@
 import {
   EnemyIdentity,
   EnemyHealthBar,
+  AnimationPlayer,
   MeshRenderer,
   NameTag,
   NetworkTransform,
@@ -55,6 +56,13 @@ export function addRemoteEnemy(world, enemyAssets, enemy) {
     texture: asset.texture,
   });
   world.addComponent(entity, mesh);
+  if (asset.animations?.length && asset.animationMixer) {
+    world.addComponent(entity, new AnimationPlayer({
+      animations: asset.animations,
+      mixer: asset.animationMixer,
+      onUpdate: asset.animationUpdate,
+    }));
+  }
   if (asset.texture) world.addComponent(entity, asset.texture);
   return entity;
 }
