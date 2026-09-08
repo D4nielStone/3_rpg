@@ -133,21 +133,23 @@ export class LineSystem {
       const vertices = [];
       const colors = [];
       const indices = [];
-      // O seno anima apenas a altura visual; o destino real continua no chao.
-      const height = target[1] + 0.04 + Math.sin(time * 0.006) * 0.2;
+      // O marcador permanece no destino; apenas o raio pulsa visualmente.
+      const height = target[1] + 0.04;
+      const visualScale = 1 + Math.sin(time * 0.006) * 0.2;
+      const outerRadius = line.radius * visualScale;
       // O anel usa triangulos para que a espessura seja consistente no WebGL.
-      const innerRadius = Math.max(0, line.radius - line.thickness);
+      const innerRadius = Math.max(0, outerRadius - line.thickness);
 
       for (let index = 0; index < line.segments; index += 1) {
         const angle = (index / line.segments) * Math.PI * 2;
         const nextAngle = ((index + 1) / line.segments) * Math.PI * 2;
         const first = vertices.length / 3;
         vertices.push(
-          target[0] + Math.cos(angle) * line.radius, height,
+          target[0] + Math.cos(angle) * outerRadius, height,
           target[2] + Math.sin(angle) * line.radius,
           target[0] + Math.cos(angle) * innerRadius, height,
           target[2] + Math.sin(angle) * innerRadius,
-          target[0] + Math.cos(nextAngle) * line.radius, height,
+          target[0] + Math.cos(nextAngle) * outerRadius, height,
           target[2] + Math.sin(nextAngle) * line.radius,
           target[0] + Math.cos(nextAngle) * innerRadius, height,
           target[2] + Math.sin(nextAngle) * innerRadius,

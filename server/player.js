@@ -7,6 +7,10 @@ function copyVector(vector, fallback) {
     : [...fallback];
 }
 
+function calculateMaxXp(level) {
+  return Math.ceil(level * (level / 100 + 3));
+}
+
 export class Player {
   constructor({
     peerId,
@@ -16,8 +20,9 @@ export class Player {
     mana = 100,
     maxMana = 100,
     money = 0,
+    level = 1,
     xp = 0,
-    maxXp = 100,
+    maxXp,
     position = DEFAULT_POSITION,
     rotation = DEFAULT_ROTATION,
     inventory = [],
@@ -29,8 +34,9 @@ export class Player {
     this.mana = Number(mana);
     this.maxMana = Number(maxMana);
     this.money = Number(money);
+    this.level = Math.max(1, Math.floor(Number(level)));
     this.xp = Number(xp);
-    this.maxXp = Number(maxXp);
+    this.maxXp = calculateMaxXp(this.level);
     this.position = copyVector(position, DEFAULT_POSITION);
     this.rotation = copyVector(rotation, DEFAULT_ROTATION);
     this.inventory = Array.isArray(inventory) ? [...inventory] : [];
@@ -39,6 +45,19 @@ export class Player {
   setTransform(position, rotation) {
     this.position = copyVector(position, this.position);
     this.rotation = copyVector(rotation, this.rotation);
+  }
+
+  addExperience(amount) {
+    const experience = Number(amount);
+    if (!Number.isFinite(experience) || experience <= 0) return false;
+
+    this.xp += experience;
+    if (this.xp < this.maxXp) return false;
+
+    this.level += 1;
+    this.xp = 0;
+    this.maxXp = calculateMaxXp(this.level);
+    return true;
   }
 
   toSnapshot() {
@@ -50,6 +69,7 @@ export class Player {
       mana: this.mana,
       maxMana: this.maxMana,
       money: this.money,
+      level: this.level,
       xp: this.xp,
       maxXp: this.maxXp,
       position: [...this.position],

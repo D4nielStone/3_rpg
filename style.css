@@ -241,6 +241,7 @@ body {
 .start-primary {
   color: #111827;
   background: #ffb703;
+  font-family: 'Pixelify Sans', sans-serif;
 }
 
 .start-register {
@@ -250,12 +251,14 @@ body {
   background: transparent;
   font: 600 0.8rem/1 sans-serif;
   cursor: pointer;
+  font-family: 'Pixelify Sans', sans-serif;
 }
 
 .start-guest {
   width: 100%;
   color: white;
   background: rgb(255 255 255 / 10%);
+  font-family: 'Pixelify Sans', sans-serif;
 }
 
 .start-primary:hover,

@@ -140,6 +140,13 @@ function isChatMessage(value) {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= 200;
 }
 
+function parseExperienceCommand(text) {
+  const match = text.trim().match(/^\/xp\s+(\d+)$/i);
+  if (!match) return null;
+  const amount = Number(match[1]);
+  return Number.isSafeInteger(amount) && amount > 0 && amount <= 1_000_000 ? amount : null;
+}
+
 function getUserLabel(peerId, nickname) {
   return nickname || `Usuário ${peerId.slice(0, 6)}`;
 }
@@ -205,15 +212,39 @@ socketServer.on('connection', async (socket, request) => {
       if (!player) return;
 
       if (message.type === 'chat' && isChatMessage(message.text)) {
+        const text = message.text.trim();
+        const experienceAmount = parseExperienceCommand(text);
+        if (experienceAmount !== null) {
+          if (player.nickname !== 'ADMIN') {
+            socket.send(JSON.stringify({
+              type: 'system',
+              text: 'Comando restrito ao administrador.',
+              sentAt: Date.now(),
+            }));
+            return;
+          }
+
+          const leveledUp = player.addExperience(experienceAmount);
+          await playerStore.save(playerId, player);
+          socket.send(JSON.stringify({
+            type: 'system',
+            text: leveledUp
+              ? `XP adicionado. Level ${player.level}; XP zerado para o proximo nivel.`
+              : `XP adicionado: ${experienceAmount}. Progresso ${player.xp}/${player.maxXp}.`,
+            sentAt: Date.now(),
+          }));
+          broadcastSnapshot();
+          return;
+        }
         logger.info('Mensagem de chat recebida', {
           peerId,
-          length: message.text.trim().length,
+          length: text.length,
         });
         broadcast({
           type: 'chat',
           peerId,
           nickname: player.nickname,
-          text: message.text.trim(),
+          text,
           sentAt: Date.now(),
         });
         return;
