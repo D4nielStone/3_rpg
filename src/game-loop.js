@@ -20,7 +20,7 @@ export function startGameLoop({
     multiplayerSystem.update(world, time);
     networkInterpolationSystem.update(world, deltaSeconds);
     lineSystem.update(world, time);
-    renderSystem.render(world);
+    renderSystem.render(world, time);
     requestAnimationFrame(frame);
   }
 

@@ -54,4 +54,9 @@ export class Player {
       inventory: [...this.inventory],
     };
   }
+
+  toPersistence() {
+    const { peerId, ...persistentState } = this.toSnapshot();
+    return persistentState;
+  }
 }

@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { WebSocketServer } from 'ws';
 import { ServerLogger } from './logger.js';
-import { Player } from './player.js';
+import { PlayerStore } from './player-store.js';
 
 const port = Number(process.env.PORT ?? process.env.MULTIPLAYER_PORT ?? 5174);
 const host = process.env.HOST ?? '0.0.0.0';
@@ -30,6 +30,16 @@ const server = createServer((request, response) => {
 const socketServer = new WebSocketServer({ server });
 const players = new Map();
 const logger = new ServerLogger();
+const playerStore = new PlayerStore();
+
+function getGuestId(requestUrl) {
+  try {
+    const guestId = new URL(requestUrl, 'ws://localhost').searchParams.get('guestId');
+    return /^[0-9a-f-]{36}$/i.test(guestId ?? '') ? guestId : randomUUID();
+  } catch {
+    return randomUUID();
+  }
+}
 
 function isVector(value) {
   return Array.isArray(value)
@@ -63,10 +73,11 @@ function broadcast(message) {
   }
 }
 
-socketServer.on('connection', (socket) => {
+socketServer.on('connection', (socket, request) => {
   const peerId = randomUUID();
+  const guestId = getGuestId(request.url);
   const userLabel = getUserLabel(peerId);
-  players.set(peerId, new Player({ peerId }));
+  players.set(peerId, playerStore.get(guestId, peerId));
   // Identidade curta aparece no chat; o UUID completo fica apenas nos logs.
   logger.info(`${userLabel} entrou no servidor`, { peerId });
   socket.send(JSON.stringify({ type: 'welcome', peerId }));
@@ -102,6 +113,7 @@ socketServer.on('connection', (socket) => {
         return;
       }
       player.setTransform(message.position, message.rotation);
+      playerStore.save(guestId, player);
       broadcastSnapshot();
     } catch {
       // Ignore malformed client messages.
@@ -109,6 +121,8 @@ socketServer.on('connection', (socket) => {
   });
 
   socket.on('close', () => {
+    const player = players.get(peerId);
+    if (player) playerStore.save(guestId, player);
     players.delete(peerId);
     logger.info(`${userLabel} saiu do servidor`, { peerId });
     broadcast({

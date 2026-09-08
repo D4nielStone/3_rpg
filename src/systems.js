@@ -15,6 +15,7 @@ import {
   NetworkTransform,
   Texture,
   Transform,
+  Water,
 } from './components.js';
 
 export class NetworkInterpolationSystem {
@@ -239,7 +240,7 @@ export class RenderSystem {
     );
   }
 
-  render(world) {
+  render(world, time = 0) {
     const { gl, locations } = this;
     const view = this.camera.getViewMatrix();
     const projection = this.camera.getProjectionMatrix();
@@ -248,6 +249,7 @@ export class RenderSystem {
       const transform = world.getComponent(entity, Transform);
       const mesh = world.getComponent(entity, MeshRenderer);
       const texture = world.getComponent(entity, Texture);
+      const water = world.getComponent(entity, Water);
       this.prepareMesh(mesh);
       this.prepareTexture(texture);
 
@@ -257,7 +259,9 @@ export class RenderSystem {
       );
 
       gl.uniformMatrix4fv(locations.matrix, false, matrix);
-      gl.uniform1i(locations.useTexture, 1);
+      gl.uniform1f(locations.useTexture, texture ? 1 : 0);
+      gl.uniform1f(locations.isWater, water ? 1 : 0);
+      gl.uniform1f(locations.time, time);
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.positionBuffer);
       gl.vertexAttribPointer(locations.position, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.colorBuffer);
@@ -281,7 +285,8 @@ export class RenderSystem {
       if (line.indices.length === 0) continue;
 
       gl.uniformMatrix4fv(locations.matrix, false, multiplyMatrices(projection, view));
-      gl.uniform1i(locations.useTexture, 0);
+      gl.uniform1f(locations.useTexture, 0);
+      gl.uniform1f(locations.isWater, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, line.positionBuffer);
       gl.vertexAttribPointer(locations.position, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, line.colorBuffer);

@@ -11,15 +11,23 @@ import { TextureManager } from './texture-manager.js';
 import { createProgram } from './webgl.js';
 
 const vertexShaderSource = `
+  precision mediump float;
   attribute vec3 position;
   attribute vec3 vertexColor;
   attribute vec2 uv;
   uniform mat4 matrix;
   varying vec3 color;
   varying vec2 vUv;
+  uniform float isWater;
+  uniform float time;
 
   void main() {
-    gl_Position = matrix * vec4(position, 1.0);
+    vec3 animatedPosition = position;
+    if (isWater > 0.5) {
+      animatedPosition.y += sin(position.x * 1.7 + time * 0.0012) * 0.035;
+      animatedPosition.y += cos(position.z * 1.25 + time * 0.0009) * 0.025;
+    }
+    gl_Position = matrix * vec4(animatedPosition, 1.0);
     color = vertexColor;
     vUv = uv;
   }
@@ -30,10 +38,20 @@ const fragmentShaderSource = `
   varying vec3 color;
   varying vec2 vUv;
   uniform sampler2D uTexture;
-  uniform bool useTexture;
+  uniform float useTexture;
+  uniform float isWater;
+  uniform float time;
 
   void main() {
-    vec3 finalColor = useTexture ? texture2D(uTexture, vUv).rgb : vec3(1.0);
+    vec3 finalColor;
+    if (isWater > 0.5) {
+      vec2 movingUv = vUv + vec2(time * 0.00008, time * 0.00005);
+      float bands = sin((movingUv.x + movingUv.y) * 2.0);
+      float highlights = smoothstep(0.35, 0.85, bands);
+      finalColor = mix(vec3(0.035, 0.28, 0.55), vec3(0.12, 0.68, 0.82), highlights);
+    } else {
+      finalColor = useTexture > 0.5 ? texture2D(uTexture, vUv).rgb : color;
+    }
     gl_FragColor = vec4(color * finalColor, 1.0);
   }
 `;
@@ -70,6 +88,8 @@ export function createGame(canvas, status) {
     matrix: gl.getUniformLocation(program, 'matrix'),
     uTexture: gl.getUniformLocation(program, 'uTexture'),
     useTexture: gl.getUniformLocation(program, 'useTexture'),
+    isWater: gl.getUniformLocation(program, 'isWater'),
+    time: gl.getUniformLocation(program, 'time'),
   };
 
   resizeCanvas(gl, camera, canvas);

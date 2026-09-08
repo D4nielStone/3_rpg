@@ -5,9 +5,16 @@ import { createGame } from './game-setup.js';
 import { startGameLoop } from './game-loop.js';
 import { ChatPanel } from './chat.js';
 import { PlayerStatus } from './player-status.js';
+import { createWater } from './water.js';
+import { InterfaceScale } from './interface-scale.js';
 
 const canvas = document.querySelector('#canvas');
 const status = document.querySelector('#status');
+new InterfaceScale({
+  root: document.documentElement,
+  decreaseButton: document.querySelector('#ui-scale-decrease'),
+  increaseButton: document.querySelector('#ui-scale-increase'),
+});
 const playerStatus = new PlayerStatus({
   root: document.querySelector('#player-status'),
   hpValue: document.querySelector('#player-hp-value'),
@@ -57,8 +64,11 @@ function createMultiplayer(game, playerEntity) {
     .replace(/^http:/, 'ws:')
     .replace(/^https:/, 'wss:')
     .replace(/\/$/, '');
+  const guestId = getGuestId();
+  const url = multiplayerUrl ? new URL(multiplayerUrl) : null;
+  url?.searchParams.set('guestId', guestId);
   const multiplayer = new MultiplayerSystem({
-    url: multiplayerUrl,
+    url: url?.toString() ?? '',
     world: game.world,
     onStatus: (message) => {
       status.textContent = `${message} Clique para mover; Space cancela.`;
@@ -73,9 +83,20 @@ function createMultiplayer(game, playerEntity) {
   return multiplayer;
 }
 
+function getGuestId() {
+  const storageKey = 'webgl-rpg-guest-id';
+  const savedGuestId = window.localStorage.getItem(storageKey);
+  if (savedGuestId) return savedGuestId;
+
+  const guestId = window.crypto.randomUUID();
+  window.localStorage.setItem(storageKey, guestId);
+  return guestId;
+}
+
 async function start() {
   status.textContent = 'Carregando modelo 3D...';
   const game = createGame(canvas, status);
+  createWater(game.world);
   const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game);
 
   followPlayer(game, playerEntity);
@@ -86,6 +107,9 @@ async function start() {
     radius: 0.35,
     thickness: 0.06,
   }));
+
+  // adicionando o mapa 3d
+  
 
   const multiplayerSystem = createMultiplayer(game, playerEntity);
 

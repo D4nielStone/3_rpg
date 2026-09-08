@@ -7,6 +7,7 @@ main {
 
 html {
   background: #080c18;
+  --ui-scale: 1;
 }
 
 canvas {
@@ -23,12 +24,45 @@ body {
 
 #status,
 #player-status,
+#ui-scale-controls,
 #chat {
   position: fixed;
   z-index: 2;
   color: white;
   font-family: sans-serif;
   text-shadow: 0 1px 3px black;
+}
+
+#status,
+#player-status,
+#ui-scale-controls,
+#chat {
+  zoom: var(--ui-scale);
+}
+
+#ui-scale-controls {
+  top: max(1rem, env(safe-area-inset-top));
+  right: max(1rem, env(safe-area-inset-right));
+  display: flex;
+  gap: 0.35rem;
+}
+
+#ui-scale-controls button {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgb(255 255 255 / 25%);
+  border-radius: 4px;
+  color: white;
+  background: rgb(8 12 24 / 86%);
+  font: 700 1.1rem/1 sans-serif;
+  cursor: pointer;
+}
+
+#ui-scale-controls button:hover,
+#ui-scale-controls button:focus-visible {
+  border-color: #ffb703;
+  outline: 2px solid #ffb703;
+  outline-offset: 1px;
 }
 
 #player-status {
@@ -165,6 +199,11 @@ body {
     max-width: calc(100vw - 1.5rem);
     box-sizing: border-box;
     font-size: 0.82rem;
+  }
+
+  #ui-scale-controls {
+    top: max(0.75rem, env(safe-area-inset-top));
+    right: max(0.75rem, env(safe-area-inset-right));
   }
 
   #player-status {

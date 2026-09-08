@@ -23,6 +23,7 @@ export class MultiplayerSystem {
     this.remoteEntities = new Map();
     this.lastSentAt = 0;
     this.pendingState = null;
+    this.localStateRestored = false;
   }
 
   setLocalEntity(entity) {
@@ -48,6 +49,7 @@ export class MultiplayerSystem {
     }
 
     this.onStatus('Conectando ao multiplayer...');
+    this.localStateRestored = false;
     this.socket = new WebSocket(this.url);
     this.socket.addEventListener('open', () => this.onStatus('Multiplayer conectado.'));
     this.socket.addEventListener('message', (event) => this.handleMessage(event.data));
@@ -129,6 +131,14 @@ export class MultiplayerSystem {
 
     for (const player of this.pendingState) {
       if (player.peerId === this.localPeerId) {
+        if (!this.localStateRestored && Array.isArray(player.position) && Array.isArray(player.rotation)) {
+          const transform = world.getComponent(this.localEntity, Transform);
+          if (transform) {
+            transform.position = [...player.position];
+            transform.rotation = [...player.rotation];
+          }
+          this.localStateRestored = true;
+        }
         this.onPlayerState(player);
         continue;
       }

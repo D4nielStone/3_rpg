@@ -67,6 +67,12 @@ export class MeshRenderer {
   }
 }
 
+export class Water {
+  constructor({ color = [0.08, 0.45, 0.72] } = {}) {
+    this.color = color;
+  }
+}
+
 export class LineRenderer {
   // radius controla o tamanho; thickness controla a largura do anel.
   constructor({

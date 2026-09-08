@@ -108,6 +108,12 @@ O painel de chat usa a mesma conexao multiplayer. Digite a mensagem no campo no 
 
 O relay registra conexoes, desconexoes, mensagens de chat e mensagens invalidas no terminal com nivel (`INFO`, `WARN` ou `ERROR`), timestamp ISO e contexto JSON. A entrada e a saida de cada usuario tambem aparecem no chat como mensagens do servidor.
 
+### Jogador convidado
+
+O cliente cria um `guestId` anonimo e o guarda no `localStorage`. O relay usa esse identificador para persistir vida, mana, XP, dinheiro, inventario, posicao e rotacao em `server/data/players.json`. Assim, um jogador sem conta recupera o estado ao recarregar a pagina ou reconectar.
+
+Limpar os dados do site ou trocar de navegador cria um novo jogador convidado. Esse identificador nao substitui autenticacao: quem conseguir copia-lo pode recuperar o mesmo jogador. Em hospedagens com disco efemero, configure armazenamento persistente ou troque o `PlayerStore` por um banco de dados, caso contrario os dados serao perdidos quando o servico reiniciar.
+
 A URL do Web Service do Render e a URL do relay, nao a pagina do jogo. Abrir essa URL diretamente mostra o status JSON do servidor; o jogo deve ser publicado separadamente como Static Site.
 
 ### Publicar o relay no Render
