@@ -155,6 +155,11 @@ export async function loadGLTF(url, textureManager = null) {
 
 const loaders = new Map();
 
+// Mantém os caminhos dos assets da cena fora da lógica de inicialização.
+const GAME_ASSETS = {
+  enemies: ['/models/rat/scene.glb'],
+};
+
 export function registerAssetLoader(format, loader) {
   loaders.set(String(format).toLowerCase(), loader);
   return loader;
@@ -192,6 +197,7 @@ export class AssetLoader {
   }
 
   async load(url, formatOverride) {
+    // Reutiliza a mesma Promise para evitar downloads duplicados do asset.
     if (!this.cache.has(url)) {
       this.cache.set(url, loadAsset(url, formatOverride, this.textureManager));
     }
@@ -202,6 +208,14 @@ export class AssetLoader {
     const assets = await Promise.all(urls.map((url) => this.load(url)));
     return new Map(urls.map((url, index) => [url, assets[index]]));
   }
+}
+
+// Carrega os assets compartilhados pela cena e os agrupa por categoria.
+export async function loadGameAssets(textureManager) {
+  const assetLoader = new AssetLoader(textureManager);
+  const enemyAssets = await assetLoader.loadMany(GAME_ASSETS.enemies);
+
+  return { assetLoader, enemyAssets };
 }
 
 registerAssetLoader('obj', loadOBJ);

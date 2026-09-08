@@ -1,4 +1,4 @@
-import { LineRenderer, NameTag, Transform } from './components.js';
+import { EnemyIdentity, LineRenderer, NameTag, Transform } from './components.js';
 import { MultiplayerSystem } from './multiplayer.js';
 import { addRemotePlayer, loadPlayer, spawnFallbackPlayer } from './player-factory.js';
 import { createGame } from './game-setup.js';
@@ -7,7 +7,7 @@ import { ChatPanel } from './chat.js';
 import { PlayerStatus } from './player-status.js';
 import { createWater } from './water.js';
 import { addRemoteEnemy } from './enemy-factory.js';
-import { AssetLoader } from './asset-loader.js';
+import { loadGameAssets } from './asset-loader.js';
 import { InterfaceScale } from './interface-scale.js';
 
 const canvas = document.querySelector('#canvas');
@@ -45,6 +45,7 @@ const playerStatus = new PlayerStatus({
   manaBar: document.querySelector('#player-mana-bar'),
   xpBar: document.querySelector('#player-xp-bar'),
   levelValue: document.querySelector('#player-level-value'),
+  goldValue: document.querySelector('#player-gold-value'),
 });
 playerStatus.update({ level: 1, hp: 100, maxHp: 100, mana: 100, maxMana: 100, xp: 0, maxXp: 4 });
 // O chat e a cena sao inicializados uma unica vez; os sistemas fazem o trabalho por frame.
@@ -114,6 +115,7 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
   const multiplayer = new MultiplayerSystem({
     url: url?.toString() ?? '',
     world: game.world,
+    input: game.input,
     onStatus: (message) => {
       status.textContent = `${message} Clique para mover; Space cancela.`;
     },
@@ -128,11 +130,10 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
   return multiplayer;
 }
 
-async function loadSceneAssets(game) {
+async function loadSceneAssets(textureManager) {
+  // O main controla apenas o estado visual; o catálogo fica no asset-loader.
   updateLoading('Carregando modelos de inimigos...');
-  const assetLoader = new AssetLoader(game.textureManager);
-  const enemyAssets = await assetLoader.loadMany(['/models/rat/scene.glb']);
-  return { assetLoader, enemyAssets };
+  return loadGameAssets(textureManager);
 }
 
 function getGuestId() {
@@ -152,7 +153,7 @@ async function start() {
   updateLoading('Carregando cenário e personagem...');
   //createWater(game.world);
   const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game);
-  const { enemyAssets } = await loadSceneAssets(game);
+  const { enemyAssets } = await loadSceneAssets(game.textureManager);
   addPlayerNameTag(game.world, playerEntity);
 
   updateLoading('Finalizando cena...');
@@ -163,6 +164,11 @@ async function start() {
   // createMap(game.world);
 
   const multiplayerSystem = createMultiplayer(game, playerEntity, enemyAssets);
+  game.enemyHoverSystem.onSelect = (entity) => {
+    if (entity && game.world.getComponent(entity, EnemyIdentity)) {
+      multiplayerSystem.sendAttack();
+    }
+  };
 
   status.textContent = usedFallback
     ? 'Modelo 3D indisponível; usando modelo de fallback.'

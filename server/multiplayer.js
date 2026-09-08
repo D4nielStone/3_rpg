@@ -164,15 +164,40 @@ function isChatMessage(value) {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= 200;
 }
 
-function parseExperienceCommand(text) {
-  const match = text.trim().match(/^\/xp\s+(\d+)$/i);
+function parseAdminCommand(text) {
+  const match = text.trim().match(/^\/(xp|hp)\s+(\d+)(?:\s+(@.+))?$/i);
   if (!match) return null;
-  const amount = Number(match[1]);
-  return Number.isSafeInteger(amount) && amount > 0 && amount <= 1_000_000 ? amount : null;
+  const amount = Number(match[2]);
+  if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 1_000_000) return null;
+  return {
+    type: match[1].toLowerCase(),
+    amount,
+    target: match[3]?.trim() ?? '@p',
+  };
 }
 
 function getUserLabel(peerId, nickname) {
   return nickname || `Usuário ${peerId.slice(0, 6)}`;
+}
+
+function resolvePlayerTarget(selector, requesterPeerId, requesterPlayerId) {
+  if (selector.toLowerCase() === '@p') {
+    return {
+      player: players.get(requesterPeerId),
+      playerId: requesterPlayerId,
+    };
+  }
+
+  const nickname = selector.startsWith('@') ? selector.slice(1).trim() : '';
+  if (!nickname) return null;
+
+  for (const [peerId, player] of players) {
+    if (player.nickname.toLowerCase() !== nickname.toLowerCase()) continue;
+    const session = [...activeGuestSessions.entries()]
+      .find(([, active]) => active.peerId === peerId);
+    return session ? { player, playerId: session[0] } : null;
+  }
+  return null;
 }
 
 function broadcastSnapshot() {
@@ -238,8 +263,8 @@ socketServer.on('connection', async (socket, request) => {
 
       if (message.type === 'chat' && isChatMessage(message.text)) {
         const text = message.text.trim();
-        const experienceAmount = parseExperienceCommand(text);
-        if (experienceAmount !== null) {
+        const command = parseAdminCommand(text);
+        if (command) {
           if (!identity.isAdmin) {
             socket.send(JSON.stringify({
               type: 'system',
@@ -249,13 +274,32 @@ socketServer.on('connection', async (socket, request) => {
             return;
           }
 
-          const leveledUp = player.addExperience(experienceAmount);
-          await playerStore.save(playerId, player);
+          const target = resolvePlayerTarget(command.target, peerId, playerId);
+          if (!target?.player) {
+            socket.send(JSON.stringify({
+              type: 'system',
+              text: `Jogador nao encontrado: ${command.target}`,
+              sentAt: Date.now(),
+            }));
+            return;
+          }
+
+          let messageText;
+          if (command.type === 'xp') {
+            const leveledUp = target.player.addExperience(command.amount);
+            messageText = `+${command.amount} XP para ${target.player.nickname}${leveledUp ? '. Level aumentado.' : '.'}`;
+          } else {
+            target.player.hp = Math.min(
+              target.player.maxHp,
+              target.player.hp + command.amount,
+            );
+            messageText = `+${command.amount} HP para ${target.player.nickname}.`;
+          }
+
+          await playerStore.save(target.playerId, target.player);
           socket.send(JSON.stringify({
             type: 'system',
-            text: leveledUp
-              ? `XP adicionado. Level ${player.level}; XP zerado para o proximo nivel.`
-              : `XP adicionado: ${experienceAmount}. Progresso ${player.xp}/${player.maxXp}.`,
+            text: messageText,
             sentAt: Date.now(),
           }));
           broadcastSnapshot();
@@ -272,6 +316,28 @@ socketServer.on('connection', async (socket, request) => {
           text,
           sentAt: Date.now(),
         });
+        return;
+      }
+
+      if (message.type === 'attack') {
+        let attackResult = { hit: false };
+        for (const area of enemyAreas) {
+          attackResult = area.attack(player, Date.now());
+          if (attackResult.hit) break;
+        }
+        if (attackResult.hit) {
+          if (attackResult.rewards) {
+            player.money += attackResult.rewards.gold;
+            const leveledUp = player.addExperience(attackResult.rewards.experience);
+            await playerStore.save(playerId, player);
+            socket.send(JSON.stringify({
+              type: 'system',
+              text: `Rato derrotado: +${attackResult.rewards.gold} ouro e +${attackResult.rewards.experience} XP${leveledUp ? '. Level aumentado.' : '.'}`,
+              sentAt: Date.now(),
+            }));
+          }
+          broadcastSnapshot();
+        }
         return;
       }
 
@@ -317,7 +383,8 @@ playerStore.ready
       previousUpdateAt = now;
       let changed = false;
       for (const area of enemyAreas) {
-        changed = area.update(now, players.values(), deltaSeconds) || changed;
+        const result = area.update(now, players.values(), deltaSeconds);
+        changed = result.changed || changed;
       }
       if (changed) broadcastSnapshot();
     }, 50);

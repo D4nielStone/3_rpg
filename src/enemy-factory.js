@@ -1,5 +1,6 @@
 import {
   EnemyIdentity,
+  EnemyHealthBar,
   MeshRenderer,
   NameTag,
   NetworkTransform,
@@ -35,6 +36,10 @@ export function addRemoteEnemy(world, enemyAssets, enemy) {
   world.addComponent(entity, new EnemyIdentity({
     enemyId: enemy.id,
     type: enemy.type,
+  }));
+  world.addComponent(entity, new EnemyHealthBar({
+    hp: enemy.hp,
+    maxHp: enemy.maxHp,
   }));
   world.addComponent(entity, new NetworkTransform());
   world.addComponent(entity, new OutlineRenderer());

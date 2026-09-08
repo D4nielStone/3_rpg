@@ -64,6 +64,29 @@ export class EnemyIdentity {
   }
 }
 
+export class EnemyHealthBar {
+  constructor({ hp = 1, maxHp = 1 } = {}) {
+    this.hp = hp;
+    this.maxHp = maxHp;
+    this.element = document.createElement('div');
+    this.element.className = 'enemy-healthbar';
+    this.fill = document.createElement('span');
+    this.element.append(this.fill);
+    document.body.append(this.element);
+    this.update(hp, maxHp);
+  }
+
+  update(hp, maxHp = this.maxHp) {
+    this.hp = Math.max(0, Number(hp) || 0);
+    this.maxHp = Math.max(1, Number(maxHp) || 1);
+    this.fill.style.width = `${Math.min(100, this.hp / this.maxHp * 100)}%`;
+  }
+
+  dispose() {
+    this.element.remove();
+  }
+}
+
 export class OutlineRenderer {
   constructor({ radius = 0.65, thickness = 0.08, color = [0.84, 0.66, 0.24], segments = 24 } = {}) {
     this.radius = radius;

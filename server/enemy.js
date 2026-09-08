@@ -29,18 +29,29 @@ export class Enemy {
     this.goldMax = definition.goldMax;
 
     this.detectionRadius = 6;
+    this.attackRange = 1;
+    this.attackDamage = 5;
+    this.attackCooldown = 0;
     this.moveSpeed = 1.25;
     this.alerted = false;
+    this.targetPeerId = null;
 
     this.position = [...position];
     this.rotationY = 0;
   }
 
   updateChase(players, deltaSeconds) {
-    let target = null;
-    let targetDistance = this.detectionRadius;
+    this.attackCooldown = Math.max(0, this.attackCooldown - deltaSeconds);
+    let target = players.find((player) => player.peerId === this.targetPeerId) ?? null;
+    let targetDistance = target
+      ? Math.hypot(
+        target.position[0] - this.position[0],
+        target.position[2] - this.position[2],
+      )
+      : this.detectionRadius;
 
     for (const player of players) {
+      if (target) break;
       const distance = Math.hypot(
         player.position[0] - this.position[0],
         player.position[2] - this.position[2],
@@ -54,7 +65,18 @@ export class Enemy {
 
     this.alerted = Boolean(target);
 
-    if (!target || targetDistance === 0) return;
+    if (!target) return;
+
+    if (targetDistance <= this.attackRange) {
+      if (this.attackCooldown === 0 && target.hp > 0) {
+        target.hp = Math.max(0, target.hp - this.attackDamage);
+        this.attackCooldown = 1;
+        return { damagedPlayer: target };
+      }
+      return;
+    }
+
+    if (targetDistance === 0) return;
 
     const directionX =
       (target.position[0] - this.position[0]) / targetDistance;
@@ -72,6 +94,26 @@ export class Enemy {
 
     this.position[0] += directionX * step;
     this.position[2] += directionZ * step;
+  }
+
+  receiveDamage(amount) {
+    const damage = Number(amount);
+    if (!Number.isFinite(damage) || damage <= 0 || this.hp <= 0) return false;
+
+    this.hp = Math.max(0, this.hp - damage);
+    return true;
+  }
+
+  setTarget(player) {
+    this.targetPeerId = player.peerId;
+    this.alerted = true;
+  }
+
+  getDrop() {
+    return {
+      experience: this.experience,
+      gold: Math.floor(this.goldMin + Math.random() * (this.goldMax - this.goldMin + 1)),
+    };
   }
 
   toSnapshot() {

@@ -105,6 +105,7 @@ html,
 #player-hp-bar { background: #a83b3b; }
 #player-mana-bar { background: #3e6e9e; }
 #player-xp-bar { background: var(--ui-gold); }
+.status-gold { color: var(--ui-gold); }
 
 .player-name-tag {
   border: 1px solid var(--ui-border-light);
@@ -142,6 +143,35 @@ body {
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.enemy-healthbar,
+.floating-damage {
+  position: fixed;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.enemy-healthbar {
+  width: 2.2rem;
+  height: 0.28rem;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgb(8 12 24 / 90%);
+  background: rgb(8 12 24 / 85%);
+}
+
+.enemy-healthbar span {
+  display: block;
+  height: 100%;
+  background: #d94b4b;
+  transition: width 140ms ease;
+}
+
+.floating-damage {
+  transform: translate(-50%, -50%);
+  color: #ffcf5a;
+  font: 700 1rem/1 'Pixelify Sans', sans-serif;
+  text-shadow: 1px 1px 0 #301b0a, -1px -1px 0 #301b0a;
 }
 
 #start-screen {

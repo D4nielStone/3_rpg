@@ -1,6 +1,16 @@
 const DEFAULT_POSITION = [0, 0, 0];
 const DEFAULT_ROTATION = [0, 0, 0];
 
+const BASIC_SWORD = {
+  id: 'basic-sword',
+  name: 'Espada Básica',
+  type: 'weapon',
+  slot: 'main',
+  level: 1,
+  damage: 1,
+  speed: 1,
+};
+
 function copyVector(vector, fallback) {
   return Array.isArray(vector) && vector.length === 3
     ? vector.map(Number)
@@ -25,7 +35,7 @@ export class Player {
     maxXp,
     position = DEFAULT_POSITION,
     rotation = DEFAULT_ROTATION,
-    inventory = [],
+    inventory,
   } = {}) {
     this.peerId = peerId;
     this.nickname = nickname;
@@ -39,12 +49,31 @@ export class Player {
     this.maxXp = calculateMaxXp(this.level);
     this.position = copyVector(position, DEFAULT_POSITION);
     this.rotation = copyVector(rotation, DEFAULT_ROTATION);
-    this.inventory = Array.isArray(inventory) ? [...inventory] : [];
+    const storedInventory = Array.isArray(inventory) ? inventory : [];
+    this.inventory = storedInventory.length > 0
+      ? [...storedInventory]
+      : [{ ...BASIC_SWORD }];
   }
 
   setTransform(position, rotation) {
     this.position = copyVector(position, this.position);
     this.rotation = copyVector(rotation, this.rotation);
+  }
+
+  getMainWeapon() {
+    return this.inventory.find((item) => item.type === 'weapon' && item.slot === 'main')
+      ?? null;
+  }
+
+  canAttack(now) {
+    const weapon = this.getMainWeapon();
+    if (!weapon || weapon.speed <= 0) return false;
+
+    const cooldown = 1000 / weapon.speed;
+    if (now - (this.lastAttackAt ?? 0) < cooldown) return false;
+
+    this.lastAttackAt = now;
+    return true;
   }
 
   addExperience(amount) {

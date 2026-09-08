@@ -23,11 +23,13 @@ export class EnemyArea {
 
   update(time, players = [], deltaSeconds = 1) {
     let changed = false;
+    const damagedPlayers = [];
     const activePlayers = [...players];
     for (const enemy of this.enemies.values()) {
       const previousPosition = [...enemy.position];
       const previousAlerted = enemy.alerted;
-      enemy.updateChase(activePlayers, deltaSeconds);
+      const result = enemy.updateChase(activePlayers, deltaSeconds);
+      if (result?.damagedPlayer) damagedPlayers.push(result.damagedPlayer);
       changed = changed
         || previousAlerted !== enemy.alerted
         || previousPosition[0] !== enemy.position[0]
@@ -43,7 +45,7 @@ export class EnemyArea {
       this.lastSpawnAt = time;
       changed = true;
     }
-    return changed;
+    return { changed: changed || damagedPlayers.length > 0, damagedPlayers };
   }
 
   randomPosition() {
@@ -56,6 +58,34 @@ export class EnemyArea {
 
   removeEnemy(enemyId) {
     return this.enemies.delete(enemyId);
+  }
+
+  attack(player, now) {
+    const weapon = player.getMainWeapon();
+    if (!weapon) return { hit: false };
+
+    let target = null;
+    let targetDistance = 1;
+    for (const enemy of this.enemies.values()) {
+      const distance = Math.hypot(
+        player.position[0] - enemy.position[0],
+        player.position[2] - enemy.position[2],
+      );
+      if (distance <= targetDistance) {
+        target = enemy;
+        targetDistance = distance;
+      }
+    }
+
+    if (!target || !player.canAttack(now)) return { hit: false };
+
+    target.setTarget(player);
+    target.receiveDamage(weapon.damage);
+    if (target.hp <= 0) {
+      this.removeEnemy(target.id);
+      return { hit: true, rewards: target.getDrop() };
+    }
+    return { hit: true };
   }
 
   toSnapshots() {

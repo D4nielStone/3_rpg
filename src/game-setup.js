@@ -83,6 +83,7 @@ export function createGame(canvas, status) {
   const camera = new Camera();
   const world = new World();
   const textureManager = new TextureManager(gl);
+  const input = new InputState();
   const locations = {
     position: gl.getAttribLocation(program, 'position'),
     color: gl.getAttribLocation(program, 'vertexColor'),
@@ -107,7 +108,8 @@ export function createGame(canvas, status) {
     camera,
     world,
     textureManager,
-    movementSystem: new MovementSystem(new InputState()),
+    input,
+    movementSystem: new MovementSystem(input),
     networkInterpolationSystem: new NetworkInterpolationSystem(),
     lineSystem: new LineSystem(canvas, camera),
     nameTagSystem: new NameTagSystem(canvas, camera),

@@ -1,4 +1,11 @@
-import { EnemyIdentity, NameTag, NetworkIdentity, NetworkTransform, Transform } from './components.js';
+import {
+  EnemyHealthBar,
+  EnemyIdentity,
+  NameTag,
+  NetworkIdentity,
+  NetworkTransform,
+  Transform,
+} from './components.js';
 
 const MESSAGE_LIMIT = 32;
 
@@ -6,6 +13,7 @@ export class MultiplayerSystem {
   constructor({
     url,
     world,
+    input = null,
     createRemoteEntity,
     createEnemyEntity = () => null,
     onStatus = () => {},
@@ -14,6 +22,7 @@ export class MultiplayerSystem {
   }) {
     this.url = url;
     this.world = world;
+    this.input = input;
     this.createRemoteEntity = createRemoteEntity;
     this.createEnemyEntity = createEnemyEntity;
     this.onStatus = onStatus;
@@ -119,9 +128,18 @@ export class MultiplayerSystem {
     return true;
   }
 
+  sendAttack() {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify({ type: 'attack' }));
+    return true;
+  }
+
   update(world, time) {
     this.applySnapshot(world);
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN || !this.localEntity) return;
+    if (this.input?.consumePressed('f')) {
+      this.sendAttack();
+    }
     if (time - this.lastSentAt < 50) return;
 
     const transform = world.getComponent(this.localEntity, Transform);
@@ -192,6 +210,8 @@ export class MultiplayerSystem {
       }
       const nameTag = world.getComponent(entity, NameTag);
       nameTag?.update(enemy.name, enemy.level, enemy.alerted);
+      const healthBar = world.getComponent(entity, EnemyHealthBar);
+      healthBar?.update(enemy.hp, enemy.maxHp);
       const enemyIdentity = world.getComponent(entity, EnemyIdentity);
       if (enemyIdentity) enemyIdentity.type = enemy.type;
     }
