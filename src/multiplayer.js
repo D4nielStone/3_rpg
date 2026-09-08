@@ -182,7 +182,14 @@ export class MultiplayerSystem {
         this.enemyEntities.set(enemy.id, entity);
       }
       const transform = world.getComponent(entity, Transform);
-      if (transform) transform.position = [...enemy.position];
+      const networkTransform = world.getComponent(entity, NetworkTransform);
+      if (networkTransform) {
+        networkTransform.targetPosition = enemy.position;
+        networkTransform.targetRotation = [0, enemy.rotationY ?? 0, 0];
+      } else if (transform) {
+        transform.position = [...enemy.position];
+        transform.rotation[1] = enemy.rotationY ?? 0;
+      }
       const nameTag = world.getComponent(entity, NameTag);
       nameTag?.update(enemy.name, enemy.level, enemy.alerted);
       const enemyIdentity = world.getComponent(entity, EnemyIdentity);

@@ -19,6 +19,10 @@ import {
   Water,
 } from './components.js';
 
+function shortestAngleDelta(target, current) {
+  return Math.atan2(Math.sin(target - current), Math.cos(target - current));
+}
+
 export class NetworkInterpolationSystem {
   update(world, deltaSeconds) {
     for (const entity of world.query(Transform, NetworkTransform)) {
@@ -32,8 +36,10 @@ export class NetworkInterpolationSystem {
           (networkTransform.targetPosition[index] - transform.position[index]) * amount;
       }
       if (networkTransform.targetRotation) {
-        transform.rotation[1] +=
-          (networkTransform.targetRotation[1] - transform.rotation[1]) * amount;
+        transform.rotation[1] += shortestAngleDelta(
+          networkTransform.targetRotation[1],
+          transform.rotation[1],
+        ) * amount;
       }
     }
   }

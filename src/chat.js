@@ -1,19 +1,12 @@
 const MAX_MESSAGES = 40;
 
 export class ChatPanel {
-  constructor({ messagesElement, formElement, inputElement, toggleButton }) {
+  constructor({ messagesElement, formElement, inputElement }) {
     this.messagesElement = messagesElement;
     this.formElement = formElement;
     this.inputElement = inputElement;
     this.root = formElement.closest('#chat');
     this.sendMessage = () => false;
-
-    toggleButton.addEventListener('click', () => {
-      const isCollapsed = this.root.classList.toggle('chat-collapsed');
-      toggleButton.textContent = isCollapsed ? '+' : '-';
-      toggleButton.setAttribute('aria-label', isCollapsed ? 'Mostrar chat' : 'Ocultar chat');
-      toggleButton.setAttribute('aria-expanded', String(!isCollapsed));
-    });
 
     formElement.addEventListener('submit', (event) => {
       event.preventDefault();

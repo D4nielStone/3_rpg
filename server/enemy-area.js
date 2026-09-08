@@ -23,10 +23,11 @@ export class EnemyArea {
 
   update(time, players = [], deltaSeconds = 1) {
     let changed = false;
+    const activePlayers = [...players];
     for (const enemy of this.enemies.values()) {
       const previousPosition = [...enemy.position];
       const previousAlerted = enemy.alerted;
-      enemy.updateChase(players, deltaSeconds);
+      enemy.updateChase(activePlayers, deltaSeconds);
       changed = changed
         || previousAlerted !== enemy.alerted
         || previousPosition[0] !== enemy.position[0]

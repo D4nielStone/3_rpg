@@ -52,7 +52,6 @@ const chat = new ChatPanel({
   messagesElement: document.querySelector('#chat-messages'),
   formElement: document.querySelector('#chat-form'),
   inputElement: document.querySelector('#chat-input'),
-  toggleButton: document.querySelector('#chat-toggle'),
 });
 
 async function loadLocalPlayer(game) {
@@ -132,7 +131,7 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
 async function loadSceneAssets(game) {
   updateLoading('Carregando modelos de inimigos...');
   const assetLoader = new AssetLoader(game.textureManager);
-  const enemyAssets = await assetLoader.loadMany(['/models/rat/scene.gltf']);
+  const enemyAssets = await assetLoader.loadMany(['/models/rat/scene.glb']);
   return { assetLoader, enemyAssets };
 }
 

@@ -320,7 +320,7 @@ playerStore.ready
         changed = area.update(now, players.values(), deltaSeconds) || changed;
       }
       if (changed) broadcastSnapshot();
-    }, 1000);
+    }, 50);
     server.listen(port, host, () => {
       logger.info(`Multiplayer relay ouvindo em ws://${host}:${port}`);
     });

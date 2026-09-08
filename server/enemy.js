@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 const ENEMY_TYPES = {
   rat: {
     name: 'Rato',
-    model: '/models/rat/scene.gltf',
+    model: '/models/rat/scene.glb',
     level: 1,
     maxHp: 25,
     experience: 8,
