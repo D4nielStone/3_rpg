@@ -27,14 +27,15 @@ export class ChatPanel {
     this.sendMessage = sendMessage;
   }
 
-  addMessage({ type = 'chat', peerId, text, sentAt = Date.now() }) {
+  addMessage({ type = 'chat', peerId, nickname, text, sentAt = Date.now() }) {
     // textContent impede que mensagens recebidas sejam interpretadas como HTML.
     const item = document.createElement('li');
     const author = document.createElement('strong');
     const time = document.createElement('time');
 
     item.classList.toggle('system-message', type === 'system');
-    author.textContent = peerId ? `${peerId.slice(0, 6)}: ` : '';
+    author.textContent = nickname || (peerId ? peerId.slice(0, 6) : '');
+    if (author.textContent) author.textContent += ': ';
     time.textContent = new Date(sentAt).toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',

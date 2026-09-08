@@ -117,7 +117,13 @@ function getConnectionIdentity(requestUrl) {
     const session = token ? sessions.get(token) : null;
     if (session) return { id: session.userId, nickname: session.nickname };
     const guestId = params.get('guestId');
-    if (/^[0-9a-f-]{36}$/i.test(guestId ?? '')) return { id: guestId, nickname: 'Guest' };
+    const nickname = params.get('nickname');
+    if (/^[0-9a-f-]{36}$/i.test(guestId ?? '')) {
+      return {
+        id: guestId,
+        nickname: /^[a-zA-Z0-9_ -]{2,20}$/.test(nickname ?? '') ? nickname : 'Guest',
+      };
+    }
   } catch {
     return null;
   }
@@ -134,8 +140,8 @@ function isChatMessage(value) {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= 200;
 }
 
-function getUserLabel(peerId) {
-  return `Usuário ${peerId.slice(0, 6)}`;
+function getUserLabel(peerId, nickname) {
+  return nickname || `Usuário ${peerId.slice(0, 6)}`;
 }
 
 function broadcastSnapshot() {
@@ -164,7 +170,7 @@ socketServer.on('connection', async (socket, request) => {
     return;
   }
   const playerId = identity.id;
-  const userLabel = getUserLabel(peerId);
+  const userLabel = getUserLabel(peerId, identity.nickname);
   if (activeGuestSessions.has(playerId)) {
     logger.warn('Conexao duplicada recusada', { peerId, playerId });
     socket.close(4008, 'Guest already connected');
@@ -206,6 +212,7 @@ socketServer.on('connection', async (socket, request) => {
         broadcast({
           type: 'chat',
           peerId,
+          nickname: player.nickname,
           text: message.text.trim(),
           sentAt: Date.now(),
         });

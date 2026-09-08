@@ -90,7 +90,10 @@ function createMultiplayer(game, playerEntity) {
   const guestId = getGuestId();
   const url = multiplayerUrl ? new URL(multiplayerUrl) : null;
   if (sessionToken) url?.searchParams.set('token', sessionToken);
-  else url?.searchParams.set('guestId', guestId);
+  else {
+    url?.searchParams.set('guestId', guestId);
+    url?.searchParams.set('nickname', window.localStorage.getItem('webgl-rpg-nickname') ?? 'Guest');
+  }
   const multiplayer = new MultiplayerSystem({
     url: url?.toString() ?? '',
     world: game.world,

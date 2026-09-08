@@ -91,6 +91,7 @@ export class MultiplayerSystem {
       this.onChat({
         type: 'chat',
         peerId: message.peerId,
+        nickname: message.nickname,
         text: message.text,
         sentAt: message.sentAt,
       });
