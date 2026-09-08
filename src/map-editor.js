@@ -5,9 +5,12 @@ const httpUrl = (configuredUrl || `${window.location.protocol}//${window.locatio
   .replace(/^wss:/, 'https:')
   .replace(/^ws:/, 'http:')
   .replace(/\/$/, '');
-const sessionResponse = await fetch(`${httpUrl}/api/session`, { credentials: 'include' }).catch(() => null);
-const session = sessionResponse?.ok ? await sessionResponse.json() : null;
-if (!session?.authenticated || !session.isAdmin) {
+const accessTicket = new URLSearchParams(window.location.search).get('access');
+const accessResponse = accessTicket
+  ? await fetch(`${httpUrl}/api/map-access?ticket=${encodeURIComponent(accessTicket)}`, { credentials: 'include' }).catch(() => null)
+  : null;
+const access = accessResponse?.ok ? await accessResponse.json() : null;
+if (!access?.authorized) {
   document.body.innerHTML = '<main class="access-denied"><h1>Acesso restrito</h1><p>O editor de mapas está disponível apenas para administradores pelo comando /map.</p></main>';
   throw new Error('Map editor access denied');
 }

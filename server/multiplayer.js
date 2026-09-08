@@ -104,6 +104,23 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (request.method === 'GET' && requestPath === '/api/map-access') {
+    const ticket = new URL(request.url, `http://${request.headers.host ?? 'localhost'}`).searchParams.get('ticket');
+    const access = mapAccessTickets.get(ticket);
+    const session = getSessionFromRequest(request);
+    const authorized = access
+      && access.expiresAt > Date.now()
+      && session?.isAdmin
+      && session.userId === access.userId;
+    if (!authorized) {
+      sendJson(response, 403, { authorized: false });
+      return;
+    }
+    mapAccessTickets.delete(ticket);
+    sendJson(response, 200, { authorized: true });
+    return;
+  }
+
   if (request.method === 'POST' && requestPath === '/api/logout') {
     const session = getSessionFromRequest(request);
     if (session) sessions.delete(session.token);
@@ -185,6 +202,7 @@ const socketServer = new WebSocketServer({ server });
 const players = new Map();
 const activeGuestSessions = new Map();
 const sessions = new Map();
+const mapAccessTickets = new Map();
 const logger = new ServerLogger();
 const playerStore = new PlayerStore();
 const enemyAreas = [new EnemyArea({
@@ -398,9 +416,14 @@ socketServer.on('connection', async (socket, request) => {
           }
 
           if (command.type === 'map') {
+            const ticket = randomUUID();
+            mapAccessTickets.set(ticket, {
+              userId: playerId,
+              expiresAt: Date.now() + 60_000,
+            });
             socket.send(JSON.stringify({
               type: 'map-access',
-              path: '/map-editor.html',
+              path: `/map-editor.html?access=${ticket}`,
             }));
             return;
           }
