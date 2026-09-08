@@ -99,6 +99,7 @@ const server = createServer(async (request, response) => {
     sendJson(response, 200, {
       authenticated: true,
       nickname: session.nickname,
+      isAdmin: session.isAdmin,
     });
     return;
   }
@@ -263,6 +264,7 @@ function isChatMessage(value) {
 }
 
 function parseAdminCommand(text) {
+  if (text.trim().toLowerCase() === '/map') return { type: 'map' };
   const match = text.trim().match(/^\/(xp|hp)\s+(\d+)(?:\s+(@.+))?$/i);
   if (!match) return null;
   const amount = Number(match[2]);
@@ -391,6 +393,14 @@ socketServer.on('connection', async (socket, request) => {
               type: 'system',
               text: 'Comando restrito ao administrador.',
               sentAt: Date.now(),
+            }));
+            return;
+          }
+
+          if (command.type === 'map') {
+            socket.send(JSON.stringify({
+              type: 'map-access',
+              path: '/map-editor.html',
             }));
             return;
           }

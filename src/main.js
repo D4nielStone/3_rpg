@@ -139,6 +139,7 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
     onRespawn: () => deathScreen.classList.add('death-screen-hidden'),
     onRanking: ui.renderRanking,
     onOnlinePlayers: ui.renderOnlinePlayers,
+    onMapAccess: (path) => window.open(new URL(path, window.location.origin), '_blank', 'noopener'),
     onChat: (message) => chat.addMessage(message),
     createRemoteEntity: (peerId, nickname, level) => addRemotePlayer(game.world, playerEntity, peerId, nickname, level),
     createEnemyEntity: (enemy) => addRemoteEnemy(game.world, enemyAssets, enemy),

@@ -3,6 +3,9 @@
 :root { color-scheme: dark; --bg: #101312; --panel: #181d1b; --panel-soft: #202724; --line: #35403b; --muted: #8e9a93; --text: #edf2ed; --accent: #b9ec69; --blue: #66c7e8; }
 * { box-sizing: border-box; }
 body { min-width: 1120px; min-height: 100vh; margin: 0; color: var(--text); background: var(--bg); font-family: 'Space Grotesk', sans-serif; }
+.access-denied { display: grid; min-height: 100vh; place-content: center; padding: 2rem; text-align: center; }
+.access-denied h1 { margin-bottom: 0.5rem; }
+.access-denied p { max-width: 28rem; color: var(--muted); }
 button, input { font: inherit; }
 button { cursor: pointer; }
 .editor-shell { display: flex; min-height: 100vh; flex-direction: column; }

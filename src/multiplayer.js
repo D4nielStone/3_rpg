@@ -25,6 +25,7 @@ export class MultiplayerSystem {
     onRespawn = () => {},
     onRanking = () => {},
     onOnlinePlayers = () => {},
+    onMapAccess = () => {},
   }) {
     this.url = url;
     this.world = world;
@@ -38,6 +39,7 @@ export class MultiplayerSystem {
     this.onRespawn = onRespawn;
     this.onRanking = onRanking;
     this.onOnlinePlayers = onOnlinePlayers;
+    this.onMapAccess = onMapAccess;
     this.socket = null;
     this.localEntity = null;
     this.localPeerId = null;
@@ -161,6 +163,11 @@ export class MultiplayerSystem {
 
     if (message.type === 'ranking' && Array.isArray(message.players)) {
       this.onRanking(message.players);
+      return;
+    }
+
+    if (message.type === 'map-access' && typeof message.path === 'string') {
+      this.onMapAccess(message.path);
       return;
     }
 

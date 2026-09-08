@@ -1,5 +1,17 @@
 import { MAP_CONFIG_STORAGE_KEY, readSavedMapConfig, saveMapConfig } from './map-config.js';
 
+const configuredUrl = import.meta.env.VITE_MULTIPLAYER_URL?.trim();
+const httpUrl = (configuredUrl || `${window.location.protocol}//${window.location.hostname}:5174`)
+  .replace(/^wss:/, 'https:')
+  .replace(/^ws:/, 'http:')
+  .replace(/\/$/, '');
+const sessionResponse = await fetch(`${httpUrl}/api/session`, { credentials: 'include' }).catch(() => null);
+const session = sessionResponse?.ok ? await sessionResponse.json() : null;
+if (!session?.authenticated || !session.isAdmin) {
+  document.body.innerHTML = '<main class="access-denied"><h1>Acesso restrito</h1><p>O editor de mapas está disponível apenas para administradores pelo comando /map.</p></main>';
+  throw new Error('Map editor access denied');
+}
+
 const COLS = 32;
 const ROWS = 20;
 const TERRAIN = {
