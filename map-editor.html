@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Editor de mapa | WebRPG</title>
+  <link rel="stylesheet" href="styles/map-editor.css" />
+</head>
+<body>
+  <main class="editor-shell">
+    <header class="editor-header">
+      <div>
+        <p class="editor-kicker">WEBrpg / ferramentas</p>
+        <h1>Editor de mapa</h1>
+      </div>
+      <div class="editor-actions">
+        <button id="undo-button" class="icon-button" type="button" title="Desfazer" aria-label="Desfazer">↶</button>
+        <button id="redo-button" class="icon-button" type="button" title="Refazer" aria-label="Refazer">↷</button>
+        <button id="clear-button" class="secondary-button" type="button">Limpar</button>
+        <button id="export-button" class="primary-button" type="button">Exportar JSON</button>
+      </div>
+    </header>
+
+    <section class="editor-workspace" aria-label="Área de edição do mapa">
+      <aside class="tool-panel">
+        <div class="panel-section">
+          <div class="section-heading"><h2>Terreno</h2><span id="selected-terrain">Grama</span></div>
+          <div id="terrain-palette" class="terrain-palette" role="radiogroup" aria-label="Tipos de terreno"></div>
+        </div>
+        <div class="panel-section">
+          <h2>Ferramenta</h2>
+          <div class="tool-grid">
+            <button class="tool-button tool-button-active" type="button" data-tool="brush">✎<span>Pincel</span></button>
+            <button class="tool-button" type="button" data-tool="eraser">⌫<span>Borracha</span></button>
+            <button class="tool-button" type="button" data-tool="fill">▧<span>Preencher</span></button>
+            <button class="tool-button" type="button" data-tool="pan">✥<span>Mover</span></button>
+          </div>
+        </div>
+        <div class="panel-section panel-section-compact">
+          <label for="brush-size">Tamanho do pincel <output id="brush-size-value">1</output></label>
+          <input id="brush-size" type="range" min="1" max="5" value="1" />
+        </div>
+        <div class="panel-section map-options">
+          <h2>Mapa</h2>
+          <label class="check-row"><input id="water-enabled" type="checkbox" /> Água ativa</label>
+          <label for="map-size">Escala da célula</label>
+          <input id="map-size" type="range" min="16" max="48" value="28" />
+        </div>
+      </aside>
+
+      <section class="canvas-stage">
+        <div class="stage-toolbar">
+          <span id="map-coordinates">x: 0, z: 0</span>
+          <span id="map-status" role="status">Pronto para editar</span>
+          <div class="zoom-controls"><button id="zoom-out" type="button" aria-label="Diminuir zoom">−</button><strong id="zoom-value">100%</strong><button id="zoom-in" type="button" aria-label="Aumentar zoom">+</button></div>
+        </div>
+        <div id="canvas-wrap" class="canvas-wrap">
+          <canvas id="map-canvas" width="896" height="560" aria-label="Grade do mapa editável"></canvas>
+        </div>
+        <p class="stage-hint">Clique para pintar. Arraste com “Mover” para navegar.</p>
+      </section>
+
+      <aside class="inspector-panel">
+        <div class="panel-section">
+          <h2>Configuração</h2>
+          <dl class="map-summary">
+            <div><dt>Células</dt><dd id="cell-count">640</dd></div>
+            <div><dt>Áreas inimigas</dt><dd id="enemy-area-count">2</dd></div>
+            <div><dt>Água</dt><dd id="water-status">Inativa</dd></div>
+          </dl>
+        </div>
+        <div class="panel-section">
+          <h2>Legenda</h2>
+          <ul class="legend-list">
+            <li><span class="legend-swatch legend-grass"></span>Grama</li>
+            <li><span class="legend-swatch legend-water"></span>Água</li>
+            <li><span class="legend-swatch legend-stone"></span>Pedra</li>
+            <li><span class="legend-swatch legend-enemy"></span>Área inimiga</li>
+          </ul>
+        </div>
+        <div class="panel-section export-preview">
+          <h2>Saída</h2>
+          <pre id="json-preview">{}</pre>
+        </div>
+      </aside>
+    </section>
+  </main>
+  <script type="module" src="/src/map-editor.js"></script>
+</body>
+</html>

@@ -4,8 +4,9 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>WebGL RPG Multiplayer</title>
-      <script type="module" crossorigin src="/assets/index-etlpPhqw.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-CQ6eMXzM.css">
+      <script type="module" crossorigin src="/assets/app-DHvfQ2Am.js"></script>
+      <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-P2Xu9kJm.js">
+      <link rel="stylesheet" crossorigin href="/assets/app-DhcAU4zt.css">
     </head>
     <body>
         <section id="start-screen" aria-labelledby="start-title">
@@ -50,10 +51,6 @@
                 <button class="action-slot" type="button" data-combat-mode="ranged" aria-label="Selecionar ataque a distância">➹</button>
                 <button class="action-slot" type="button" data-combat-mode="magic" aria-label="Selecionar magia">✦</button>
             </div>
-            <nav id="ui-scale-controls" aria-label="Tamanho da interface">
-                <button id="ui-scale-decrease" type="button" aria-label="Diminuir interface">-</button>
-                <button id="ui-scale-increase" type="button" aria-label="Aumentar interface">+</button>
-            </nav>
             <button id="menu-button" type="button" aria-expanded="false" aria-controls="attributes-menu" aria-label="Abrir status">⚙</button>
             <button id="ranking-button" type="button" aria-expanded="false" aria-controls="ranking-menu" aria-label="Abrir ranking">•••</button>
             <aside id="attributes-menu" class="attributes-menu-hidden" aria-labelledby="attributes-title">
@@ -76,6 +73,11 @@
                     <button type="button" class="combat-mode-button" data-combat-mode="ranged">Distância</button>
                     <button type="button" class="combat-mode-button" data-combat-mode="magic">Magia</button>
                 </div>
+                <nav id="ui-scale-controls" aria-label="Tamanho da interface">
+                    <button id="ui-scale-decrease" type="button" aria-label="Diminuir interface">-</button>
+                    <button id="ui-scale-increase" type="button" aria-label="Aumentar interface">+</button>
+                </nav>
+                <button id="logout-button" type="button">Sair da conta</button>
             </aside>
             <aside id="ranking-menu" class="attributes-menu-hidden" aria-labelledby="ranking-title">
                 <h2 id="ranking-title">Ranking global</h2>

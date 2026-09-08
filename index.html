@@ -54,10 +54,6 @@
                 <button class="action-slot" type="button" data-combat-mode="ranged" aria-label="Selecionar ataque a distância">➹</button>
                 <button class="action-slot" type="button" data-combat-mode="magic" aria-label="Selecionar magia">✦</button>
             </div>
-            <nav id="ui-scale-controls" aria-label="Tamanho da interface">
-                <button id="ui-scale-decrease" type="button" aria-label="Diminuir interface">-</button>
-                <button id="ui-scale-increase" type="button" aria-label="Aumentar interface">+</button>
-            </nav>
             <button id="menu-button" type="button" aria-expanded="false" aria-controls="attributes-menu" aria-label="Abrir status">⚙</button>
             <button id="ranking-button" type="button" aria-expanded="false" aria-controls="ranking-menu" aria-label="Abrir ranking">•••</button>
             <aside id="attributes-menu" class="attributes-menu-hidden" aria-labelledby="attributes-title">
@@ -80,6 +76,11 @@
                     <button type="button" class="combat-mode-button" data-combat-mode="ranged">Distância</button>
                     <button type="button" class="combat-mode-button" data-combat-mode="magic">Magia</button>
                 </div>
+                <nav id="ui-scale-controls" aria-label="Tamanho da interface">
+                    <button id="ui-scale-decrease" type="button" aria-label="Diminuir interface">-</button>
+                    <button id="ui-scale-increase" type="button" aria-label="Aumentar interface">+</button>
+                </nav>
+                <button id="logout-button" type="button">Sair da conta</button>
             </aside>
             <aside id="ranking-menu" class="attributes-menu-hidden" aria-labelledby="ranking-title">
                 <h2 id="ranking-title">Ranking global</h2>

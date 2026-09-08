@@ -37,6 +37,7 @@ const rankingButton = document.querySelector('#ranking-button');
 const rankingMenu = document.querySelector('#ranking-menu');
 const chatToggle = document.querySelector('#chat-toggle');
 const chatElement = document.querySelector('#chat');
+const logoutButton = document.querySelector('#logout-button');
 
 function updateLoading(message, title = 'Carregando cena') {
   loadingTitle.textContent = title;
@@ -117,14 +118,10 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
     .replace(/^http:/, 'ws:')
     .replace(/^https:/, 'wss:')
     .replace(/\/$/, '');
-  const sessionToken = window.sessionStorage.getItem('webgl-rpg-session-token');
   const guestId = getGuestId();
   const url = multiplayerUrl ? new URL(multiplayerUrl) : null;
-  if (sessionToken) url?.searchParams.set('token', sessionToken);
-  else {
-    url?.searchParams.set('guestId', guestId);
-    url?.searchParams.set('nickname', window.localStorage.getItem('webgl-rpg-nickname') ?? 'Guest');
-  }
+  url?.searchParams.set('guestId', guestId);
+  url?.searchParams.set('nickname', window.localStorage.getItem('webgl-rpg-nickname') ?? 'Guest');
   const multiplayer = new MultiplayerSystem({
     url: url?.toString() ?? '',
     world: game.world,
@@ -220,5 +217,6 @@ createAccountController({
   nicknameInput,
   passwordInput: document.querySelector('#password'),
   messageElement: accountMessage,
+  logoutButton,
   startGame: () => start().catch(handleStartError),
 });

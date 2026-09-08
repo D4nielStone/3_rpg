@@ -71,6 +71,38 @@ export class PlayerStore {
     );
   }
 
+  async migrateGuest(guestId, userId, nickname) {
+    if (!/^[0-9a-f-]{36}$/i.test(guestId ?? '')) return false;
+    await this.ready;
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await client.query(
+        'SELECT state FROM players WHERE guest_id = $1 FOR UPDATE',
+        [guestId],
+      );
+      if (!result.rows[0]) {
+        await client.query('COMMIT');
+        return false;
+      }
+      const state = { ...result.rows[0].state, nickname };
+      await client.query(`
+        INSERT INTO players (guest_id, state, updated_at)
+        VALUES ($1, $2::jsonb, NOW())
+        ON CONFLICT (guest_id)
+        DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()
+      `, [userId, JSON.stringify(state)]);
+      await client.query('DELETE FROM players WHERE guest_id = $1', [guestId]);
+      await client.query('COMMIT');
+      return true;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async findUser(nickname) {
     await this.ready;
     const result = await this.pool.query(

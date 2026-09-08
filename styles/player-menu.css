@@ -398,6 +398,75 @@
   .combat-mode-controls { grid-template-columns: 1fr; }
 }
 
+#attributes-menu #ui-scale-controls {
+  position: static;
+  width: min(42rem, 100%);
+  box-sizing: border-box;
+  justify-content: center;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 1.5rem auto 0;
+  padding-top: 1rem;
+  border-top: 1px solid rgb(255 255 255 / 22%);
+  zoom: 1;
+}
+
+#attributes-menu #ui-scale-controls button {
+  display: grid;
+  width: 3rem;
+  height: 2.7rem;
+  place-items: center;
+  border: 1px solid #fff;
+  border-radius: 0;
+  color: #fff;
+  background: #000;
+  font: 500 1.4rem/1 'Pixelify Sans', sans-serif;
+  transition: color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+#attributes-menu #ui-scale-controls button:hover,
+#attributes-menu #ui-scale-controls button:focus-visible {
+  color: #000;
+  background: #fff;
+  outline: none;
+}
+
+#attributes-menu #ui-scale-controls button:active {
+  transform: translateY(1px);
+}
+
+#attributes-menu #ui-scale-controls::before {
+  content: 'Interface';
+  margin-right: 0.35rem;
+  color: #999;
+  font: 0.75rem/1 'Pixelify Sans', sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#logout-button {
+  display: block;
+  width: min(42rem, 100%);
+  min-height: 2.8rem;
+  margin: 0.75rem auto 0;
+  border: 1px solid #8d5b5b;
+  border-radius: 0;
+  color: #d9aaaa;
+  background: #000;
+  font: 0.85rem/1 'Pixelify Sans', sans-serif;
+  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+#logout-button:hover,
+#logout-button:focus-visible {
+  border-color: #f0b0b0;
+  color: #180d0d;
+  background: #f0b0b0;
+  outline: none;
+}
+
+#logout-button:active { transform: translateY(1px); }
+
 #menu-button {
   z-index: 14 !important;
 }

@@ -15,16 +15,54 @@ import {
 const port = Number(process.env.PORT ?? process.env.MULTIPLAYER_PORT ?? 5174);
 const host = process.env.HOST ?? '0.0.0.0';
 const frontendOrigin = process.env.FRONTEND_ORIGIN ?? 'https://webgl-rpg-frontend.onrender.com';
+const allowedOrigins = new Set([
+  frontendOrigin,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+]);
 let databaseReady = false;
 
 function setCorsHeaders(request, response) {
   const origin = request.headers.origin;
-  if (origin === frontendOrigin) {
+  if (allowedOrigins.has(origin)) {
     response.setHeader('access-control-allow-origin', origin);
     response.setHeader('access-control-allow-methods', 'POST, OPTIONS');
     response.setHeader('access-control-allow-headers', 'content-type');
+    response.setHeader('access-control-allow-credentials', 'true');
     response.setHeader('vary', 'Origin');
   }
+}
+
+function createSessionCookie(request, token) {
+  const secure = request.socket.encrypted || request.headers['x-forwarded-proto'] === 'https';
+  return [
+    `webgl_session=${token}`,
+    'Path=/',
+    'HttpOnly',
+    'Max-Age=604800',
+    `SameSite=${secure ? 'None' : 'Lax'}`,
+    secure ? 'Secure' : '',
+  ].filter(Boolean).join('; ');
+}
+
+function createClearedSessionCookie(request) {
+  const secure = request.socket.encrypted || request.headers['x-forwarded-proto'] === 'https';
+  return [
+    'webgl_session=',
+    'Path=/',
+    'HttpOnly',
+    'Max-Age=0',
+    'Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+    `SameSite=${secure ? 'None' : 'Lax'}`,
+    secure ? 'Secure' : '',
+  ].filter(Boolean).join('; ');
+}
+
+function getSessionFromRequest(request) {
+  const cookies = request.headers.cookie?.split(';') ?? [];
+  const sessionCookie = cookies.find((cookie) => cookie.trim().startsWith('webgl_session='));
+  const token = sessionCookie?.split('=').slice(1).join('=').trim();
+  return token ? sessions.get(token) ?? null : null;
 }
 
 async function readJson(request) {
@@ -36,7 +74,8 @@ async function readJson(request) {
   return JSON.parse(body || '{}');
 }
 
-function sendJson(response, statusCode, body) {
+function sendJson(response, statusCode, body, headers = {}) {
+  Object.entries(headers).forEach(([name, value]) => response.setHeader(name, value));
   response.writeHead(statusCode, { 'content-type': 'application/json' });
   response.end(JSON.stringify(body));
 }
@@ -51,11 +90,34 @@ const server = createServer(async (request, response) => {
 
   const requestPath = new URL(request.url, `http://${request.headers.host ?? 'localhost'}`).pathname;
 
+  if (request.method === 'GET' && requestPath === '/api/session') {
+    const session = getSessionFromRequest(request);
+    if (!session) {
+      sendJson(response, 401, { authenticated: false });
+      return;
+    }
+    sendJson(response, 200, {
+      authenticated: true,
+      nickname: session.nickname,
+    });
+    return;
+  }
+
+  if (request.method === 'POST' && requestPath === '/api/logout') {
+    const session = getSessionFromRequest(request);
+    if (session) sessions.delete(session.token);
+    sendJson(response, 200, { authenticated: false }, {
+      'set-cookie': createClearedSessionCookie(request),
+    });
+    return;
+  }
+
   if (request.method === 'POST' && ['/api/register', '/api/login'].includes(requestPath)) {
     try {
       const body = await readJson(request);
       const nickname = typeof body.nickname === 'string' ? body.nickname.trim() : '';
       const password = body.password;
+      const guestId = typeof body.guestId === 'string' ? body.guestId : null;
       if (!validateCredentials(nickname, password)) {
         sendJson(response, 400, { error: 'Nickname ou senha invalidos.' });
         return;
@@ -67,9 +129,12 @@ const server = createServer(async (request, response) => {
         }
         const user = { id: createAccountId(), nickname };
         await playerStore.registerUser(user.id, nickname, await hashPassword(password));
+        await playerStore.migrateGuest(guestId, user.id, nickname);
         const session = createSession(user);
         sessions.set(session.token, session);
-        sendJson(response, 201, { token: session.token, nickname });
+        sendJson(response, 201, { nickname }, {
+          'set-cookie': createSessionCookie(request, session.token),
+        });
         return;
       }
       const user = await playerStore.findUser(nickname);
@@ -79,7 +144,9 @@ const server = createServer(async (request, response) => {
       }
       const session = createSession(user);
       sessions.set(session.token, session);
-      sendJson(response, 200, { token: session.token, nickname: user.nickname });
+      sendJson(response, 200, { nickname: user.nickname }, {
+        'set-cookie': createSessionCookie(request, session.token),
+      });
     } catch (error) {
       logger.warn('Falha na autenticacao', { error: error.message });
       sendJson(response, 400, { error: 'Nao foi possivel processar a solicitacao.' });
@@ -157,10 +224,12 @@ function promotePlayerToAreaTwo(player) {
   return true;
 }
 
-function getConnectionIdentity(requestUrl) {
+function getConnectionIdentity(requestUrl, requestHeaders = {}) {
   try {
     const params = new URL(requestUrl, 'ws://localhost').searchParams;
-    const token = params.get('token');
+    const cookies = requestHeaders.cookie?.split(';') ?? [];
+    const cookie = cookies.find((item) => item.trim().startsWith('webgl_session='));
+    const token = cookie?.split('=').slice(1).join('=').trim() ?? params.get('token');
     const session = token ? sessions.get(token) : null;
     if (session) {
       return {
@@ -266,7 +335,7 @@ function broadcast(message) {
 
 socketServer.on('connection', async (socket, request) => {
   const peerId = randomUUID();
-  const identity = getConnectionIdentity(request.url);
+  const identity = getConnectionIdentity(request.url, request.headers);
   if (!identity) {
     socket.close(4001, 'Authentication required');
     return;
