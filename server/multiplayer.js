@@ -73,11 +73,19 @@ function broadcast(message) {
   }
 }
 
-socketServer.on('connection', (socket, request) => {
+socketServer.on('connection', async (socket, request) => {
   const peerId = randomUUID();
   const guestId = getGuestId(request.url);
   const userLabel = getUserLabel(peerId);
-  players.set(peerId, playerStore.get(guestId, peerId));
+  let player;
+  try {
+    player = await playerStore.get(guestId, peerId);
+  } catch (error) {
+    logger.error('Falha ao carregar jogador', { peerId, error: error.message });
+    socket.close(1011, 'Database unavailable');
+    return;
+  }
+  players.set(peerId, player);
   // Identidade curta aparece no chat; o UUID completo fica apenas nos logs.
   logger.info(`${userLabel} entrou no servidor`, { peerId });
   socket.send(JSON.stringify({ type: 'welcome', peerId }));
@@ -88,7 +96,7 @@ socketServer.on('connection', (socket, request) => {
   });
   broadcastSnapshot();
 
-  socket.on('message', (rawMessage) => {
+  socket.on('message', async (rawMessage) => {
     try {
       const message = JSON.parse(rawMessage.toString());
       const player = players.get(peerId);
@@ -113,16 +121,18 @@ socketServer.on('connection', (socket, request) => {
         return;
       }
       player.setTransform(message.position, message.rotation);
-      playerStore.save(guestId, player);
+      await playerStore.save(guestId, player);
       broadcastSnapshot();
-    } catch {
-      // Ignore malformed client messages.
+    } catch (error) {
+      logger.warn('Falha ao processar mensagem do jogador', { peerId, error: error.message });
     }
   });
 
-  socket.on('close', () => {
+  socket.on('close', async () => {
     const player = players.get(peerId);
-    if (player) playerStore.save(guestId, player);
+    if (player) playerStore.save(guestId, player).catch((error) => {
+      logger.error('Falha ao salvar jogador', { peerId, error: error.message });
+    });
     players.delete(peerId);
     logger.info(`${userLabel} saiu do servidor`, { peerId });
     broadcast({

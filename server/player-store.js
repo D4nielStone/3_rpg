@@ -1,32 +1,47 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import pg from 'pg';
 import { Player } from './player.js';
 
-const storePath = join(dirname(fileURLToPath(import.meta.url)), 'data', 'players.json');
+const { Pool } = pg;
 
 export class PlayerStore {
-  constructor() {
-    this.players = this.load();
-  }
-
-  load() {
-    try {
-      return JSON.parse(readFileSync(storePath, 'utf8'));
-    } catch {
-      return {};
+  constructor(connectionString = process.env.DATABASE_URL) {
+    if (!connectionString) {
+      throw new Error('DATABASE_URL nao configurada. O relay precisa de PostgreSQL.');
     }
+
+    this.pool = new Pool({
+      connectionString,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+    });
+    this.ready = this.initialize();
   }
 
-  get(guestId, peerId) {
-    return new Player({ peerId, ...(this.players[guestId] ?? {}) });
+  async initialize() {
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS players (
+        guest_id UUID PRIMARY KEY,
+        state JSONB NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
   }
 
-  save(guestId, player) {
-    this.players[guestId] = player.toPersistence();
-    mkdirSync(dirname(storePath), { recursive: true });
-    const temporaryPath = `${storePath}.tmp`;
-    writeFileSync(temporaryPath, `${JSON.stringify(this.players, null, 2)}\n`);
-    renameSync(temporaryPath, storePath);
+  async get(guestId, peerId) {
+    await this.ready;
+    const result = await this.pool.query(
+      'SELECT state FROM players WHERE guest_id = $1',
+      [guestId],
+    );
+    return new Player({ peerId, ...(result.rows[0]?.state ?? {}) });
+  }
+
+  async save(guestId, player) {
+    await this.ready;
+    await this.pool.query(`
+      INSERT INTO players (guest_id, state, updated_at)
+      VALUES ($1, $2::jsonb, NOW())
+      ON CONFLICT (guest_id)
+      DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()
+    `, [guestId, JSON.stringify(player.toPersistence())]);
   }
 }

@@ -7,6 +7,14 @@
         <title>WebGL RPG Multiplayer</title>
     </head>
     <body>
+        <section id="loading-screen" role="status" aria-live="polite" aria-label="Carregando jogo">
+            <div class="loading-card">
+                <div class="loading-spinner" aria-hidden="true"></div>
+                <p class="loading-eyebrow">WEBGL RPG</p>
+                <h1 id="loading-title">Carregando cena</h1>
+                <p id="loading-message">Preparando o mundo...</p>
+            </div>
+        </section>
         <main>
             <canvas id="canvas" width="800" height="500"></canvas>
             <nav id="ui-scale-controls" aria-label="Tamanho da interface">

@@ -22,6 +22,78 @@ body {
   overflow: hidden;
 }
 
+#loading-screen {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  color: #f8fafc;
+  background: #07111f;
+  font-family: sans-serif;
+  transition: opacity 260ms ease, visibility 260ms ease;
+}
+
+#loading-screen.loading-screen-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loading-card {
+  width: min(24rem, 100%);
+  box-sizing: border-box;
+  padding: clamp(1.5rem, 6vw, 2.5rem);
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 8px;
+  text-align: center;
+  background: rgb(13 28 48 / 92%);
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 30%);
+}
+
+.loading-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0 auto 1.5rem;
+  border: 3px solid rgb(255 255 255 / 20%);
+  border-top-color: #ffb703;
+  border-radius: 50%;
+  animation: loading-spin 850ms linear infinite;
+}
+
+.loading-eyebrow {
+  margin: 0 0 0.5rem;
+  color: #ffb703;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.loading-card h1 {
+  margin: 0;
+  font-size: clamp(1.25rem, 5vw, 1.7rem);
+}
+
+#loading-message {
+  min-height: 1.4em;
+  margin: 0.7rem 0 0;
+  color: rgb(255 255 255 / 68%);
+  font-size: 0.9rem;
+}
+
+#loading-screen.loading-screen-error .loading-spinner {
+  display: none;
+}
+
+#loading-screen.loading-screen-error .loading-card {
+  border-color: rgb(220 38 38 / 70%);
+}
+
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+
 #status,
 #player-status,
 #ui-scale-controls,

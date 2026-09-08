@@ -10,6 +10,20 @@ import { InterfaceScale } from './interface-scale.js';
 
 const canvas = document.querySelector('#canvas');
 const status = document.querySelector('#status');
+const loadingScreen = document.querySelector('#loading-screen');
+const loadingTitle = document.querySelector('#loading-title');
+const loadingMessage = document.querySelector('#loading-message');
+
+function updateLoading(message, title = 'Carregando cena') {
+  loadingTitle.textContent = title;
+  loadingMessage.textContent = message;
+}
+
+function finishLoading() {
+  loadingScreen.classList.add('loading-screen-hidden');
+  loadingScreen.setAttribute('aria-hidden', 'true');
+}
+
 new InterfaceScale({
   root: document.documentElement,
   decreaseButton: document.querySelector('#ui-scale-decrease'),
@@ -94,11 +108,14 @@ function getGuestId() {
 }
 
 async function start() {
-  status.textContent = 'Carregando modelo 3D...';
+  updateLoading('Preparando o mundo...');
+  status.textContent = 'Carregando cena...';
   const game = createGame(canvas, status);
+  updateLoading('Carregando cenário e personagem...');
   createWater(game.world);
   const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game);
 
+  updateLoading('Finalizando cena...');
   followPlayer(game, playerEntity);
   const lineEntity = game.world.createEntity();
   // Entidade visual separada: o jogador continua sendo controlado apenas pelo ECS.
@@ -116,10 +133,13 @@ async function start() {
   status.textContent = usedFallback
     ? 'Modelo 3D indisponível; usando modelo de fallback.'
     : 'WebGL ativo: clique para mover. Space cancela o destino.';
+  finishLoading();
   startGameLoop({ ...game, multiplayerSystem });
 }
 
 start().catch((error) => {
+  updateLoading(error.message, 'Não foi possível carregar');
+  loadingScreen.classList.add('loading-screen-error');
   status.textContent = `Erro ao iniciar: ${error.message}`;
   console.error(error);
 });

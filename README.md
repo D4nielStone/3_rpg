@@ -110,9 +110,9 @@ O relay registra conexoes, desconexoes, mensagens de chat e mensagens invalidas 
 
 ### Jogador convidado
 
-O cliente cria um `guestId` anonimo e o guarda no `localStorage`. O relay usa esse identificador para persistir vida, mana, XP, dinheiro, inventario, posicao e rotacao em `server/data/players.json`. Assim, um jogador sem conta recupera o estado ao recarregar a pagina ou reconectar.
+O cliente cria um `guestId` anonimo e o guarda no `localStorage`. O relay usa esse identificador para persistir vida, mana, XP, dinheiro, inventario, posicao e rotacao em PostgreSQL. A tabela `players` e criada automaticamente na primeira inicializacao. Assim, um jogador sem conta recupera o estado ao recarregar a pagina ou reconectar.
 
-Limpar os dados do site ou trocar de navegador cria um novo jogador convidado. Esse identificador nao substitui autenticacao: quem conseguir copia-lo pode recuperar o mesmo jogador. Em hospedagens com disco efemero, configure armazenamento persistente ou troque o `PlayerStore` por um banco de dados, caso contrario os dados serao perdidos quando o servico reiniciar.
+Limpar os dados do site ou trocar de navegador cria um novo jogador convidado. Esse identificador nao substitui autenticacao: quem conseguir copia-lo pode recuperar o mesmo jogador. Configure `DATABASE_URL` com a string de conexao do banco (no Render, use o Internal Database URL do PostgreSQL). Sem essa variavel, o relay nao inicia.
 
 A URL do Web Service do Render e a URL do relay, nao a pagina do jogo. Abrir essa URL diretamente mostra o status JSON do servidor; o jogo deve ser publicado separadamente como Static Site.
 

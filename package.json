@@ -13,6 +13,7 @@
     "vite": "latest"
   },
   "dependencies": {
+    "pg": "^8.16.3",
     "three": "^0.185.1",
     "ws": "^8.18.3"
   }
