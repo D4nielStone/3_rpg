@@ -34,15 +34,40 @@ export class PlayerStore {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY,
+        nickname VARCHAR(20) NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
   }
 
-  async get(guestId, peerId) {
+  async get(guestId, peerId, nickname = 'Guest') {
     await this.ready;
     const result = await this.pool.query(
       'SELECT state FROM players WHERE guest_id = $1',
       [guestId],
     );
-    return new Player({ peerId, ...(result.rows[0]?.state ?? {}) });
+    return new Player({ peerId, nickname, ...(result.rows[0]?.state ?? {}) });
+  }
+
+  async registerUser(id, nickname, passwordHash) {
+    await this.ready;
+    await this.pool.query(
+      'INSERT INTO users (id, nickname, password_hash) VALUES ($1, $2, $3)',
+      [id, nickname, passwordHash],
+    );
+  }
+
+  async findUser(nickname) {
+    await this.ready;
+    const result = await this.pool.query(
+      'SELECT id, nickname, password_hash FROM users WHERE nickname = $1',
+      [nickname],
+    );
+    return result.rows[0] ?? null;
   }
 
   async save(guestId, player) {

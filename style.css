@@ -22,6 +22,136 @@ body {
   overflow: hidden;
 }
 
+#start-screen {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  color: #f8fafc;
+  background: #07111f;
+  font-family: sans-serif;
+  transition: opacity 260ms ease, visibility 260ms ease;
+}
+
+#start-screen.start-screen-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.start-card {
+  width: min(26rem, 100%);
+  box-sizing: border-box;
+  padding: clamp(1.5rem, 7vw, 2.75rem);
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 8px;
+  background: rgb(13 28 48 / 94%);
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 35%);
+}
+
+.start-eyebrow {
+  margin: 0 0 0.65rem;
+  color: #ffb703;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.start-card h1 {
+  margin: 0;
+  font-size: clamp(1.7rem, 7vw, 2.35rem);
+}
+
+.start-intro {
+  margin: 0.65rem 0 1.5rem;
+  color: rgb(255 255 255 / 66%);
+  font-size: 0.92rem;
+}
+
+#account-form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+#account-form label {
+  margin-top: 0.45rem;
+  color: rgb(255 255 255 / 82%);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+#account-form input {
+  width: 100%;
+  min-height: 2.7rem;
+  box-sizing: border-box;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 4px;
+  padding: 0.65rem 0.75rem;
+  color: white;
+  background: rgb(255 255 255 / 8%);
+  font: inherit;
+}
+
+#account-form input:focus {
+  border-color: #ffb703;
+  outline: 2px solid rgb(255 183 3 / 35%);
+  outline-offset: 1px;
+}
+
+.account-message {
+  min-height: 1.2em;
+  margin: 0.2rem 0 0;
+  color: #fca5a5;
+  font-size: 0.78rem;
+}
+
+.start-primary,
+.start-guest {
+  min-height: 2.7rem;
+  border: 0;
+  border-radius: 4px;
+  font: 700 0.9rem/1 sans-serif;
+  cursor: pointer;
+}
+
+.start-primary {
+  color: #111827;
+  background: #ffb703;
+}
+
+.start-guest {
+  width: 100%;
+  color: white;
+  background: rgb(255 255 255 / 10%);
+}
+
+.start-primary:hover,
+.start-guest:hover,
+.start-primary:focus-visible,
+.start-guest:focus-visible {
+  outline: 2px solid #ffb703;
+  outline-offset: 2px;
+}
+
+.start-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.1rem 0;
+  color: rgb(255 255 255 / 45%);
+  font-size: 0.75rem;
+}
+
+.start-divider::before,
+.start-divider::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: rgb(255 255 255 / 16%);
+}
+
 #loading-screen {
   position: fixed;
   z-index: 10;
@@ -237,6 +367,8 @@ body {
 
 #chat.chat-collapsed {
   width: auto;
+  gap: 0.25rem;
+  display: flex;
   padding: 0.45rem 0.65rem;
 }
 
@@ -292,7 +424,7 @@ body {
 #chat button {
   border: 0;
   border-radius: 4px;
-  padding: 0 0.7rem;
+  padding: 0.45rem 0.7rem;
   min-height: 2.4rem;
   font: inherit;
   color: #111827;

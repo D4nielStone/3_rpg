@@ -7,6 +7,23 @@
         <title>WebGL RPG Multiplayer</title>
     </head>
     <body>
+        <section id="start-screen" aria-labelledby="start-title">
+            <div class="start-card">
+                <p class="start-eyebrow">WEBGL RPG</p>
+                <h1 id="start-title">Entre no mundo</h1>
+                <p class="start-intro">Escolha como deseja começar sua aventura.</p>
+                <form id="account-form">
+                    <label for="nickname">Nickname</label>
+                    <input id="nickname" name="nickname" maxlength="20" autocomplete="username" required placeholder="Seu nome" />
+                    <label for="password">Senha</label>
+                    <input id="password" name="password" type="password" minlength="4" autocomplete="current-password" required placeholder="Mínimo de 4 caracteres" />
+                    <p id="account-message" class="account-message" role="alert"></p>
+                    <button class="start-primary" type="submit">Entrar</button>
+                </form>
+                <div class="start-divider"><span>ou</span></div>
+                <button id="guest-button" class="start-guest" type="button">Continuar como guest</button>
+            </div>
+        </section>
         <section id="loading-screen" role="status" aria-live="polite" aria-label="Carregando jogo">
             <div class="loading-card">
                 <div class="loading-spinner" aria-hidden="true"></div>
@@ -35,7 +52,6 @@
             </section>
             <aside id="chat" aria-label="Chat do jogo">
                 <header class="chat-header">
-                    <h2>Chat</h2>
                     <button id="chat-toggle" type="button" aria-label="Ocultar chat" aria-expanded="true">-</button>
                 </header>
                 <div id="chat-content">

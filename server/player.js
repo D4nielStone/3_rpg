@@ -10,6 +10,7 @@ function copyVector(vector, fallback) {
 export class Player {
   constructor({
     peerId,
+    nickname = 'Guest',
     hp = 100,
     maxHp = 100,
     mana = 100,
@@ -22,6 +23,7 @@ export class Player {
     inventory = [],
   } = {}) {
     this.peerId = peerId;
+    this.nickname = nickname;
     this.hp = Number(hp);
     this.maxHp = Number(maxHp);
     this.mana = Number(mana);
@@ -42,6 +44,7 @@ export class Player {
   toSnapshot() {
     return {
       peerId: this.peerId,
+      nickname: this.nickname,
       hp: this.hp,
       maxHp: this.maxHp,
       mana: this.mana,

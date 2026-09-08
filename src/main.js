@@ -13,6 +13,12 @@ const status = document.querySelector('#status');
 const loadingScreen = document.querySelector('#loading-screen');
 const loadingTitle = document.querySelector('#loading-title');
 const loadingMessage = document.querySelector('#loading-message');
+const startScreen = document.querySelector('#start-screen');
+const accountForm = document.querySelector('#account-form');
+const guestButton = document.querySelector('#guest-button');
+const nicknameInput = document.querySelector('#nickname');
+const accountMessage = document.querySelector('#account-message');
+let gameStarted = false;
 
 function updateLoading(message, title = 'Carregando cena') {
   loadingTitle.textContent = title;
@@ -138,9 +144,33 @@ async function start() {
   startGameLoop({ ...game, multiplayerSystem });
 }
 
-start().catch((error) => {
+function beginGame(nickname) {
+  if (gameStarted) return;
+  gameStarted = true;
+  window.localStorage.setItem('webgl-rpg-nickname', nickname);
+  startScreen.classList.add('start-screen-hidden');
+  start().catch(handleStartError);
+}
+
+function handleStartError(error) {
   updateLoading(error.message, 'Não foi possível carregar');
   loadingScreen.classList.add('loading-screen-error');
   status.textContent = `Erro ao iniciar: ${error.message}`;
   console.error(error);
+}
+
+accountForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const nickname = nicknameInput.value.trim();
+  const password = document.querySelector('#password').value;
+  if (nickname.length < 2 || password.length < 4) {
+    accountMessage.textContent = 'Use um nickname com 2 caracteres e uma senha com 4.';
+    return;
+  }
+  beginGame(nickname);
+});
+
+guestButton.addEventListener('click', () => {
+  const guestNickname = `Guest-${window.crypto.randomUUID().slice(0, 4).toUpperCase()}`;
+  beginGame(guestNickname);
 });
