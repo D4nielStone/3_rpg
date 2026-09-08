@@ -207,6 +207,43 @@ body {
   font-size: 0.95rem;
 }
 
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-header h2 {
+  margin: 0;
+}
+
+#chat-toggle {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgb(255 255 255 / 25%);
+  border-radius: 4px;
+  color: white;
+  background: rgb(255 255 255 / 10%);
+  font: 700 1.1rem/1 sans-serif;
+  cursor: pointer;
+}
+
+#chat-toggle:hover,
+#chat-toggle:focus-visible {
+  border-color: #ffb703;
+  outline: 2px solid #ffb703;
+  outline-offset: 1px;
+}
+
+#chat.chat-collapsed {
+  width: auto;
+  padding: 0.45rem 0.65rem;
+}
+
+#chat.chat-collapsed #chat-content {
+  display: none;
+}
+
 #chat-messages {
   display: flex;
   flex-direction: column;

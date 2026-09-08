@@ -29,6 +29,7 @@ const server = createServer((request, response) => {
 });
 const socketServer = new WebSocketServer({ server });
 const players = new Map();
+const activeGuestSessions = new Map();
 const logger = new ServerLogger();
 const playerStore = new PlayerStore();
 
@@ -77,11 +78,19 @@ socketServer.on('connection', async (socket, request) => {
   const peerId = randomUUID();
   const guestId = getGuestId(request.url);
   const userLabel = getUserLabel(peerId);
+  if (activeGuestSessions.has(guestId)) {
+    logger.warn('Conexao duplicada recusada', { peerId, guestId });
+    socket.close(4008, 'Guest already connected');
+    return;
+  }
+  activeGuestSessions.set(guestId, { peerId, socket });
+
   let player;
   try {
     player = await playerStore.get(guestId, peerId);
   } catch (error) {
     logger.error('Falha ao carregar jogador', { peerId, error: error.message });
+    activeGuestSessions.delete(guestId);
     socket.close(1011, 'Database unavailable');
     return;
   }
@@ -129,6 +138,8 @@ socketServer.on('connection', async (socket, request) => {
   });
 
   socket.on('close', async () => {
+    const activeSession = activeGuestSessions.get(guestId);
+    if (activeSession?.peerId === peerId) activeGuestSessions.delete(guestId);
     const player = players.get(peerId);
     if (player) playerStore.save(guestId, player).catch((error) => {
       logger.error('Falha ao salvar jogador', { peerId, error: error.message });

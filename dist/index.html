@@ -4,8 +4,8 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>WebGL RPG Multiplayer</title>
-      <script type="module" crossorigin src="/assets/index-De0H77Fb.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-DsyR-mU0.css">
+      <script type="module" crossorigin src="/assets/index-C8WFKio-.js"></script>
+      <link rel="stylesheet" crossorigin href="/assets/index-DmlEtU2R.css">
     </head>
     <body>
         <section id="loading-screen" role="status" aria-live="polite" aria-label="Carregando jogo">
@@ -35,12 +35,17 @@
                 <div class="status-bar"><span id="player-xp-bar"></span></div>
             </section>
             <aside id="chat" aria-label="Chat do jogo">
-                <h2>Chat</h2>
-                <ol id="chat-messages" aria-live="polite"></ol>
-                <form id="chat-form">
+                <header class="chat-header">
+                    <h2>Chat</h2>
+                    <button id="chat-toggle" type="button" aria-label="Ocultar chat" aria-expanded="true">-</button>
+                </header>
+                <div id="chat-content">
+                    <ol id="chat-messages" aria-live="polite"></ol>
+                    <form id="chat-form">
                     <input id="chat-input" maxlength="200" autocomplete="off" placeholder="Digite uma mensagem" />
                     <button type="submit">Enviar</button>
-                </form>
+                    </form>
+                </div>
             </aside>
         </main>
     </body>

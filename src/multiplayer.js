@@ -53,9 +53,13 @@ export class MultiplayerSystem {
     this.socket = new WebSocket(this.url);
     this.socket.addEventListener('open', () => this.onStatus('Multiplayer conectado.'));
     this.socket.addEventListener('message', (event) => this.handleMessage(event.data));
-    this.socket.addEventListener('close', () => {
-      this.onStatus('Multiplayer offline. Inicie o relay para conectar.');
+    this.socket.addEventListener('close', (event) => {
       this.socket = null;
+      if (event.code === 4008) {
+        this.onStatus('Este jogador já está aberto em outra aba.');
+        return;
+      }
+      this.onStatus('Multiplayer offline. Inicie o relay para conectar.');
       if (retry) {
         window.setTimeout(() => this.connect({ retry }), 3000);
       }

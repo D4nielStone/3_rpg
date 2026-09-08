@@ -42,6 +42,7 @@ const chat = new ChatPanel({
   messagesElement: document.querySelector('#chat-messages'),
   formElement: document.querySelector('#chat-form'),
   inputElement: document.querySelector('#chat-input'),
+  toggleButton: document.querySelector('#chat-toggle'),
 });
 
 async function loadLocalPlayer(game) {
