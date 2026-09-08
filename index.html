@@ -9,8 +9,8 @@
     <body>
         <section id="start-screen" aria-labelledby="start-title">
             <div class="start-card">
-                <p class="start-eyebrow">WEBGL RPG</p>
-                <h1 id="start-title">Entre no mundo</h1>
+                <p class="start-eyebrow">RUCOY ONLINE</p>
+                <h1 id="start-title">Welcome</h1>
                 <p class="start-intro">Escolha como deseja começar sua aventura.</p>
                 <form id="account-form">
                     <label for="nickname">Nickname</label>
@@ -43,12 +43,18 @@
         </section>
         <main>
             <canvas id="canvas" width="800" height="500"></canvas>
+            <div id="action-bar" aria-label="Ações rápidas">
+                <button class="action-slot action-slot-selected" type="button" aria-label="Ataque atual">⚔</button>
+                <button class="action-slot" type="button" aria-label="Habilidade 2">✦</button>
+                <button class="action-slot" type="button" aria-label="Habilidade 3">◆</button>
+                <button class="action-slot" type="button" aria-label="Habilidade 4">✚</button>
+            </div>
             <nav id="ui-scale-controls" aria-label="Tamanho da interface">
                 <button id="ui-scale-decrease" type="button" aria-label="Diminuir interface">-</button>
                 <button id="ui-scale-increase" type="button" aria-label="Aumentar interface">+</button>
             </nav>
-            <button id="menu-button" type="button" aria-expanded="false" aria-controls="attributes-menu">Status</button>
-            <button id="ranking-button" type="button" aria-expanded="false" aria-controls="ranking-menu">Ranking</button>
+            <button id="menu-button" type="button" aria-expanded="false" aria-controls="attributes-menu" aria-label="Abrir status">⚙</button>
+            <button id="ranking-button" type="button" aria-expanded="false" aria-controls="ranking-menu" aria-label="Abrir ranking">•••</button>
             <aside id="attributes-menu" class="attributes-menu-hidden" aria-labelledby="attributes-title">
                 <h2 id="attributes-title">Atributos</h2>
                 <div class="attribute-row"><span>Força</span><strong id="player-strength-value">1</strong></div>
