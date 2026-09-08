@@ -1,0 +1,65 @@
+#start-screen {
+  background: #000;
+}
+
+#start-screen::before,
+#start-screen::after {
+  display: none;
+}
+
+.start-card {
+  position: relative;
+  z-index: 1;
+  width: min(22rem, 100%);
+  padding: 1.5rem;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: 'Pixelify Sans', sans-serif;
+}
+
+.start-eyebrow {
+  display: none;
+}
+
+.start-card h1 {
+  margin-bottom: 1.4rem;
+  color: #fff;
+  font-size: clamp(2rem, 8vw, 2.8rem);
+  text-shadow: none;
+}
+
+.start-intro {
+  display: none;
+}
+
+#account-form label { color: #fff; }
+
+#account-form input {
+  min-height: 2.45rem;
+  border: 1px solid #555;
+  border-radius: 2px;
+  color: #fff;
+  background: #111;
+}
+
+.start-primary,
+.start-guest { border-radius: 2px; }
+
+.start-primary {
+  color: #fff;
+  background: #1677d2;
+  box-shadow: none;
+}
+
+.start-guest {
+  color: #fff;
+  background: #222;
+}
+
+.start-divider {
+  margin: 0.8rem 0;
+  color: #777;
+}

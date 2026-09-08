@@ -28,7 +28,7 @@ const vertexShaderSource = `
   uniform mat4 modelMatrix;
 
   varying vec3 color;
-  varying vec3 vNormal;
+  varying vec3 vWorldNormal;
   varying vec2 vUv;
 
   uniform float isWater;
@@ -46,7 +46,7 @@ const vertexShaderSource = `
 
     color = vertexColor;
 
-    vNormal = normalize(
+    vWorldNormal = normalize(
       (modelMatrix * vec4(normal, 0.0)).xyz
     );
 
@@ -58,7 +58,7 @@ const fragmentShaderSource = `
   precision mediump float;
 
   varying vec3 color;
-  varying vec3 vNormal;
+  varying vec3 vWorldNormal;
   varying vec2 vUv;
 
   uniform sampler2D uTexture;
@@ -81,7 +81,7 @@ const fragmentShaderSource = `
       finalColor = vec3(0.015, 0.06, 0.16);
       alpha = 0.24;
     } else {
-      vec3 normal = normalize(vNormal);
+      vec3 normal = normalize(vWorldNormal);
       vec3 light = normalize(-lightDirection);
 
       float directional = max(

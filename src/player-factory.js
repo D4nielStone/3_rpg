@@ -2,7 +2,6 @@ import { loadAsset } from './asset-loader.js';
 import {
   MeshRenderer,
   AnimationPlayer,
-  ShadowRenderer,
   MoveTarget,
   NetworkIdentity,
   NetworkTransform,
@@ -36,7 +35,6 @@ function addController(world, entity) {
   // Componentes comuns a jogador local e fallback ficam centralizados aqui.
   world.addComponent(entity, new Transform());
   world.addComponent(entity, new AnimationPlayer());
-  world.addComponent(entity, new ShadowRenderer());
   world.addComponent(entity, new PlayerController());
   world.addComponent(entity, new MoveTarget());
 }

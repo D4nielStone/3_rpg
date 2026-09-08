@@ -2,7 +2,6 @@ import {
   EnemyIdentity,
   EnemyHealthBar,
   AnimationPlayer,
-  ShadowRenderer,
   MeshRenderer,
   NameTag,
   NetworkTransform,
@@ -42,7 +41,6 @@ export function addRemoteEnemy(world, enemyAssets, enemy) {
     enemyId: enemy.id,
     type: enemy.type,
   }));
-  world.addComponent(entity, new ShadowRenderer({ radius: [0.55, 0.32] }));
   world.addComponent(entity, new EnemyHealthBar({
     hp: enemy.hp,
     maxHp: enemy.maxHp,
