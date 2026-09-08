@@ -271,6 +271,19 @@ function findPlayerArea(position) {
   return enemyAreas.find((area) => area.contains(position)) ?? null;
 }
 
+function isWaterPosition(position) {
+  const terrain = publishedMapConfig?.terrain;
+  if (Number.isInteger(terrain?.columns) && Number.isInteger(terrain?.rows)) {
+    const column = Math.floor(position[0] + terrain.columns / 2);
+    const row = Math.floor(position[2] + terrain.rows / 2);
+    return terrain.cells?.[row]?.[column] === 'water';
+  }
+  const water = publishedMapConfig?.water;
+  if (!water?.enabled) return false;
+  const size = Number(water.size) || 50;
+  return Math.abs(position[0]) <= size / 2 && Math.abs(position[2]) <= size / 2;
+}
+
 function promotePlayerToAreaTwo(player) {
   if (player.level < MIN_LEVEL_FOR_HIGHER_AREA || player.area?.id !== 'starting-rat-area') {
     return false;
@@ -590,6 +603,15 @@ socketServer.on('connection', async (socket, request) => {
       if (player.dead) return;
       if (message.type !== 'state' || !isVector(message.position) || !isVector(message.rotation)) {
         logger.warn('Mensagem inválida ignorada', { peerId, type: message.type });
+        return;
+      }
+      if (isWaterPosition(message.position)) {
+        socket.send(JSON.stringify({
+          type: 'water-blocked',
+          position: [...player.position],
+          rotation: [...player.rotation],
+        }));
+        sendSystemMessage(socket, 'Não é possível caminhar sobre a água.');
         return;
       }
       const destinationArea = findPlayerArea(message.position);

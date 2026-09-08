@@ -153,6 +153,19 @@ export class MultiplayerSystem {
       return;
     }
 
+    if (message.type === 'water-blocked') {
+      const transform = this.localEntity
+        ? this.world.getComponent(this.localEntity, Transform)
+        : null;
+      const moveTarget = this.localEntity
+        ? this.world.getComponent(this.localEntity, MoveTarget)
+        : null;
+      if (transform && Array.isArray(message.position)) transform.position = [...message.position];
+      if (transform && Array.isArray(message.rotation)) transform.rotation = [...message.rotation];
+      if (moveTarget) moveTarget.position = null;
+      return;
+    }
+
     if (message.type === 'snapshot' && Array.isArray(message.players)) {
       // O snapshot apenas agenda dados; a criacao/remoção ECS ocorre em update().
       this.pendingState = message.players.slice(0, MESSAGE_LIMIT);

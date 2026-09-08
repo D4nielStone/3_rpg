@@ -118,7 +118,7 @@ function getEnemyAreas() {
   return areas;
 }
 
-function exportConfig() { return { enemyAreas: getEnemyAreas(), water: { enabled: waterEnabled.checked || grid.flat().includes('water'), size: 50, segments: 32 }, terrain: { columns: COLS, rows: ROWS, cells: grid.map((row) => [...row]) } }; }
+function exportConfig() { return { enemyAreas: getEnemyAreas(), water: { enabled: waterEnabled.checked || grid.flat().includes('water'), size: 50, segments: 32, level: -0.2 }, terrain: { columns: COLS, rows: ROWS, cells: grid.map((row) => [...row]) } }; }
 function download() { const file = new Blob([JSON.stringify(exportConfig(), null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(file); link.download = 'map-config.json'; link.click(); URL.revokeObjectURL(link.href); status.textContent = 'Configuração exportada'; }
 async function applyToGame() {
   const config = exportConfig();

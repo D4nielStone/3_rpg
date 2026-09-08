@@ -37,9 +37,9 @@ function createWaterMesh(size, segments) {
   });
 }
 
-export function createWater(world, { size = 50, segments = 32 } = {}) {
+export function createWater(world, { size = 50, segments = 32, level = -0.2 } = {}) {
   const entity = world.createEntity();
-  world.addComponent(entity, new Transform({ position: [0, -0.08, 0] }));
+  world.addComponent(entity, new Transform({ position: [0, level, 0] }));
   world.addComponent(entity, new Water());
   world.addComponent(entity, createWaterMesh(size, segments));
   return entity;

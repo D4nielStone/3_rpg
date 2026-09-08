@@ -11,6 +11,7 @@ export const DEFAULT_MAP_CONFIG = Object.freeze({
     enabled: false,
     size: 50,
     segments: 32,
+    level: -0.2,
   },
 });
 
@@ -40,11 +41,12 @@ function createTerrain(world, terrain) {
       const x = column - halfColumns;
       const z = row - halfRows;
       const first = vertices.length / 3;
+      const level = terrainType === 'water' ? -0.2 : -0.08;
       vertices.push(
-        x, -0.08, z,
-        x + 1, -0.08, z,
-        x + 1, -0.08, z + 1,
-        x, -0.08, z + 1,
+        x, level, z,
+        x + 1, level, z,
+        x + 1, level, z + 1,
+        x, level, z + 1,
       );
       colors.push(...color, ...color, ...color, ...color);
       indices.push(first, first + 1, first + 2, first, first + 2, first + 3);
