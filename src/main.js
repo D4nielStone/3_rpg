@@ -42,8 +42,9 @@ const playerStatus = new PlayerStatus({
   hpBar: document.querySelector('#player-hp-bar'),
   manaBar: document.querySelector('#player-mana-bar'),
   xpBar: document.querySelector('#player-xp-bar'),
+  levelValue: document.querySelector('#player-level-value'),
 });
-playerStatus.update({ hp: 100, maxHp: 100, mana: 100, maxMana: 100, xp: 0, maxXp: 100 });
+playerStatus.update({ level: 1, hp: 100, maxHp: 100, mana: 100, maxMana: 100, xp: 0, maxXp: 4 });
 // O chat e a cena sao inicializados uma unica vez; os sistemas fazem o trabalho por frame.
 const chat = new ChatPanel({
   messagesElement: document.querySelector('#chat-messages'),
@@ -102,7 +103,7 @@ function createMultiplayer(game, playerEntity) {
     },
     onPlayerState: (player) => playerStatus.update(player),
     onChat: (message) => chat.addMessage(message),
-    createRemoteEntity: (peerId, nickname) => addRemotePlayer(game.world, playerEntity, peerId, nickname),
+    createRemoteEntity: (peerId, nickname, level) => addRemotePlayer(game.world, playerEntity, peerId, nickname, level),
   });
   chat.connect((message) => multiplayer.sendChat(message));
   multiplayer.setLocalEntity(playerEntity);

@@ -19,6 +19,8 @@ Nunca coloque senhas reais neste arquivo ou no repositorio. Use `.env.example` c
 
 Crie um arquivo `.env` na raiz, baseado em `.env.example`, e informe uma URL do PostgreSQL local ou de desenvolvimento. O script do relay carrega esse arquivo automaticamente.
 
+Nao copie para o `.env` local a `Internal Database URL` do Render. Hostnames como `dpg-...` sao acessiveis apenas pelos servicos dentro da rede do Render e causam `getaddrinfo ENOTFOUND` no computador local. Para executar fora do Render, use um banco local ou a `External Database URL` exibida na pagina do PostgreSQL no Render.
+
 ```powershell
 npm.cmd install
 npm.cmd run multiplayer
@@ -60,6 +62,38 @@ A origem deve ser exatamente igual a URL que aparece no navegador, sem barra fin
 - Senhas sao armazenadas como hash `scrypt` com salt.
 - O token de sessao fica apenas no `sessionStorage` do navegador.
 
+### Administrador
+
+A permissao de administrador fica na coluna `users.is_admin` do PostgreSQL. Ela nao e determinada pelo nickname. Para promover uma conta no PostgreSQL do Render:
+
+1. Abra o banco PostgreSQL no Render.
+2. Abra **Shell** ou conecte-se usando o **External Database URL** com `psql`.
+3. Execute:
+
+```sql
+UPDATE users
+SET is_admin = TRUE
+WHERE nickname = 'Seu nick';
+```
+
+Confirme:
+
+```sql
+SELECT nickname, is_admin
+FROM users
+WHERE nickname = 'Seu nick';
+```
+
+Para remover a permissao:
+
+```sql
+UPDATE users
+SET is_admin = FALSE
+WHERE nickname = 'Seu nick';
+```
+
+Depois de promover ou remover a permissao, faca logout/login novamente para emitir uma nova sessao. O comando `/xp` consulta a permissao da sessao autenticada no servidor.
+
 O jogador guest continua usando um `guestId` anonimo no `localStorage`. Contas e guests compartilham a mesma tabela de estado do jogador, mas usam identidades diferentes.
 
 ## Diagnostico
@@ -67,6 +101,8 @@ O jogador guest continua usando um `guestId` anonimo no `localStorage`. Contas e
 `DATABASE_URL nao configurada`: configure a variavel no ambiente do relay.
 
 `ENOTFOUND host`: a URL ainda usa o hostname de exemplo `host`; substitua pela connection string real.
+
+`ENOTFOUND dpg-...`: a URL interna do Render esta sendo usada fora do Render; troque por `localhost` ou pela URL externa do banco.
 
 Erro de CORS: confirme `FRONTEND_ORIGIN`, faca novo deploy do relay e verifique se o frontend esta usando `https://`/`wss://` em producao.
 

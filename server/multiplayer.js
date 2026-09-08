@@ -115,7 +115,13 @@ function getConnectionIdentity(requestUrl) {
     const params = new URL(requestUrl, 'ws://localhost').searchParams;
     const token = params.get('token');
     const session = token ? sessions.get(token) : null;
-    if (session) return { id: session.userId, nickname: session.nickname };
+    if (session) {
+      return {
+        id: session.userId,
+        nickname: session.nickname,
+        isAdmin: session.isAdmin,
+      };
+    }
     const guestId = params.get('guestId');
     const nickname = params.get('nickname');
     if (/^[0-9a-f-]{36}$/i.test(guestId ?? '')) {
@@ -215,7 +221,7 @@ socketServer.on('connection', async (socket, request) => {
         const text = message.text.trim();
         const experienceAmount = parseExperienceCommand(text);
         if (experienceAmount !== null) {
-          if (player.nickname !== 'ADMIN') {
+          if (!identity.isAdmin) {
             socket.send(JSON.stringify({
               type: 'system',
               text: 'Comando restrito ao administrador.',

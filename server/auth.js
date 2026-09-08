@@ -27,7 +27,12 @@ export async function verifyPassword(password, storedHash) {
 }
 
 export function createSession(user) {
-  return { token: randomBytes(32).toString('hex'), userId: user.id, nickname: user.nickname };
+  return {
+    token: randomBytes(32).toString('hex'),
+    userId: user.id,
+    nickname: user.nickname,
+    isAdmin: user.is_admin === true,
+  };
 }
 
 export function createAccountId() {

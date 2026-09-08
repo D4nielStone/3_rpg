@@ -70,13 +70,13 @@ export async function loadPlayer(world, textureManager) {
   return entity;
 }
 
-export function addRemotePlayer(world, sourceEntity, peerId, nickname = 'Guest') {
+export function addRemotePlayer(world, sourceEntity, peerId, nickname = 'Guest', level = 1) {
   // Jogadores remotos reutilizam a malha, mas recebem transformacao pela rede.
   const entity = world.createEntity();
   world.addComponent(entity, new Transform());
   world.addComponent(entity, new NetworkIdentity({ peerId }));
   world.addComponent(entity, new NetworkTransform());
-  world.addComponent(entity, new NameTag({ text: nickname }));
+  world.addComponent(entity, new NameTag({ text: nickname, level }));
   world.addComponent(entity, world.getComponent(sourceEntity, MeshRenderer));
 
   const texture = world.getComponent(sourceEntity, Texture);

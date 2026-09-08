@@ -34,12 +34,19 @@ export class NetworkTransform {
 }
 
 export class NameTag {
-  constructor({ text = 'Guest' } = {}) {
+  constructor({ text = 'Guest', level = 1 } = {}) {
     this.text = text;
+    this.level = level;
     this.element = document.createElement('span');
     this.element.className = 'player-name-tag';
-    this.element.textContent = text;
+    this.update(text, level);
     document.body.append(this.element);
+  }
+
+  update(text = this.text, level = this.level) {
+    this.text = text;
+    this.level = Math.max(1, Number(level) || 1);
+    this.element.textContent = `${this.text} • LVL ${this.level}`;
   }
 
   dispose() {

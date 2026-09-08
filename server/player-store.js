@@ -19,9 +19,14 @@ export class PlayerStore {
       throw new Error('DATABASE_URL ainda usa o hostname de exemplo "host". Configure a URL real do PostgreSQL.');
     }
 
+    const isLocalDatabase = ['localhost', '127.0.0.1', '::1'].includes(databaseUrl.hostname);
+
     this.pool = new Pool({
       connectionString,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+      ssl: !isLocalDatabase ? { rejectUnauthorized: false } : undefined,
+      connectionTimeoutMillis: 10_000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10_000,
     });
     this.ready = this.initialize();
   }
@@ -39,8 +44,13 @@ export class PlayerStore {
         id UUID PRIMARY KEY,
         nickname VARCHAR(20) NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
+        is_admin BOOLEAN NOT NULL DEFAULT FALSE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
+    `);
+    await this.pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE
     `);
   }
 
@@ -64,7 +74,7 @@ export class PlayerStore {
   async findUser(nickname) {
     await this.ready;
     const result = await this.pool.query(
-      'SELECT id, nickname, password_hash FROM users WHERE nickname = $1',
+      'SELECT id, nickname, password_hash, is_admin FROM users WHERE nickname = $1',
       [nickname],
     );
     return result.rows[0] ?? null;

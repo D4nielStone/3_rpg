@@ -1,4 +1,4 @@
-import { NetworkIdentity, NetworkTransform, Transform } from './components.js';
+import { NameTag, NetworkIdentity, NetworkTransform, Transform } from './components.js';
 
 const MESSAGE_LIMIT = 32;
 
@@ -144,6 +144,8 @@ export class MultiplayerSystem {
           }
           this.localStateRestored = true;
         }
+        const localNameTag = world.getComponent(this.localEntity, NameTag);
+        localNameTag?.update(player.nickname, player.level);
         this.onPlayerState(player);
         continue;
       }
@@ -151,9 +153,12 @@ export class MultiplayerSystem {
       activePeers.add(player.peerId);
       let entity = this.remoteEntities.get(player.peerId);
       if (!entity) {
-        entity = this.createRemoteEntity(player.peerId, player.nickname);
+        entity = this.createRemoteEntity(player.peerId, player.nickname, player.level);
         this.remoteEntities.set(player.peerId, entity);
       }
+
+      const nameTag = world.getComponent(entity, NameTag);
+      nameTag?.update(player.nickname, player.level);
 
       const networkTransform = world.getComponent(entity, NetworkTransform);
       if (networkTransform) {
