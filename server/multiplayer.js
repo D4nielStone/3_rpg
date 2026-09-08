@@ -207,6 +207,15 @@ function getPlayerIdByPeerId(peerId) {
   return null;
 }
 
+function sendSystemMessage(socket, text) {
+  if (socket?.readyState !== 1) return;
+  socket.send(JSON.stringify({
+    type: 'system',
+    text,
+    sentAt: Date.now(),
+  }));
+}
+
 function broadcastSnapshot() {
   // O relay mantem somente o estado temporario dos jogadores conectados.
   const snapshot = JSON.stringify({
@@ -296,6 +305,13 @@ socketServer.on('connection', async (socket, request) => {
           if (command.type === 'xp') {
             const leveledUp = target.player.addExperience(command.amount);
             messageText = `+${command.amount} XP para ${target.player.nickname}${leveledUp ? '. Level aumentado.' : '.'}`;
+            if (leveledUp) {
+              const targetSession = activeGuestSessions.get(target.playerId);
+              sendSystemMessage(
+                targetSession?.socket,
+                `Você subiu para o level ${target.player.level}! Vida e mana restauradas para 100%.`,
+              );
+            }
           } else {
             target.player.hp = Math.min(
               target.player.maxHp,
@@ -305,11 +321,7 @@ socketServer.on('connection', async (socket, request) => {
           }
 
           await playerStore.save(target.playerId, target.player);
-          socket.send(JSON.stringify({
-            type: 'system',
-            text: messageText,
-            sentAt: Date.now(),
-          }));
+          sendSystemMessage(socket, messageText);
           broadcastSnapshot();
           return;
         }
@@ -339,11 +351,16 @@ socketServer.on('connection', async (socket, request) => {
             player.money += attackResult.rewards.gold;
             const leveledUp = player.addExperience(attackResult.rewards.experience);
             await playerStore.save(playerId, player);
-            socket.send(JSON.stringify({
-              type: 'system',
-              text: `Rato derrotado: +${attackResult.rewards.gold} ouro e +${attackResult.rewards.experience} XP${leveledUp ? '. Level aumentado.' : '.'}`,
-              sentAt: Date.now(),
-            }));
+            sendSystemMessage(
+              socket,
+              `Rato derrotado: +${attackResult.rewards.gold} ouro e +${attackResult.rewards.experience} XP${leveledUp ? '.' : '.'}`,
+            );
+            if (leveledUp) {
+              sendSystemMessage(
+                socket,
+                `Você subiu para o level ${player.level}! Vida e mana restauradas para 100%.`,
+              );
+            }
           }
           broadcastSnapshot();
         }

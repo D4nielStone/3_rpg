@@ -280,6 +280,10 @@ export class MultiplayerSystem {
       }
       const transform = world.getComponent(entity, Transform);
       const networkTransform = world.getComponent(entity, NetworkTransform);
+      const enemyScale = Number(enemy.scale);
+      if (transform && Number.isFinite(enemyScale) && enemyScale > 0) {
+        transform.scale = [enemyScale, enemyScale, enemyScale];
+      }
       if (networkTransform) {
         networkTransform.targetPosition = enemy.position;
         networkTransform.targetRotation = [0, enemy.rotationY ?? 0, 0];

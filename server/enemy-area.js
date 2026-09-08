@@ -29,7 +29,7 @@ export class EnemyArea {
     for (const enemy of this.enemies.values()) {
       const previousPosition = [...enemy.position];
       const previousAlerted = enemy.alerted;
-      const result = enemy.updateChase(activePlayers, deltaSeconds);
+      const result = enemy.updateChase(activePlayers, deltaSeconds, this);
       if (result?.damagedPlayer) damagedPlayers.push(result.damagedPlayer);
       changed = changed
         || previousAlerted !== enemy.alerted

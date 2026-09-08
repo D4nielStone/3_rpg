@@ -155,6 +155,7 @@ export class EnemyHealthBar {
     this.maxHp = maxHp;
     this.element = document.createElement('div');
     this.element.className = 'enemy-healthbar';
+    this.element.setAttribute('role', 'progressbar');
     this.fill = document.createElement('span');
     this.element.append(this.fill);
     document.body.append(this.element);
@@ -164,7 +165,10 @@ export class EnemyHealthBar {
   update(hp, maxHp = this.maxHp) {
     this.hp = Math.max(0, Number(hp) || 0);
     this.maxHp = Math.max(1, Number(maxHp) || 1);
-    this.fill.style.width = `${Math.min(100, this.hp / this.maxHp * 100)}%`;
+    const percentage = Math.min(100, this.hp / this.maxHp * 100);
+    this.fill.style.width = `${percentage}%`;
+    this.element.setAttribute('aria-valuenow', String(this.hp));
+    this.element.setAttribute('aria-valuemax', String(this.maxHp));
   }
 
   dispose() {
