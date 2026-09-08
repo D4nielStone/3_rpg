@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { WebSocketServer } from 'ws';
 import { ServerLogger } from './logger.js';
+import { Player } from './player.js';
 
 const port = Number(process.env.PORT ?? process.env.MULTIPLAYER_PORT ?? 5174);
 const host = process.env.HOST ?? '0.0.0.0';
@@ -48,7 +49,7 @@ function broadcastSnapshot() {
   // O relay mantem somente o estado temporario dos jogadores conectados.
   const snapshot = JSON.stringify({
     type: 'snapshot',
-    players: [...players.values()],
+    players: [...players.values()].map((player) => player.toSnapshot()),
   });
   for (const client of socketServer.clients) {
     if (client.readyState === 1) client.send(snapshot);
@@ -65,11 +66,7 @@ function broadcast(message) {
 socketServer.on('connection', (socket) => {
   const peerId = randomUUID();
   const userLabel = getUserLabel(peerId);
-  players.set(peerId, {
-    peerId,
-    position: [0, 0, 0],
-    rotation: [0, 0, 0],
-  });
+  players.set(peerId, new Player({ peerId }));
   // Identidade curta aparece no chat; o UUID completo fica apenas nos logs.
   logger.info(`${userLabel} entrou no servidor`, { peerId });
   socket.send(JSON.stringify({ type: 'welcome', peerId }));
@@ -104,8 +101,7 @@ socketServer.on('connection', (socket) => {
         logger.warn('Mensagem inválida ignorada', { peerId, type: message.type });
         return;
       }
-      player.position = message.position.slice(0, 3).map(Number);
-      player.rotation = message.rotation.slice(0, 3).map(Number);
+      player.setTransform(message.position, message.rotation);
       broadcastSnapshot();
     } catch {
       // Ignore malformed client messages.

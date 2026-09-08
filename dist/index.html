@@ -4,13 +4,24 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>WebGL RPG Multiplayer</title>
-      <script type="module" crossorigin src="/assets/index-BFRwdTIu.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-Bm4_2rZ_.css">
+      <script type="module" crossorigin src="/assets/index-B9G8Rx15.js"></script>
+      <link rel="stylesheet" crossorigin href="/assets/index-B47P6ZsF.css">
     </head>
     <body>
         <main>
             <canvas id="canvas" width="800" height="500"></canvas>
             <p id="status">Inicializando WebGL...</p>
+            <section id="player-status" aria-label="Status do jogador">
+                <div class="status-row status-health">
+                    <span class="status-label">VIDA</span>
+                    <span id="player-hp-value">100/100</span>
+                </div>
+                <div class="status-bar"><span id="player-hp-bar"></span></div>
+                <div class="status-row"><span class="status-label">MANA</span></div>
+                <div class="status-bar"><span id="player-mana-bar"></span></div>
+                <div class="status-row"><span class="status-label">XP</span></div>
+                <div class="status-bar"><span id="player-xp-bar"></span></div>
+            </section>
             <aside id="chat" aria-label="Chat do jogo">
                 <h2>Chat</h2>
                 <ol id="chat-messages" aria-live="polite"></ol>

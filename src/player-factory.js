@@ -10,6 +10,8 @@ import {
 } from './components.js';
 import { cubeColors, cubeIndices, cubeUVs, cubeVertices } from './cube.js';
 
+export class Player {}
+
 function createPatternTexture() {
   const textureCanvas = document.createElement('canvas');
   textureCanvas.width = 64;

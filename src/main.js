@@ -4,9 +4,18 @@ import { addRemotePlayer, loadPlayer, spawnFallbackPlayer } from './player-facto
 import { createGame } from './game-setup.js';
 import { startGameLoop } from './game-loop.js';
 import { ChatPanel } from './chat.js';
+import { PlayerStatus } from './player-status.js';
 
 const canvas = document.querySelector('#canvas');
 const status = document.querySelector('#status');
+const playerStatus = new PlayerStatus({
+  root: document.querySelector('#player-status'),
+  hpValue: document.querySelector('#player-hp-value'),
+  hpBar: document.querySelector('#player-hp-bar'),
+  manaBar: document.querySelector('#player-mana-bar'),
+  xpBar: document.querySelector('#player-xp-bar'),
+});
+playerStatus.update({ hp: 100, maxHp: 100, mana: 100, maxMana: 100, xp: 0, maxXp: 100 });
 // O chat e a cena sao inicializados uma unica vez; os sistemas fazem o trabalho por frame.
 const chat = new ChatPanel({
   messagesElement: document.querySelector('#chat-messages'),
@@ -54,6 +63,7 @@ function createMultiplayer(game, playerEntity) {
     onStatus: (message) => {
       status.textContent = `${message} Clique para mover; Space cancela.`;
     },
+    onPlayerState: (player) => playerStatus.update(player),
     onChat: (message) => chat.addMessage(message),
     createRemoteEntity: (peerId) => addRemotePlayer(game.world, playerEntity, peerId),
   });

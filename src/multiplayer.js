@@ -3,12 +3,20 @@ import { NetworkIdentity, NetworkTransform, Transform } from './components.js';
 const MESSAGE_LIMIT = 32;
 
 export class MultiplayerSystem {
-  constructor({ url, world, createRemoteEntity, onStatus = () => {}, onChat = () => {} }) {
+  constructor({
+    url,
+    world,
+    createRemoteEntity,
+    onStatus = () => {},
+    onChat = () => {},
+    onPlayerState = () => {},
+  }) {
     this.url = url;
     this.world = world;
     this.createRemoteEntity = createRemoteEntity;
     this.onStatus = onStatus;
     this.onChat = onChat;
+    this.onPlayerState = onPlayerState;
     this.socket = null;
     this.localEntity = null;
     this.localPeerId = null;
@@ -120,7 +128,11 @@ export class MultiplayerSystem {
     const activePeers = new Set();
 
     for (const player of this.pendingState) {
-      if (!player.peerId || player.peerId === this.localPeerId) continue;
+      if (player.peerId === this.localPeerId) {
+        this.onPlayerState(player);
+        continue;
+      }
+      if (!player.peerId) continue;
       activePeers.add(player.peerId);
       let entity = this.remoteEntities.get(player.peerId);
       if (!entity) {

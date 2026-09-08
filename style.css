@@ -22,6 +22,7 @@ body {
 }
 
 #status,
+#player-status,
 #chat {
   position: fixed;
   z-index: 2;
@@ -29,6 +30,49 @@ body {
   font-family: sans-serif;
   text-shadow: 0 1px 3px black;
 }
+
+#player-status {
+  top: max(1rem, env(safe-area-inset-top));
+  left: max(1rem, env(safe-area-inset-left));
+  width: min(16rem, calc(100vw - 2rem));
+  padding: 0.8rem;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 6px;
+  background: rgb(8 12 24 / 86%);
+  text-shadow: none;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  color: rgb(255 255 255 / 80%);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.status-health {
+  color: #fff;
+}
+
+.status-bar {
+  height: 0.55rem;
+  margin: 0.25rem 0 0.55rem;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 18%);
+}
+
+.status-bar span {
+  display: block;
+  width: 0;
+  height: 100%;
+  transition: width 180ms ease-out;
+}
+
+#player-hp-bar { background: #dc2626; }
+#player-mana-bar { background: #2563eb; }
+#player-xp-bar { background: #f8fafc; }
 
 #status {
   left: max(1rem, env(safe-area-inset-left));
@@ -121,6 +165,13 @@ body {
     max-width: calc(100vw - 1.5rem);
     box-sizing: border-box;
     font-size: 0.82rem;
+  }
+
+  #player-status {
+    top: max(0.75rem, env(safe-area-inset-top));
+    left: max(0.75rem, env(safe-area-inset-left));
+    width: min(13rem, calc(100vw - 1.5rem));
+    padding: 0.65rem;
   }
 
   #chat {
