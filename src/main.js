@@ -32,6 +32,8 @@ const combatModeButtons = [...document.querySelectorAll('[data-combat-mode]')];
 const rankingButton = document.querySelector('#ranking-button');
 const rankingMenu = document.querySelector('#ranking-menu');
 const rankingList = document.querySelector('#ranking-list');
+const chatToggle = document.querySelector('#chat-toggle');
+const chatElement = document.querySelector('#chat');
 const onlinePlayersPanel = document.querySelector('#online-players-panel');
 const onlinePlayersList = document.querySelector('#online-players-list');
 let gameStarted = false;
@@ -124,6 +126,13 @@ const chat = new ChatPanel({
   messagesElement: document.querySelector('#chat-messages'),
   formElement: document.querySelector('#chat-form'),
   inputElement: document.querySelector('#chat-input'),
+});
+
+chatToggle.addEventListener('click', () => {
+  const isOpen = chatElement.hidden;
+  chatElement.hidden = !isOpen;
+  chatToggle.setAttribute('aria-expanded', String(isOpen));
+  if (isOpen) document.querySelector('#chat-input').focus();
 });
 
 async function loadLocalPlayer(game) {

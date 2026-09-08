@@ -43,11 +43,11 @@
         </section>
         <main>
             <canvas id="canvas" width="800" height="500"></canvas>
+            <button id="chat-toggle" type="button" aria-expanded="false" aria-controls="chat" aria-label="Abrir chat">CHAT</button>
             <div id="action-bar" aria-label="Ações rápidas">
-                <button class="action-slot action-slot-selected" type="button" aria-label="Ataque atual">⚔</button>
-                <button class="action-slot" type="button" aria-label="Habilidade 2">✦</button>
-                <button class="action-slot" type="button" aria-label="Habilidade 3">◆</button>
-                <button class="action-slot" type="button" aria-label="Habilidade 4">✚</button>
+                <button class="action-slot action-slot-selected" type="button" data-combat-mode="melee" aria-label="Selecionar ataque corpo a corpo">⚔</button>
+                <button class="action-slot" type="button" data-combat-mode="ranged" aria-label="Selecionar ataque a distância">➹</button>
+                <button class="action-slot" type="button" data-combat-mode="magic" aria-label="Selecionar magia">✦</button>
             </div>
             <nav id="ui-scale-controls" aria-label="Tamanho da interface">
                 <button id="ui-scale-decrease" type="button" aria-label="Diminuir interface">-</button>
@@ -111,7 +111,7 @@
                 <div class="status-row"><span class="status-label">MAGIA</span><span id="player-status-magic-value">1</span></div>
                 <div class="status-row"><span class="status-label">MODO</span><span id="player-combat-mode-value">Corpo-a-corpo</span></div>
             </section>
-            <aside id="chat" aria-label="Chat do jogo">
+            <aside id="chat" aria-label="Chat do jogo" hidden>
                 <header class="chat-header">
                     <h2>CHAT</h2>
                 </header>

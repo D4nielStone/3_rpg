@@ -295,3 +295,118 @@
     min-height: 2.35rem;
   }
 }
+
+/* Full-screen stats panel styled like the in-game session menu. */
+#attributes-menu {
+  position: fixed;
+  z-index: 12;
+  top: 50%;
+  left: 50%;
+  width: min(60rem, calc(100vw - 3rem));
+  max-height: calc(100dvh - 5rem);
+  box-sizing: border-box;
+  overflow-y: auto;
+  transform: translate(-50%, -50%);
+  padding: 2rem 2.5rem 2.25rem;
+  border: 4px solid #f2f2e9;
+  border-radius: 0;
+  color: #f7f7ed;
+  background: rgb(10 14 13 / 94%);
+  box-shadow: 0 0 0 4px #141918, 0 0 2rem rgb(0 0 0 / 70%);
+  font-family: 'Pixelify Sans', sans-serif;
+  text-shadow: 2px 2px 0 #101211;
+}
+
+#attributes-menu::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: '';
+  opacity: 0.3;
+  background: repeating-linear-gradient(0deg, transparent 0 7px, rgb(255 255 255 / 3%) 7px 9px);
+  pointer-events: none;
+}
+
+#attributes-menu h2 {
+  margin: 0 0 1.25rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 3px solid #f2f2e9;
+  color: #fff;
+  font-size: clamp(1.6rem, 4vw, 2.5rem);
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-shadow: 3px 3px 0 #3b4b42;
+}
+
+.attribute-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  min-height: 3.2rem;
+  align-items: center;
+  padding: 0 1rem;
+  border: 0;
+  border-bottom: 2px solid rgb(255 255 255 / 14%);
+  font-size: clamp(1rem, 2.2vw, 1.45rem);
+}
+
+.attribute-row:nth-of-type(1) span { color: #f0e91e; }
+.attribute-row:nth-of-type(2) span { color: #42b9f2; }
+.attribute-row:nth-of-type(3) span { color: #dc71ed; }
+
+.attribute-row strong {
+  color: #fff;
+  font-size: 1.25em;
+}
+
+.combat-mode-title {
+  margin: 1.5rem 0 0.75rem;
+  padding: 0;
+  border: 0;
+  color: #f0c54a;
+  font-size: clamp(1rem, 2.2vw, 1.4rem);
+  text-align: center;
+}
+
+.combat-mode-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.combat-mode-button {
+  min-height: 3.3rem;
+  border: 3px solid #f2f2e9;
+  border-radius: 0;
+  color: #fff;
+  background: #252c29;
+  box-shadow: 3px 3px 0 #101211;
+  font: 700 clamp(0.8rem, 2vw, 1.1rem)/1 'Pixelify Sans', sans-serif;
+  text-shadow: 2px 2px 0 #101211;
+}
+
+.combat-mode-button:hover,
+.combat-mode-button:focus-visible,
+.combat-mode-button.combat-mode-selected {
+  border-color: #f0f21c;
+  color: #171b13;
+  background: #f0f21c;
+  text-shadow: none;
+}
+
+@media (max-width: 640px) {
+  #attributes-menu {
+    width: calc(100vw - 1.5rem);
+    max-height: calc(100dvh - 3rem);
+    padding: 1.25rem 1rem 1.4rem;
+  }
+
+  .attribute-row {
+    min-height: 2.65rem;
+    padding: 0 0.5rem;
+  }
+
+  .combat-mode-controls {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+}

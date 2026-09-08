@@ -798,18 +798,7 @@ html,
 }
 
 #player-status .status-identity {
-  position: absolute;
-  top: 2.35rem;
-  left: 6.3rem;
-  z-index: 1;
-  display: block;
-  width: 11rem;
-  overflow: hidden;
-  color: #fff;
-  font-size: 0.78rem;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: none;
 }
 
 #player-status .status-identity .status-label,
@@ -822,15 +811,19 @@ html,
 }
 
 #player-status .status-health {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
   display: flex;
   width: 18rem;
-  height: 1.65rem;
+  height: 2rem;
   box-sizing: border-box;
   align-items: center;
-  padding: 0 0.6rem 0 6.3rem;
-  border: 3px solid #101820;
+  padding: 0 0.6rem;
+  border: 0;
   color: #fff;
-  background: #cf3038;
+  background: transparent;
   font-size: 1rem;
   text-shadow: 2px 2px 0 #672027;
 }
@@ -844,19 +837,48 @@ html,
 }
 
 #player-status .status-bar:nth-of-type(4) {
+  display: block;
   position: absolute;
-  top: 1.65rem;
+  top: 0;
   left: 0;
   width: 18rem;
-  height: 0.35rem;
+  height: 2rem;
   margin: 0;
-  border: 2px solid #101820;
+  border: 3px solid #101820;
   border-radius: 0;
   background: #2b3033;
 }
 
-#player-status .status-bar:first-of-type span {
-  background: #43b7ef;
+#player-status .status-bar:nth-of-type(4) span {
+  background: #cf3038;
+}
+#player-status .status-bar:nth-of-type(7),
+#player-status .status-bar:nth-of-type(10) {
+  display: block;
+  position: absolute;
+  left: 0;
+  width: 18rem;
+  height: 0.28rem;
+  margin: 0;
+  border: 2px solid #101820;
+  border-radius: 0;
+  background: #252b2d;
+}
+
+#player-status .status-bar:nth-of-type(7) {
+  top: 2.35rem;
+}
+
+#player-status .status-bar:nth-of-type(7) span {
+  background: #2499e8;
+}
+
+#player-status .status-bar:nth-of-type(10) {
+  top: 2.95rem;
+}
+
+#player-status .status-bar:nth-of-type(10) span {
+  background: #f4f4ed;
 }
 
 #ui-scale-controls {
@@ -1032,17 +1054,18 @@ html,
 
   #player-status,
   #player-status .status-health,
-  #player-status .status-bar:nth-of-type(4) {
+  #player-status .status-bar:nth-of-type(4),
+  #player-status .status-bar:nth-of-type(7),
+  #player-status .status-bar:nth-of-type(10) {
     width: min(16rem, 62vw);
   }
 
   #player-status .status-identity {
-    left: 5.5rem;
-    width: calc(100% - 5.8rem);
+    display: none;
   }
 
   #player-status .status-health {
-    padding-left: 5.5rem;
+    padding-left: 0.5rem;
   }
 
   #menu-button { right: 7.1rem; }
@@ -1163,5 +1186,47 @@ html,
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+}
+
+#chat[hidden] {
+  display: none;
+}
+
+#chat-toggle {
+  position: fixed;
+  z-index: 7;
+  right: 0.3rem;
+  bottom: 10.8rem;
+  width: 3.3rem;
+  height: 2.1rem;
+  padding: 0;
+  border: 3px solid #101820;
+  border-radius: 0;
+  color: #fff;
+  background: #3e6843;
+  box-shadow: 2px 2px 0 #101820;
+  font: 700 0.65rem/1 'Pixelify Sans', sans-serif;
+  cursor: pointer;
+}
+
+#chat-toggle[aria-expanded='true'] {
+  color: #182016;
+  background: #f0c54a;
+}
+
+.action-slot.combat-mode-selected,
+.action-slot:hover,
+.action-slot:focus-visible {
+  border-color: #f0c54a;
+  color: #f0c54a;
+  background: #536a3c;
+}
+
+@media (max-width: 640px) {
+  #chat-toggle {
+    right: 0.2rem;
+    bottom: 8.9rem;
+    width: 2.65rem;
+  }
 }
 
