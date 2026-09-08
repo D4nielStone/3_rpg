@@ -52,12 +52,14 @@ export class Player {
     if (!Number.isFinite(experience) || experience <= 0) return false;
 
     this.xp += experience;
-    if (this.xp < this.maxXp) return false;
-
-    this.level += 1;
-    this.xp = 0;
-    this.maxXp = calculateMaxXp(this.level);
-    return true;
+    let leveledUp = false;
+    while (this.xp >= this.maxXp) {
+      this.xp -= this.maxXp;
+      this.level += 1;
+      this.maxXp = calculateMaxXp(this.level);
+      leveledUp = true;
+    }
+    return leveledUp;
   }
 
   toSnapshot() {
