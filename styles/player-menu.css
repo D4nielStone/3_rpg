@@ -162,6 +162,7 @@
   position: fixed;
   z-index: 7;
   top: 3.75rem;
+/* Final monochrome override: keeps the attributes view consistent with chat. */
   right: max(1rem, env(safe-area-inset-right));
   width: min(19rem, calc(100vw - 2rem));
   padding: 0.85rem;
@@ -279,6 +280,127 @@
     width: min(16rem, calc(100vw - 1.3rem));
   }
 
+/* Final monochrome override: keeps the attributes view consistent with chat. */
+#attributes-menu {
+  position: fixed;
+  z-index: 13;
+  inset: 0;
+  display: flex;
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: none;
+  box-sizing: border-box;
+  overflow-y: auto;
+  transform: none;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(1.25rem, 6vw, 5rem);
+  border: 0;
+  border-radius: 0;
+  color: #fff;
+  background: #000;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+#attributes-menu::before { display: none; }
+
+#attributes-menu h2 {
+  width: min(42rem, 100%);
+  margin: 0 auto 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #fff;
+  color: #fff;
+  font-size: clamp(1.5rem, 4vw, 2.3rem);
+  text-align: center;
+  text-shadow: none;
+}
+
+.attribute-row {
+  display: grid;
+  width: min(42rem, 100%);
+  min-height: 4.2rem;
+  box-sizing: border-box;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto 0.45rem;
+  align-content: center;
+  margin: 0 auto;
+  padding: 0.65rem 0;
+  border: 0;
+  border-bottom: 1px solid rgb(255 255 255 / 22%);
+  color: #fff;
+  font-size: clamp(1rem, 2.5vw, 1.35rem);
+}
+
+.attribute-row:nth-of-type(1) span,
+.attribute-row:nth-of-type(2) span,
+.attribute-row:nth-of-type(3) span,
+.attribute-row strong { color: #fff; }
+
+.attribute-meter {
+  position: relative;
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 0.45rem;
+  margin-top: 0.4rem;
+  overflow: hidden;
+  border: 1px solid #777;
+  background: #222;
+}
+
+.attribute-meter span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: #fff;
+  transition: width 180ms ease;
+}
+
+.combat-mode-title {
+  width: min(42rem, 100%);
+  margin: 1.75rem auto 0.75rem;
+  padding: 0;
+  border: 0;
+  color: #fff;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.combat-mode-controls {
+  width: min(42rem, 100%);
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0 auto;
+}
+
+.combat-mode-button {
+  min-height: 2.8rem;
+  border: 1px solid #fff;
+  border-radius: 0;
+  color: #fff;
+  background: #000;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.combat-mode-button:hover,
+.combat-mode-button:focus-visible,
+.combat-mode-button.combat-mode-selected {
+  border-color: #fff;
+  color: #000;
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  #attributes-menu { padding: 1rem; }
+  .attribute-row { min-height: 3.8rem; }
+  .combat-mode-controls { grid-template-columns: 1fr; }
+}
+
+#menu-button {
+  z-index: 14 !important;
+}
   #ranking-menu {
     width: min(20rem, calc(100vw - 1.3rem));
   }
@@ -294,6 +416,127 @@
   .combat-mode-button {
     min-height: 2.35rem;
   }
+}
+
+/* Full-screen monochrome attributes panel. */
+#attributes-menu {
+  position: fixed;
+  z-index: 13;
+  inset: 0;
+  display: flex;
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  box-sizing: border-box;
+  overflow-y: auto;
+  transform: none;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(1.25rem, 6vw, 5rem);
+  border: 0;
+  border-radius: 0;
+  color: #fff;
+  background: #000;
+  box-shadow: none;
+  font-family: 'Pixelify Sans', sans-serif;
+  text-shadow: none;
+}
+
+#attributes-menu::before { display: none; }
+
+#attributes-menu h2 {
+  width: min(42rem, 100%);
+  margin: 0 auto 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #fff;
+  color: #fff;
+  font-size: clamp(1.5rem, 4vw, 2.3rem);
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-shadow: none;
+}
+
+.attribute-row {
+  display: grid;
+  width: min(42rem, 100%);
+  min-height: 4.2rem;
+  box-sizing: border-box;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto 0.45rem;
+  align-content: center;
+  margin: 0 auto;
+  padding: 0.65rem 0;
+  border: 0;
+  border-bottom: 1px solid rgb(255 255 255 / 22%);
+  color: #fff;
+  font-size: clamp(1rem, 2.5vw, 1.35rem);
+}
+
+.attribute-row:nth-of-type(1) span,
+.attribute-row:nth-of-type(2) span,
+.attribute-row:nth-of-type(3) span,
+.attribute-row strong {
+  color: #fff;
+}
+
+.attribute-meter {
+  position: relative;
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 0.45rem;
+  margin-top: 0.4rem;
+  overflow: hidden;
+  border: 1px solid #777;
+  background: #222;
+}
+
+.attribute-meter span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: #fff;
+  transition: width 180ms ease;
+}
+
+.combat-mode-title {
+  width: min(42rem, 100%);
+  margin: 1.75rem auto 0.75rem;
+  padding: 0;
+  border: 0;
+  color: #fff;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.combat-mode-controls {
+  width: min(42rem, 100%);
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0 auto;
+}
+
+.combat-mode-button {
+  min-height: 2.8rem;
+  border: 1px solid #fff;
+  border-radius: 0;
+  color: #fff;
+  background: #000;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.combat-mode-button:hover,
+.combat-mode-button:focus-visible,
+.combat-mode-button.combat-mode-selected {
+  border-color: #fff;
+  color: #000;
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  #attributes-menu { padding: 1rem; }
+  .attribute-row { min-height: 3.8rem; }
+  .combat-mode-controls { grid-template-columns: 1fr; }
 }
 
 /* Full-screen stats panel styled like the in-game session menu. */
@@ -349,9 +592,9 @@
   font-size: clamp(1rem, 2.2vw, 1.45rem);
 }
 
-.attribute-row:nth-of-type(1) span { color: #f0e91e; }
+.attribute-row:nth-of-type(1) span { color: #fdfdfc; }
 .attribute-row:nth-of-type(2) span { color: #42b9f2; }
-.attribute-row:nth-of-type(3) span { color: #dc71ed; }
+.attribute-row:nth-of-type(3) span { color: #a84bb6; }
 
 .attribute-row strong {
   color: #fff;
@@ -409,4 +652,121 @@
     grid-template-columns: 1fr;
     gap: 0.5rem;
   }
+}
+
+/* Final override after legacy menu rules. */
+#attributes-menu {
+  position: fixed;
+  z-index: 13;
+  inset: 0;
+  display: flex;
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: none;
+  box-sizing: border-box;
+  transform: none;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(1.25rem, 6vw, 5rem);
+  overflow-y: auto;
+  border: 0;
+  border-radius: 0;
+  color: #fff;
+  background: #000;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+#attributes-menu::before { display: none; }
+
+#attributes-menu h2 {
+  width: min(42rem, 100%);
+  margin: 0 auto 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #fff;
+  color: #fff;
+  font-size: clamp(1.5rem, 4vw, 2.3rem);
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-shadow: none;
+}
+
+.attribute-row {
+  display: grid;
+  width: min(42rem, 100%);
+  min-height: 4.2rem;
+  box-sizing: border-box;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto 0.45rem;
+  align-content: center;
+  margin: 0 auto;
+  padding: 0.65rem 0;
+  border: 0;
+  border-bottom: 1px solid rgb(255 255 255 / 22%);
+  color: #fff;
+  font-size: clamp(1rem, 2.5vw, 1.35rem);
+}
+
+.attribute-row span,
+.attribute-row strong { color: #fff; }
+
+.attribute-meter {
+  position: relative;
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 0.45rem;
+  margin-top: 0.4rem;
+  overflow: hidden;
+  border: 1px solid #777;
+  background: #222;
+}
+
+.attribute-meter span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: #fff;
+  transition: width 180ms ease;
+}
+
+.combat-mode-title {
+  width: min(42rem, 100%);
+  margin: 1.75rem auto 0.75rem;
+  padding: 0;
+  border: 0;
+  color: #fff;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.combat-mode-controls {
+  width: min(42rem, 100%);
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0 auto;
+}
+
+.combat-mode-button {
+  min-height: 2.8rem;
+  border: 1px solid #fff;
+  border-radius: 0;
+  color: #fff;
+  background: #000;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.combat-mode-button:hover,
+.combat-mode-button:focus-visible,
+.combat-mode-button.combat-mode-selected {
+  border-color: #fff;
+  color: #000;
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  #attributes-menu { padding: 1rem; }
+  .attribute-row { min-height: 3.8rem; }
+  .combat-mode-controls { grid-template-columns: 1fr; }
 }

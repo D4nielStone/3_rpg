@@ -1,0 +1,67 @@
+/* In-game status message and shared progress primitives. */
+#status {
+  position: fixed;
+  z-index: 6;
+  left: max(1rem, env(safe-area-inset-left));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+  color: #fff;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 55%);
+  font: 0.85rem/1.2 'Pixelify Sans', sans-serif;
+  text-shadow: 0 1px 3px #000;
+  zoom: var(--ui-scale);
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  color: rgb(255 255 255 / 80%);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.status-health { color: #fff; }
+
+.status-bar {
+  height: 0.55rem;
+  margin: 0.25rem 0 0.55rem;
+  overflow: hidden;
+  border: 1px solid #3a3d43;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 18%);
+}
+
+.status-bar span {
+  display: block;
+  width: 0;
+  height: 100%;
+  transition: width 180ms ease-out;
+}
+
+.status-gold { color: #d6a83d; }
+
+#player-hp-bar { background: #a83b3b; }
+#player-mana-bar { background: #3e6e9e; }
+#player-xp-bar { background: #d6a83d; }
+
+@media (max-width: 640px) {
+  #status {
+    top: max(0.75rem, env(safe-area-inset-top));
+    right: max(0.75rem, env(safe-area-inset-right));
+    bottom: auto;
+    max-width: calc(100vw - 1.5rem);
+    box-sizing: border-box;
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 640px) and (orientation: landscape) {
+  #status {
+    top: max(0.5rem, env(safe-area-inset-top));
+    left: max(0.5rem, env(safe-area-inset-left));
+    right: auto;
+  }
+}

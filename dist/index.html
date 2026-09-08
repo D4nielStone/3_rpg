@@ -1,11 +1,11 @@
 <!doctype html>
 <html lang="pt-BR">
-    <head>
+    <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>WebGL RPG Multiplayer</title>
-      <script type="module" crossorigin src="/assets/index-DsdgW31z.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-DAp-UWSU.css">
+      <script type="module" crossorigin src="/assets/index-qKtNlRJd.js"></script>
+      <link rel="stylesheet" crossorigin href="/assets/index-1kHj09cQ.css">
     </head>
     <body>
         <section id="start-screen" aria-labelledby="start-title">
@@ -58,9 +58,18 @@
             <button id="ranking-button" type="button" aria-expanded="false" aria-controls="ranking-menu" aria-label="Abrir ranking">•••</button>
             <aside id="attributes-menu" class="attributes-menu-hidden" aria-labelledby="attributes-title">
                 <h2 id="attributes-title">Atributos</h2>
-                <div class="attribute-row"><span>Força</span><strong id="player-strength-value">1</strong></div>
-                <div class="attribute-row"><span>Pontaria</span><strong id="player-accuracy-value">1</strong></div>
-                <div class="attribute-row"><span>Magia</span><strong id="player-magic-value">1</strong></div>
+                <div class="attribute-row">
+                    <span>Força</span><strong id="player-strength-value">1</strong>
+                    <div class="attribute-meter" role="progressbar" aria-label="Força"><span id="player-strength-bar"></span></div>
+                </div>
+                <div class="attribute-row">
+                    <span>Pontaria</span><strong id="player-accuracy-value">1</strong>
+                    <div class="attribute-meter" role="progressbar" aria-label="Pontaria"><span id="player-accuracy-bar"></span></div>
+                </div>
+                <div class="attribute-row">
+                    <span>Magia</span><strong id="player-magic-value">1</strong>
+                    <div class="attribute-meter" role="progressbar" aria-label="Magia"><span id="player-magic-bar"></span></div>
+                </div>
                 <h3 class="combat-mode-title">Modo de ataque</h3>
                 <div id="combat-mode-controls" class="combat-mode-controls" role="group" aria-label="Modo de ataque">
                     <button type="button" class="combat-mode-button" data-combat-mode="melee">Corpo-a-corpo</button>

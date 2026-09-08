@@ -1,6 +1,6 @@
-import { EnemyIdentity, LineRenderer, NameTag, Transform } from './components.js';
+import { EnemyIdentity } from './components.js';
 import { MultiplayerSystem } from './multiplayer.js';
-import { addRemotePlayer, loadPlayer, spawnFallbackPlayer } from './player-factory.js';
+import { addRemotePlayer } from './player-factory.js';
 import { createGame } from './game-setup.js';
 import { startGameLoop } from './game-loop.js';
 import { ChatPanel } from './chat.js';
@@ -9,6 +9,13 @@ import { createWater } from './water.js';
 import { addRemoteEnemy } from './enemy-factory.js';
 import { loadGameAssets } from './asset-loader.js';
 import { InterfaceScale } from './interface-scale.js';
+import { createUiController } from './ui-controller.js';
+import {
+  addMovementMarker,
+  addPlayerNameTag,
+  followPlayer,
+  loadLocalPlayer,
+} from './scene-helpers.js';
 
 const canvas = document.querySelector('#canvas');
 const status = document.querySelector('#status');
@@ -25,17 +32,11 @@ const deathScreen = document.querySelector('#death-screen');
 const respawnButton = document.querySelector('#respawn-button');
 const menuButton = document.querySelector('#menu-button');
 const attributesMenu = document.querySelector('#attributes-menu');
-const strengthValue = document.querySelector('#player-strength-value');
-const accuracyValue = document.querySelector('#player-accuracy-value');
-const magicValue = document.querySelector('#player-magic-value');
 const combatModeButtons = [...document.querySelectorAll('[data-combat-mode]')];
 const rankingButton = document.querySelector('#ranking-button');
 const rankingMenu = document.querySelector('#ranking-menu');
-const rankingList = document.querySelector('#ranking-list');
 const chatToggle = document.querySelector('#chat-toggle');
 const chatElement = document.querySelector('#chat');
-const onlinePlayersPanel = document.querySelector('#online-players-panel');
-const onlinePlayersList = document.querySelector('#online-players-list');
 let gameStarted = false;
 
 function updateLoading(message, title = 'Carregando cena') {
@@ -53,6 +54,25 @@ new InterfaceScale({
   decreaseButton: document.querySelector('#ui-scale-decrease'),
   increaseButton: document.querySelector('#ui-scale-increase'),
 });
+const ui = createUiController({
+  menuButton,
+  attributesMenu,
+  rankingButton,
+  rankingMenu,
+  rankingList: document.querySelector('#ranking-list'),
+  combatModeButtons,
+  chatToggle,
+  chatElement,
+  onlinePlayersPanel: document.querySelector('#online-players-panel'),
+  onlinePlayersList: document.querySelector('#online-players-list'),
+  strengthValue: document.querySelector('#player-strength-value'),
+  accuracyValue: document.querySelector('#player-accuracy-value'),
+  magicValue: document.querySelector('#player-magic-value'),
+  strengthBar: document.querySelector('#player-strength-bar'),
+  accuracyBar: document.querySelector('#player-accuracy-bar'),
+  magicBar: document.querySelector('#player-magic-bar'),
+});
+
 const playerStatus = new PlayerStatus({
   root: document.querySelector('#player-status'),
   nicknameValue: document.querySelector('#player-nickname-value'),
@@ -70,57 +90,15 @@ const playerStatus = new PlayerStatus({
 });
 playerStatus.update({ level: 1, hp: 20, maxHp: 20, mana: 20, maxMana: 20, xp: 0, maxXp: 4 });
 function updatePlayerAttributes({ strength = 1, strengthXp = 0, maxStrengthXp = 1, accuracy = 1, magic = 1 } = {}) {
-  strengthValue.textContent = `${strength} (${strengthXp}/${maxStrengthXp})`;
-  accuracyValue.textContent = String(accuracy);
-  magicValue.textContent = String(magic);
+  ui.updateAttributes({ strength, strengthXp, maxStrengthXp, accuracy, magic });
 }
 
 function updateCombatMode(mode = 'melee') {
-  combatModeButtons.forEach((button) => {
-    button.classList.toggle('combat-mode-selected', button.dataset.combatMode === mode);
-  });
+  ui.updateCombatMode(mode);
 }
-
-function renderOnlinePlayers(players = []) {
-  onlinePlayersList.replaceChildren();
-  players.forEach((player) => {
-    const item = document.createElement('li');
-    const nickname = document.createElement('span');
-    const level = document.createElement('strong');
-    nickname.textContent = player.nickname ?? 'Guest';
-    level.textContent = `LVL ${player.level ?? 1}`;
-    item.append(nickname, level);
-    onlinePlayersList.append(item);
-  });
-}
-
-window.addEventListener('keydown', (event) => {
-  if (event.key !== 'Tab') return;
-  event.preventDefault();
-  onlinePlayersPanel.classList.toggle('online-players-hidden');
-});
 
 updatePlayerAttributes();
 updateCombatMode();
-menuButton.addEventListener('click', () => {
-  const isHidden = attributesMenu.classList.toggle('attributes-menu-hidden');
-  rankingMenu.classList.add('attributes-menu-hidden');
-  rankingButton.setAttribute('aria-expanded', 'false');
-  menuButton.setAttribute('aria-expanded', String(!isHidden));
-});
-
-function renderRanking(players = []) {
-  rankingList.replaceChildren();
-  players.forEach((player, index) => {
-    const item = document.createElement('li');
-    const name = document.createElement('span');
-    const score = document.createElement('strong');
-    name.textContent = `${index + 1}. ${player.nickname ?? 'Guest'}`;
-    score.textContent = `LVL ${player.level} | XP ${player.xp}`;
-    item.append(name, score);
-    rankingList.append(item);
-  });
-}
 // O chat e a cena sao inicializados uma unica vez; os sistemas fazem o trabalho por frame.
 const chat = new ChatPanel({
   messagesElement: document.querySelector('#chat-messages'),
@@ -129,52 +107,8 @@ const chat = new ChatPanel({
 });
 
 chatToggle.addEventListener('click', () => {
-  const isOpen = chatElement.hidden;
-  chatElement.hidden = !isOpen;
-  chatToggle.setAttribute('aria-expanded', String(isOpen));
-  if (isOpen) document.querySelector('#chat-input').focus();
+  ui.toggleChat();
 });
-
-async function loadLocalPlayer(game) {
-  // O fallback permite testar a movimentacao mesmo quando o modelo demora ou falha.
-  try {
-    const entity = await Promise.race([
-      loadPlayer(game.world, game.textureManager),
-      new Promise((_, reject) => {
-        window.setTimeout(() => reject(new Error('Tempo limite ao carregar o modelo 3D.')), 10000);
-      }),
-    ]);
-    return { entity, usedFallback: false };
-  } catch (error) {
-    console.error(error);
-    return { entity: spawnFallbackPlayer(game.world), usedFallback: true };
-  }
-}
-
-function followPlayer(game, playerEntity) {
-  const transform = game.world.getComponent(playerEntity, Transform);
-  game.camera.orbitalFollow(transform, {
-    distance: 6,
-    azimuth: 0,
-    elevation: 0.35,
-    targetHeight: 0.5,
-  });
-}
-
-function addPlayerNameTag(world, playerEntity) {
-  world.addComponent(playerEntity, new NameTag({
-    text: window.localStorage.getItem('webgl-rpg-nickname') ?? 'Guest',
-  }));
-}
-
-function addMovementMarker(world, playerEntity) {
-  const lineEntity = world.createEntity();
-  world.addComponent(lineEntity, new LineRenderer({
-    sourceEntity: playerEntity,
-    radius: 0.35,
-    thickness: 0.06,
-  }));
-}
 
 function createMultiplayer(game, playerEntity, enemyAssets) {
   // Em producao, a URL vem do Render; localmente usamos o relay na porta 5174.
@@ -207,8 +141,8 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
     },
     onDeath: () => deathScreen.classList.remove('death-screen-hidden'),
     onRespawn: () => deathScreen.classList.add('death-screen-hidden'),
-    onRanking: renderRanking,
-    onOnlinePlayers: renderOnlinePlayers,
+    onRanking: ui.renderRanking,
+    onOnlinePlayers: ui.renderOnlinePlayers,
     onChat: (message) => chat.addMessage(message),
     createRemoteEntity: (peerId, nickname, level) => addRemotePlayer(game.world, playerEntity, peerId, nickname, level),
     createEnemyEntity: (enemy) => addRemoteEnemy(game.world, enemyAssets, enemy),
@@ -218,11 +152,7 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
     button.addEventListener('click', () => multiplayer.setCombatMode(button.dataset.combatMode));
   });
   rankingButton.addEventListener('click', () => {
-    const isHidden = rankingMenu.classList.toggle('attributes-menu-hidden');
-    attributesMenu.classList.add('attributes-menu-hidden');
-    menuButton.setAttribute('aria-expanded', 'false');
-    rankingButton.setAttribute('aria-expanded', String(!isHidden));
-    if (!isHidden) multiplayer.requestRanking();
+    if (ui.toggleRanking()) multiplayer.requestRanking();
   });
   multiplayer.setLocalEntity(playerEntity);
   multiplayer.connect();
