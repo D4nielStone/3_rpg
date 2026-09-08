@@ -19,3 +19,5 @@ services:
         fromDatabase:
           name: webgl-rpg-db
           property: connectionString
+      - key: FRONTEND_ORIGIN
+        value: https://webgl-rpg-frontend.onrender.com

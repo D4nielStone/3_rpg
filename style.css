@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap');
+
 html,
 body,
 main {
@@ -5,9 +7,111 @@ main {
   height: 100%;
 }
 
+
+:root {
+  --ui-bg: #090a0c;
+  --ui-panel: #191c21;
+  --ui-panel-dark: #0d0f12;
+  --ui-border: #3a3d43;
+  --ui-border-light: #565a62;
+  --ui-text: #e9e4d0;
+  --ui-muted: #96958c;
+  --ui-gold: #d6a83d;
+}
 html {
   background: #080c18;
   --ui-scale: 1;
+}
+
+/* Visual theme: dark pixel-RPG interface. */
+body,
+#start-screen,
+#loading-screen,
+#status,
+#player-status,
+#ui-scale-controls,
+#chat {
+  font-family: 'Pixelify Sans', sans-serif;
+}
+
+html,
+#start-screen,
+#loading-screen {
+  background: var(--ui-bg);
+}
+
+.start-card,
+.loading-card,
+#player-status,
+#chat {
+  border: 2px solid var(--ui-border);
+  border-radius: 2px;
+  background: var(--ui-panel);
+  box-shadow: 0 0 0 1px #050608, 0 1.5rem 4rem rgb(0 0 0 / 65%);
+}
+
+.start-card,
+.loading-card {
+  color: var(--ui-text);
+}
+
+.start-eyebrow,
+.loading-eyebrow,
+#chat-messages strong {
+  color: var(--ui-gold);
+}
+
+.start-intro,
+#loading-message,
+#chat-messages time {
+  color: var(--ui-muted);
+}
+
+#account-form input,
+#chat-input,
+#ui-scale-controls button,
+#chat-toggle {
+  border: 1px solid var(--ui-border-light);
+  border-radius: 2px;
+  color: var(--ui-text);
+  background: var(--ui-panel-dark);
+  font-family: inherit;
+}
+
+.start-primary,
+#chat button {
+  border: 1px solid #76591f;
+  border-radius: 2px;
+  color: #17130a;
+  background: var(--ui-gold);
+}
+
+.start-guest {
+  border-radius: 2px;
+  color: var(--ui-text);
+  background: #25282d;
+}
+
+.loading-spinner {
+  border-top-color: var(--ui-gold);
+}
+
+.status-bar {
+  border: 1px solid var(--ui-border);
+  border-radius: 2px;
+  background: #292c31;
+}
+
+#player-hp-bar { background: #a83b3b; }
+#player-mana-bar { background: #3e6e9e; }
+#player-xp-bar { background: var(--ui-gold); }
+
+.player-name-tag {
+  border: 1px solid var(--ui-border-light);
+  border-radius: 2px;
+  color: var(--ui-text);
+  background: rgb(13 15 18 / 90%);
+  font-family: 'Pixelify Sans', sans-serif;
 }
 
 canvas {
@@ -524,4 +628,94 @@ body {
   display: block;
   color: #a7f3d0;
   font-style: italic;
+}
+
+body,
+#start-screen,
+#loading-screen,
+#status,
+#player-status,
+#ui-scale-controls,
+#chat {
+  font-family: 'Pixelify Sans', sans-serif;
+}
+
+html,
+#start-screen,
+#loading-screen {
+  background: var(--ui-bg);
+}
+
+.start-card,
+.loading-card,
+#player-status,
+#chat {
+  border: 2px solid var(--ui-border);
+  border-radius: 2px;
+  background: var(--ui-panel);
+  box-shadow: 0 0 0 1px #050608, 0 1.5rem 4rem rgb(0 0 0 / 65%);
+}
+
+.start-card,
+.loading-card {
+  color: var(--ui-text);
+}
+
+.start-eyebrow,
+.loading-eyebrow,
+#chat-messages strong {
+  color: var(--ui-gold);
+}
+
+.start-intro,
+#loading-message,
+#chat-messages time {
+  color: var(--ui-muted);
+}
+
+#account-form input,
+#chat-input,
+#ui-scale-controls button,
+#chat-toggle {
+  border: 1px solid var(--ui-border-light);
+  border-radius: 2px;
+  color: var(--ui-text);
+  background: var(--ui-panel-dark);
+  font-family: inherit;
+}
+
+.start-primary,
+#chat button {
+  border: 1px solid #76591f;
+  border-radius: 2px;
+  color: #17130a;
+  background: var(--ui-gold);
+}
+
+.start-guest {
+  border-radius: 2px;
+  color: var(--ui-text);
+  background: #25282d;
+}
+
+.loading-spinner {
+  border-top-color: var(--ui-gold);
+}
+
+.status-bar {
+  border: 1px solid var(--ui-border);
+  border-radius: 2px;
+  background: #292c31;
+}
+
+#player-hp-bar { background: #a83b3b; }
+#player-mana-bar { background: #3e6e9e; }
+#player-xp-bar { background: var(--ui-gold); }
+
+.player-name-tag {
+  border: 1px solid var(--ui-border-light);
+  border-radius: 2px;
+  color: var(--ui-text);
+  background: rgb(13 15 18 / 90%);
+  font-family: 'Pixelify Sans', sans-serif;
 }

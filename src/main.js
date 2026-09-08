@@ -196,8 +196,8 @@ accountForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const nickname = nicknameInput.value.trim();
   const password = document.querySelector('#password').value;
-  if (nickname.length < 2 || password.length < 4) {
-    accountMessage.textContent = 'Use um nickname com 2 caracteres e uma senha com 4.';
+  if (nickname.length < 2 || password.length < 8) {
+    accountMessage.textContent = 'Use um nickname com 2 caracteres e uma senha com 8.';
     return;
   }
   beginGame(nickname, password);

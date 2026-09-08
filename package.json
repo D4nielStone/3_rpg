@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "multiplayer": "node server/multiplayer.js",
+    "multiplayer": "node --env-file-if-exists=.env server/multiplayer.js",
     "build": "vite build",
     "preview": "vite preview"
   },

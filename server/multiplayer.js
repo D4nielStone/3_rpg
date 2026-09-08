@@ -13,6 +13,18 @@ import {
 
 const port = Number(process.env.PORT ?? process.env.MULTIPLAYER_PORT ?? 5174);
 const host = process.env.HOST ?? '0.0.0.0';
+const frontendOrigin = process.env.FRONTEND_ORIGIN ?? 'https://webgl-rpg-frontend.onrender.com';
+
+function setCorsHeaders(request, response) {
+  const origin = request.headers.origin;
+  if (origin === frontendOrigin) {
+    response.setHeader('access-control-allow-origin', origin);
+    response.setHeader('access-control-allow-methods', 'POST, OPTIONS');
+    response.setHeader('access-control-allow-headers', 'content-type');
+    response.setHeader('vary', 'Origin');
+  }
+}
+
 async function readJson(request) {
   let body = '';
   for await (const chunk of request) {
@@ -28,6 +40,13 @@ function sendJson(response, statusCode, body) {
 }
 
 const server = createServer(async (request, response) => {
+  setCorsHeaders(request, response);
+  if (request.method === 'OPTIONS') {
+    response.writeHead(204);
+    response.end();
+    return;
+  }
+
   if (request.method === 'POST' && ['/api/register', '/api/login'].includes(request.url)) {
     try {
       const body = await readJson(request);
