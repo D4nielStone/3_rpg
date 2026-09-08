@@ -90,12 +90,12 @@ export class EnemyArea {
     if (!target || !player.canAttack(now)) return { hit: false };
 
     target.setTarget(player);
-    target.receiveDamage(weapon.damage + player.strength);
+    const damage = target.receiveDamage(weapon.damage + player.strength);
     if (target.hp <= 0) {
       this.removeEnemy(target.id);
-      return { hit: true, rewards: target.getDrop() };
+      return { hit: true, damage, rewards: target.getDrop() };
     }
-    return { hit: true };
+    return { hit: true, damage };
   }
 
   toSnapshots() {

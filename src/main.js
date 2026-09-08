@@ -48,16 +48,22 @@ new InterfaceScale({
 });
 const playerStatus = new PlayerStatus({
   root: document.querySelector('#player-status'),
+  nicknameValue: document.querySelector('#player-nickname-value'),
   hpValue: document.querySelector('#player-hp-value'),
   hpBar: document.querySelector('#player-hp-bar'),
   manaBar: document.querySelector('#player-mana-bar'),
   xpBar: document.querySelector('#player-xp-bar'),
   levelValue: document.querySelector('#player-level-value'),
+  xpValue: document.querySelector('#player-xp-value'),
   goldValue: document.querySelector('#player-gold-value'),
+  strengthValue: document.querySelector('#player-status-strength-value'),
+  accuracyValue: document.querySelector('#player-status-accuracy-value'),
+  magicValue: document.querySelector('#player-status-magic-value'),
+  combatModeValue: document.querySelector('#player-combat-mode-value'),
 });
 playerStatus.update({ level: 1, hp: 20, maxHp: 20, mana: 20, maxMana: 20, xp: 0, maxXp: 4 });
-function updatePlayerAttributes({ strength = 1, accuracy = 1, magic = 1 } = {}) {
-  strengthValue.textContent = String(strength);
+function updatePlayerAttributes({ strength = 1, strengthXp = 0, maxStrengthXp = 1, accuracy = 1, magic = 1 } = {}) {
+  strengthValue.textContent = `${strength} (${strengthXp}/${maxStrengthXp})`;
   accuracyValue.textContent = String(accuracy);
   magicValue.textContent = String(magic);
 }

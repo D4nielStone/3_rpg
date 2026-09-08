@@ -6,6 +6,7 @@ const ENEMY_TYPES = {
     model: '/models/test/source/AmongUS[Red].glb',
     level: 1,
     maxHp: 3,
+    defense: 1,
     damage: 1,
     experience: 2,
     goldMin: 3,
@@ -26,6 +27,7 @@ export class Enemy {
     this.level = definition.level;
     this.hp = definition.maxHp;
     this.maxHp = definition.maxHp;
+    this.defense = Math.max(0, Number(definition.defense) || 0);
     this.experience = definition.experience;
     this.goldMin = definition.goldMin;
     this.goldMax = definition.goldMax;
@@ -150,11 +152,12 @@ export class Enemy {
   }
 
   receiveDamage(amount) {
-    const damage = Number(amount);
-    if (!Number.isFinite(damage) || damage <= 0 || this.hp <= 0) return false;
+    const rawDamage = Number(amount);
+    if (!Number.isFinite(rawDamage) || rawDamage <= 0 || this.hp <= 0) return false;
 
+    const damage = Math.max(0, rawDamage - this.defense);
     this.hp = Math.max(0, this.hp - damage);
-    return true;
+    return damage;
   }
 
   setTarget(player) {
@@ -178,6 +181,7 @@ export class Enemy {
       level: this.level,
       hp: this.hp,
       maxHp: this.maxHp,
+      defense: this.defense,
       alerted: this.alerted,
       position: [...this.position],
       rotationY: this.rotationY,

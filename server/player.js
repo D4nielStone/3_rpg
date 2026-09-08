@@ -21,6 +21,12 @@ function calculateMaxXp(level) {
   return Math.ceil(level * (level / 100 + 3));
 }
 
+function calculateMeleeXp(level) {
+  return level ** 2 * 5;
+}
+
+const BLOOD_HIT_WINDOW_MS = 7000;
+
 function calculateMaxAttribute(baseValue, level) {
   return Math.round(baseValue * 1.2 ** (level - 1));
 }
@@ -33,6 +39,7 @@ export class Player {
     mana = 20,
     money = 0,
     strength = 1,
+    strengthXp = 0,
     accuracy = 1,
     magic = 1,
     combatMode = 'melee',
@@ -47,6 +54,9 @@ export class Player {
     this.nickname = nickname;
     this.money = Number(money);
     this.strength = Math.max(1, Number(strength) || 1);
+    this.strengthXp = Math.max(0, Number(strengthXp) || 0);
+    this.maxStrengthXp = calculateMeleeXp(this.strength);
+    this.lastBloodHitAt = 0;
     this.accuracy = Math.max(1, Number(accuracy) || 1);
     this.magic = Math.max(1, Number(magic) || 1);
     this.combatMode = ['melee', 'ranged', 'magic'].includes(combatMode)
@@ -114,6 +124,29 @@ export class Player {
     return leveledUp;
   }
 
+  addStrengthExperience(amount) {
+    const experience = Number(amount);
+    if (!Number.isFinite(experience) || experience <= 0) return false;
+
+    this.strengthXp += experience;
+    let leveledUp = false;
+    while (this.strengthXp >= this.maxStrengthXp) {
+      this.strengthXp -= this.maxStrengthXp;
+      this.strength += 1;
+      this.maxStrengthXp = calculateMeleeXp(this.strength);
+      leveledUp = true;
+    }
+    return leveledUp;
+  }
+
+  registerMeleeAttack(realDamage, now, ticks = 1) {
+    if (realDamage > 0) this.lastBloodHitAt = now;
+    if (!this.lastBloodHitAt || now - this.lastBloodHitAt > BLOOD_HIT_WINDOW_MS) {
+      return false;
+    }
+    return this.addStrengthExperience(ticks);
+  }
+
   die() {
     if (this.dead) return false;
     this.hp = 0;
@@ -141,6 +174,8 @@ export class Player {
       maxMana: this.maxMana,
       money: this.money,
       strength: this.strength,
+      strengthXp: this.strengthXp,
+      maxStrengthXp: this.maxStrengthXp,
       accuracy: this.accuracy,
       magic: this.magic,
       combatMode: this.combatMode,

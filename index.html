@@ -62,6 +62,14 @@
             </aside>
             <p id="status">Inicializando WebGL...</p>
             <section id="player-status" aria-label="Status do jogador">
+                <div class="status-row status-identity">
+                    <span class="status-label">JOGADOR</span>
+                    <strong id="player-nickname-value">Guest</strong>
+                </div>
+                <div class="status-row status-level">
+                    <span class="status-label">NÍVEL</span>
+                    <span id="player-level-value">1</span>
+                </div>
                 <div class="status-row status-health">
                     <span class="status-label">VIDA</span>
                     <span id="player-hp-value">20/20</span>
@@ -76,13 +84,17 @@
                 <div class="status-row"><span class="status-label"></span></div>
                 <div class="status-row status-level">
                     <span class="status-label">XP</span>
-                    <span id="player-level-value">0/100</span>
+                    <span id="player-xp-value">0/4</span>
                 </div>
                 <div class="status-bar"><span id="player-xp-bar"></span></div>
                 <div class="status-row status-gold">
                     <span class="status-label">OURO</span>
                     <span id="player-gold-value">0</span>
                 </div>
+                <div class="status-row"><span class="status-label">FORÇA</span><span id="player-status-strength-value">1 (0/5)</span></div>
+                <div class="status-row"><span class="status-label">PONTARIA</span><span id="player-status-accuracy-value">1</span></div>
+                <div class="status-row"><span class="status-label">MAGIA</span><span id="player-status-magic-value">1</span></div>
+                <div class="status-row"><span class="status-label">MODO</span><span id="player-combat-mode-value">Corpo-a-corpo</span></div>
             </section>
             <aside id="chat" aria-label="Chat do jogo">
                 <header class="chat-header">

@@ -341,17 +341,20 @@ socketServer.on('connection', async (socket, request) => {
 
       if (message.type === 'attack') {
         if (player.dead) return;
+        const attackAt = Date.now();
         let attackResult = { hit: false };
         for (const area of enemyAreas) {
-          attackResult = area.attack(player, Date.now());
+          attackResult = area.attack(player, attackAt);
           if (attackResult.hit) break;
         }
         if (attackResult.hit) {
+          const strengthLeveledUp = player.combatMode === 'melee'
+            ? player.registerMeleeAttack(attackResult.damage, attackAt)
+            : false;
           if (attackResult.rewards) {
             player.money += attackResult.rewards.gold;
             const experience = attackResult.rewards.experience;
             const leveledUp = player.addExperience(experience);
-            player.strength += experience;
             await playerStore.save(playerId, player);
             sendSystemMessage(
               socket,
@@ -363,6 +366,14 @@ socketServer.on('connection', async (socket, request) => {
                 `Você subiu para o level ${player.level}! Vida e mana restauradas para 100%.`,
               );
             }
+          } else {
+            await playerStore.save(playerId, player);
+          }
+          if (strengthLeveledUp) {
+            sendSystemMessage(
+              socket,
+              `Sua força subiu para ${player.strength}! Progresso corpo-a-corpo reiniciado.`,
+            );
           }
           broadcastSnapshot();
         }
