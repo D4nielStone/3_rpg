@@ -1,3 +1,5 @@
+import { MAP_CONFIG_STORAGE_KEY, readSavedMapConfig, saveMapConfig } from './map-config.js';
+
 const COLS = 32;
 const ROWS = 20;
 const TERRAIN = {
@@ -18,6 +20,7 @@ const preview = document.querySelector('#json-preview');
 const cellCount = document.querySelector('#cell-count');
 const enemyAreaCount = document.querySelector('#enemy-area-count');
 const waterStatus = document.querySelector('#water-status');
+const waterEnabled = document.querySelector('#water-enabled');
 const brushSize = document.querySelector('#brush-size');
 const brushSizeValue = document.querySelector('#brush-size-value');
 const mapSize = document.querySelector('#map-size');
@@ -55,11 +58,21 @@ function renderPalette() { palette.replaceChildren(...Object.keys(TERRAIN).map(t
 function setTool(next) { tool = next; document.querySelectorAll('.tool-button').forEach((button) => button.classList.toggle('tool-button-active', button.dataset.tool === tool)); canvas.style.cursor = tool === 'pan' ? 'grab' : 'crosshair'; }
 function drawCell(column, row, value = grid[row]?.[column]) { if (!value) return; const x = offset.x + column * cellSize * zoom; const y = offset.y + row * cellSize * zoom; context.fillStyle = TERRAIN[value].color; context.fillRect(x, y, cellSize * zoom, cellSize * zoom); context.strokeStyle = 'rgb(0 0 0 / 18%)'; context.strokeRect(x, y, cellSize * zoom, cellSize * zoom); }
 function render() { context.clearRect(0, 0, canvas.width, canvas.height); context.fillStyle = '#101512'; context.fillRect(0, 0, canvas.width, canvas.height); grid.forEach((row, y) => row.forEach((value, x) => drawCell(x, y, value))); updateSummary(); }
-function updateSummary() { const enemyCount = grid.flat().filter((value) => value === 'enemy').length; const water = grid.flat().includes('water'); cellCount.textContent = `${COLS * ROWS}`; enemyAreaCount.textContent = `${enemyCount}`; waterStatus.textContent = water ? 'Ativa' : 'Inativa'; preview.textContent = JSON.stringify(exportConfig(), null, 2); }
+function updateSummary() { const enemyCount = grid.flat().filter((value) => value === 'enemy').length; const water = waterEnabled.checked || grid.flat().includes('water'); cellCount.textContent = `${COLS * ROWS}`; enemyAreaCount.textContent = `${enemyCount}`; waterStatus.textContent = water ? 'Ativa' : 'Inativa'; preview.textContent = JSON.stringify(exportConfig(), null, 2); }
 function cellAt(event) { const rect = canvas.getBoundingClientRect(); return { column: Math.floor((event.clientX - rect.left - offset.x) / (cellSize * zoom)), row: Math.floor((event.clientY - rect.top - offset.y) / (cellSize * zoom)) }; }
 function paint(event) { const point = cellAt(event); if (point.column < 0 || point.column >= COLS || point.row < 0 || point.row >= ROWS) return; if (tool === 'fill') { const old = grid[point.row][point.column]; grid = grid.map((row) => row.map((value) => value === old ? selected : value)); } else if (tool !== 'pan') { const value = tool === 'eraser' ? 'grass' : selected; const radius = Number(brushSize.value); for (let row = point.row - radius + 1; row <= point.row + radius - 1; row += 1) for (let column = point.column - radius + 1; column <= point.column + radius - 1; column += 1) if (grid[row]?.[column]) grid[row][column] = value; } render(); coordinates.textContent = `x: ${point.column}, z: ${point.row}`; }
-function exportConfig() { const enemyAreas = []; grid.forEach((row, z) => row.forEach((value, x) => { if (value === 'enemy') enemyAreas.push([x - COLS / 2, 0, z - ROWS / 2]); })); return { enemyAreas, water: { enabled: grid.flat().includes('water'), size: 50, segments: 32 } }; }
+function exportConfig() { const enemyAreas = []; grid.forEach((row, z) => row.forEach((value, x) => { if (value === 'enemy') enemyAreas.push([x - COLS / 2, 0, z - ROWS / 2]); })); return { enemyAreas, water: { enabled: waterEnabled.checked || grid.flat().includes('water'), size: 50, segments: 32 }, terrain: { columns: COLS, rows: ROWS, cells: grid.map((row) => [...row]) } }; }
 function download() { const file = new Blob([JSON.stringify(exportConfig(), null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(file); link.download = 'map-config.json'; link.click(); URL.revokeObjectURL(link.href); status.textContent = 'Configuração exportada'; }
+function applyToGame() { saveMapConfig(exportConfig()); status.textContent = `Mapa aplicado (${MAP_CONFIG_STORAGE_KEY})`; }
+
+function loadSavedMap() {
+  const saved = readSavedMapConfig();
+  const terrain = saved?.terrain;
+  if (terrain?.columns === COLS && terrain.rows === ROWS && Array.isArray(terrain.cells)) {
+    grid = terrain.cells.map((row) => row.map((value) => TERRAIN[value] ? value : 'grass'));
+  }
+  waterEnabled.checked = Boolean(saved?.water?.enabled);
+}
 
 document.querySelectorAll('.tool-button').forEach((button) => button.addEventListener('click', () => setTool(button.dataset.tool)));
 brushSize.addEventListener('input', () => { brushSizeValue.textContent = brushSize.value; });
@@ -67,6 +80,7 @@ mapSize.addEventListener('input', () => { cellSize = Number(mapSize.value); rend
 document.querySelector('#water-enabled').addEventListener('change', (event) => { if (event.target.checked) { selected = 'water'; selectedTerrain.textContent = TERRAIN.water.label; renderPalette(); } waterStatus.textContent = event.target.checked ? 'Ativa' : 'Inativa'; });
 document.querySelector('#clear-button').addEventListener('click', () => { commit(); grid = createGrid('grass'); render(); status.textContent = 'Mapa limpo'; });
 document.querySelector('#export-button').addEventListener('click', download);
+document.querySelector('#apply-button').addEventListener('click', applyToGame);
 document.querySelector('#undo-button').addEventListener('click', () => { if (!history.length) return; future.push(snapshot()); restore(history.pop()); });
 document.querySelector('#redo-button').addEventListener('click', () => { if (!future.length) return; history.push(snapshot()); restore(future.pop()); });
 document.querySelector('#zoom-in').addEventListener('click', () => { zoom = Math.min(2, zoom + 0.1); zoomValue.textContent = `${Math.round(zoom * 100)}%`; render(); });
@@ -76,5 +90,6 @@ canvas.addEventListener('pointermove', (event) => { if (!painting) return; if (t
 canvas.addEventListener('pointerup', () => { painting = false; panStart = null; });
 canvas.addEventListener('pointerleave', () => { painting = false; panStart = null; });
 
+loadSavedMap();
 renderPalette();
 render();
