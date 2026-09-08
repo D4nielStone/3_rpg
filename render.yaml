@@ -1,3 +1,9 @@
+databases:
+  - name: webgl-rpg-db
+    databaseName: webgl_rpg
+    user: webgl_rpg
+    plan: free
+
 services:
   - type: web
     name: webgl-rpg-multiplayer
@@ -10,4 +16,6 @@ services:
       - key: NODE_VERSION
         value: 22
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: webgl-rpg-db
+          property: connectionString

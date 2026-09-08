@@ -9,6 +9,16 @@ export class PlayerStore {
       throw new Error('DATABASE_URL nao configurada. O relay precisa de PostgreSQL.');
     }
 
+    let databaseUrl;
+    try {
+      databaseUrl = new URL(connectionString);
+    } catch {
+      throw new Error('DATABASE_URL invalida. Use a connection string real do PostgreSQL.');
+    }
+    if (databaseUrl.hostname === 'host') {
+      throw new Error('DATABASE_URL ainda usa o hostname de exemplo "host". Configure a URL real do PostgreSQL.');
+    }
+
     this.pool = new Pool({
       connectionString,
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,

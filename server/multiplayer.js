@@ -144,6 +144,13 @@ socketServer.on('connection', async (socket, request) => {
   });
 });
 
-server.listen(port, host, () => {
-  logger.info(`Multiplayer relay ouvindo em ws://${host}:${port}`);
-});
+playerStore.ready
+  .then(() => {
+    server.listen(port, host, () => {
+      logger.info(`Multiplayer relay ouvindo em ws://${host}:${port}`);
+    });
+  })
+  .catch((error) => {
+    logger.error('Nao foi possivel inicializar o PostgreSQL', { error: error.message });
+    process.exitCode = 1;
+  });
