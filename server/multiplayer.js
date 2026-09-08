@@ -26,7 +26,7 @@ function setCorsHeaders(request, response) {
   const origin = request.headers.origin;
   if (allowedOrigins.has(origin)) {
     response.setHeader('access-control-allow-origin', origin);
-    response.setHeader('access-control-allow-methods', 'POST, OPTIONS');
+    response.setHeader('access-control-allow-methods', 'GET, PUT, POST, OPTIONS');
     response.setHeader('access-control-allow-headers', 'content-type');
     response.setHeader('access-control-allow-credentials', 'true');
     response.setHeader('vary', 'Origin');
@@ -65,6 +65,18 @@ function getSessionFromRequest(request) {
   return token ? sessions.get(token) ?? null : null;
 }
 
+function isValidMapConfig(config) {
+  return config && typeof config === 'object'
+    && Array.isArray(config.enemyAreas)
+    && config.enemyAreas.every((area) => area && typeof area === 'object'
+      && Array.isArray(area.center)
+      && area.center.length === 3
+      && area.center.every((value) => Number.isFinite(value))
+      && Number.isFinite(area.width) && area.width > 0
+      && Number.isFinite(area.depth) && area.depth > 0)
+    && config.water && typeof config.water.enabled === 'boolean';
+}
+
 async function readJson(request) {
   let body = '';
   for await (const chunk of request) {
@@ -101,6 +113,32 @@ const server = createServer(async (request, response) => {
       nickname: session.nickname,
       isAdmin: session.isAdmin,
     });
+    return;
+  }
+
+  if (request.method === 'GET' && requestPath === '/api/map-config') {
+    sendJson(response, 200, publishedMapConfig ?? {});
+    return;
+  }
+
+  if (request.method === 'PUT' && requestPath === '/api/map-config') {
+    const session = getSessionFromRequest(request);
+    if (!session?.isAdmin) {
+      sendJson(response, 403, { error: 'Acesso restrito ao administrador.' });
+      return;
+    }
+    try {
+      const body = await readJson(request);
+      if (!isValidMapConfig(body)) {
+        sendJson(response, 400, { error: 'Configuracao de mapa invalida.' });
+        return;
+      }
+      publishedMapConfig = body;
+      enemyAreas = createEnemyAreas(body);
+      sendJson(response, 200, { saved: true });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+    }
     return;
   }
 
@@ -203,25 +241,30 @@ const players = new Map();
 const activeGuestSessions = new Map();
 const sessions = new Map();
 const mapAccessTickets = new Map();
+let publishedMapConfig = null;
 const logger = new ServerLogger();
 const playerStore = new PlayerStore();
-const enemyAreas = [new EnemyArea({
-  id: 'starting-rat-area',
-  center: [0, 0, 0],
-  width: 25,
-  depth: 25,
-  maxEnemies: 5,
-  enemyType: 'rat',
-  areaLevel: 1,
-}), new EnemyArea({
-  id: 'second-rat-area',
-  center: [35, 0, 0],
-  width: 25,
-  depth: 25,
-  maxEnemies: 5,
-  enemyType: 'rat',
-  areaLevel: 2,
-})];
+const DEFAULT_ENEMY_AREAS = [
+  { id: 'starting-rat-area', center: [0, 0, 0], width: 25, depth: 25, areaLevel: 1 },
+  { id: 'second-rat-area', center: [35, 0, 0], width: 25, depth: 25, areaLevel: 2 },
+];
+
+function createEnemyAreas(config = null) {
+  const definitions = Array.isArray(config?.enemyAreas)
+    ? config.enemyAreas
+    : DEFAULT_ENEMY_AREAS;
+  return definitions.map((area, index) => new EnemyArea({
+    id: area.id ?? (index === 0 ? 'starting-rat-area' : `map-area-${index + 1}`),
+    center: area.center,
+    width: area.width,
+    depth: area.depth,
+    maxEnemies: area.maxEnemies ?? 5,
+    enemyType: area.enemyType ?? 'rat',
+    areaLevel: area.areaLevel ?? Math.min(index + 1, 2),
+  }));
+}
+
+let enemyAreas = createEnemyAreas();
 const MIN_LEVEL_FOR_HIGHER_AREA = 3;
 
 function findPlayerArea(position) {
@@ -549,38 +592,14 @@ socketServer.on('connection', async (socket, request) => {
         logger.warn('Mensagem inválida ignorada', { peerId, type: message.type });
         return;
       }
-      const currentArea = enemyAreas[0];
-      const outsideCurrentArea = Math.abs(message.position[0] - currentArea.center[0]) > currentArea.width / 2
-        || Math.abs(message.position[2] - currentArea.center[2]) > currentArea.depth / 2;
-      if (outsideCurrentArea && player.level < MIN_LEVEL_FOR_HIGHER_AREA) {
-        socket.send(JSON.stringify({
-          type: 'area-blocked',
-          position: [...player.position],
-          rotation: [...player.rotation],
-        }));
-        sendSystemMessage(
-          socket,
-          `Acesso bloqueado. Você precisa do nível ${MIN_LEVEL_FOR_HIGHER_AREA} para entrar em uma área superior.`,
-        );
-        return;
-      }
       const destinationArea = findPlayerArea(message.position);
-      if (!destinationArea) {
-        sendSystemMessage(socket, 'Você está fora de uma área disponível.');
-        return;
-      }
-      if (destinationArea.areaLevel > 1 && player.level < MIN_LEVEL_FOR_HIGHER_AREA) {
-        sendSystemMessage(
-          socket,
-          `Acesso bloqueado. Você precisa do nível ${MIN_LEVEL_FOR_HIGHER_AREA} para entrar nesta área.`,
-        );
-        return;
-      }
-      player.area = {
-        id: destinationArea.id,
-        name: destinationArea.id === 'second-rat-area' ? 'Área dos Ratos 2' : 'Área dos Ratos',
-        level: destinationArea.areaLevel,
-      };
+      player.area = destinationArea
+        ? {
+          id: destinationArea.id,
+          name: destinationArea.id === 'second-rat-area' ? 'Área dos Ratos 2' : 'Área dos Ratos',
+          level: destinationArea.areaLevel,
+        }
+        : { id: 'open-world', name: 'Mundo aberto', level: 0 };
       player.setTransform(message.position, message.rotation);
       await playerStore.save(playerId, player);
       broadcastSnapshot();

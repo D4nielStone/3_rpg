@@ -73,15 +73,73 @@ function renderPalette() { palette.replaceChildren(...Object.keys(TERRAIN).map(t
 function setTool(next) { tool = next; document.querySelectorAll('.tool-button').forEach((button) => button.classList.toggle('tool-button-active', button.dataset.tool === tool)); canvas.style.cursor = tool === 'pan' ? 'grab' : 'crosshair'; }
 function drawCell(column, row, value = grid[row]?.[column]) { if (!value) return; const x = offset.x + column * cellSize * zoom; const y = offset.y + row * cellSize * zoom; context.fillStyle = TERRAIN[value].color; context.fillRect(x, y, cellSize * zoom, cellSize * zoom); context.strokeStyle = 'rgb(0 0 0 / 18%)'; context.strokeRect(x, y, cellSize * zoom, cellSize * zoom); }
 function render() { context.clearRect(0, 0, canvas.width, canvas.height); context.fillStyle = '#101512'; context.fillRect(0, 0, canvas.width, canvas.height); grid.forEach((row, y) => row.forEach((value, x) => drawCell(x, y, value))); updateSummary(); }
-function updateSummary() { const enemyCount = grid.flat().filter((value) => value === 'enemy').length; const water = waterEnabled.checked || grid.flat().includes('water'); cellCount.textContent = `${COLS * ROWS}`; enemyAreaCount.textContent = `${enemyCount}`; waterStatus.textContent = water ? 'Ativa' : 'Inativa'; preview.textContent = JSON.stringify(exportConfig(), null, 2); }
+function updateSummary() { const enemyCount = exportConfig().enemyAreas.length; const water = waterEnabled.checked || grid.flat().includes('water'); cellCount.textContent = `${COLS * ROWS}`; enemyAreaCount.textContent = `${enemyCount}`; waterStatus.textContent = water ? 'Ativa' : 'Inativa'; preview.textContent = JSON.stringify(exportConfig(), null, 2); }
 function cellAt(event) { const rect = canvas.getBoundingClientRect(); return { column: Math.floor((event.clientX - rect.left - offset.x) / (cellSize * zoom)), row: Math.floor((event.clientY - rect.top - offset.y) / (cellSize * zoom)) }; }
 function paint(event) { const point = cellAt(event); if (point.column < 0 || point.column >= COLS || point.row < 0 || point.row >= ROWS) return; if (tool === 'fill') { const old = grid[point.row][point.column]; grid = grid.map((row) => row.map((value) => value === old ? selected : value)); } else if (tool !== 'pan') { const value = tool === 'eraser' ? 'grass' : selected; const radius = Number(brushSize.value); for (let row = point.row - radius + 1; row <= point.row + radius - 1; row += 1) for (let column = point.column - radius + 1; column <= point.column + radius - 1; column += 1) if (grid[row]?.[column]) grid[row][column] = value; } render(); coordinates.textContent = `x: ${point.column}, z: ${point.row}`; }
-function exportConfig() { const enemyAreas = []; grid.forEach((row, z) => row.forEach((value, x) => { if (value === 'enemy') enemyAreas.push([x - COLS / 2, 0, z - ROWS / 2]); })); return { enemyAreas, water: { enabled: waterEnabled.checked || grid.flat().includes('water'), size: 50, segments: 32 }, terrain: { columns: COLS, rows: ROWS, cells: grid.map((row) => [...row]) } }; }
-function download() { const file = new Blob([JSON.stringify(exportConfig(), null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(file); link.download = 'map-config.json'; link.click(); URL.revokeObjectURL(link.href); status.textContent = 'Configuração exportada'; }
-function applyToGame() { saveMapConfig(exportConfig()); status.textContent = `Mapa aplicado (${MAP_CONFIG_STORAGE_KEY})`; }
+function getEnemyAreas() {
+  const visited = new Set();
+  const areas = [];
+  const key = (column, row) => `${column}:${row}`;
+  grid.forEach((row, startRow) => row.forEach((value, startColumn) => {
+    const startKey = key(startColumn, startRow);
+    if (value !== 'enemy' || visited.has(startKey)) return;
+    const queue = [[startColumn, startRow]];
+    visited.add(startKey);
+    const cells = [];
+    while (queue.length) {
+      const [column, currentRow] = queue.shift();
+      cells.push([column, currentRow]);
+      [[column - 1, currentRow], [column + 1, currentRow], [column, currentRow - 1], [column, currentRow + 1]]
+        .forEach(([nextColumn, nextRow]) => {
+          const nextKey = key(nextColumn, nextRow);
+          if (grid[nextRow]?.[nextColumn] === 'enemy' && !visited.has(nextKey)) {
+            visited.add(nextKey);
+            queue.push([nextColumn, nextRow]);
+          }
+        });
+    }
+    const columns = cells.map(([column]) => column);
+    const rows = cells.map(([, currentRow]) => currentRow);
+    const minColumn = Math.min(...columns);
+    const maxColumn = Math.max(...columns);
+    const minRow = Math.min(...rows);
+    const maxRow = Math.max(...rows);
+    const size = Math.max(maxColumn - minColumn + 1, maxRow - minRow + 1);
+    areas.push({
+      center: [
+        (minColumn + maxColumn + 1) / 2 - COLS / 2,
+        0,
+        (minRow + maxRow + 1) / 2 - ROWS / 2,
+      ],
+      width: size,
+      depth: size,
+    });
+  }));
+  return areas;
+}
 
-function loadSavedMap() {
-  const saved = readSavedMapConfig();
+function exportConfig() { return { enemyAreas: getEnemyAreas(), water: { enabled: waterEnabled.checked || grid.flat().includes('water'), size: 50, segments: 32 }, terrain: { columns: COLS, rows: ROWS, cells: grid.map((row) => [...row]) } }; }
+function download() { const file = new Blob([JSON.stringify(exportConfig(), null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(file); link.download = 'map-config.json'; link.click(); URL.revokeObjectURL(link.href); status.textContent = 'Configuração exportada'; }
+async function applyToGame() {
+  const config = exportConfig();
+  const response = await fetch(`${httpUrl}/api/map-config`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(config),
+  }).catch(() => null);
+  if (!response?.ok) {
+    status.textContent = 'Não foi possível aplicar o mapa no servidor';
+    return;
+  }
+  saveMapConfig(config);
+  status.textContent = 'Mapa aplicado no jogo';
+}
+
+async function loadSavedMap() {
+  const response = await fetch(`${httpUrl}/api/map-config`).catch(() => null);
+  const remoteConfig = response?.ok ? await response.json() : null;
+  const saved = remoteConfig?.terrain ? remoteConfig : readSavedMapConfig();
   const terrain = saved?.terrain;
   if (terrain?.columns === COLS && terrain.rows === ROWS && Array.isArray(terrain.cells)) {
     grid = terrain.cells.map((row) => row.map((value) => TERRAIN[value] ? value : 'grass'));
@@ -105,6 +163,6 @@ canvas.addEventListener('pointermove', (event) => { if (!painting) return; if (t
 canvas.addEventListener('pointerup', () => { painting = false; panStart = null; });
 canvas.addEventListener('pointerleave', () => { painting = false; panStart = null; });
 
-loadSavedMap();
+await loadSavedMap();
 renderPalette();
 render();

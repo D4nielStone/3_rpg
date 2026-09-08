@@ -1,11 +1,11 @@
-import { EnemyAreaRenderer, MeshRenderer, Transform } from './components.js';
+import { MeshRenderer, Transform } from './components.js';
 import { createWater } from './water.js';
 import { readSavedMapConfig } from './map-config.js';
 
 export const DEFAULT_MAP_CONFIG = Object.freeze({
   enemyAreas: [
-    [0, 0, 0],
-    [35, 0, 0],
+    { center: [0, 0, 0], width: 25, depth: 25 },
+    { center: [35, 0, 0], width: 25, depth: 25 },
   ],
   water: {
     enabled: false,
@@ -13,23 +13,6 @@ export const DEFAULT_MAP_CONFIG = Object.freeze({
     segments: 32,
   },
 });
-
-function createEnemyAreaMarker(world, center) {
-  const entity = world.createEntity();
-  world.addComponent(entity, new Transform({ position: [center[0], -0.04, center[2]] }));
-  world.addComponent(entity, new EnemyAreaRenderer());
-  world.addComponent(entity, new MeshRenderer({
-    vertices: new Float32Array([
-      -12.5, 0, -12.5, 12.5, 0, -12.5,
-      12.5, 0, 12.5, -12.5, 0, 12.5,
-    ]),
-    colors: new Float32Array([
-      0.015, 0.06, 0.16, 0.015, 0.06, 0.16,
-      0.015, 0.06, 0.16, 0.015, 0.06, 0.16,
-    ]),
-    indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
-  }));
-}
 
 const TERRAIN_COLORS = {
   grass: [0.247, 0.529, 0.282],
@@ -52,7 +35,8 @@ function createTerrain(world, terrain) {
 
   for (let row = 0; row < rows; row += 1) {
     for (let column = 0; column < columns; column += 1) {
-      const color = TERRAIN_COLORS[cells[row]?.[column]] ?? TERRAIN_COLORS.grass;
+      const terrainType = cells[row]?.[column] === 'enemy' ? 'grass' : cells[row]?.[column];
+      const color = TERRAIN_COLORS[terrainType] ?? TERRAIN_COLORS.grass;
       const x = column - halfColumns;
       const z = row - halfRows;
       const first = vertices.length / 3;
@@ -76,11 +60,9 @@ function createTerrain(world, terrain) {
   }));
 }
 
-export function customizeMap(world, config = DEFAULT_MAP_CONFIG) {
-  const savedConfig = readSavedMapConfig();
-  const activeConfig = savedConfig ? { ...config, ...savedConfig } : config;
+export function customizeMap(world, config = null) {
+  const activeConfig = config ?? readSavedMapConfig() ?? DEFAULT_MAP_CONFIG;
   createTerrain(world, activeConfig.terrain);
-  activeConfig.enemyAreas?.forEach((center) => createEnemyAreaMarker(world, center));
   if (activeConfig.water?.enabled && !activeConfig.terrain?.cells) {
     createWater(world, activeConfig.water);
   }

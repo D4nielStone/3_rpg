@@ -169,7 +169,7 @@ function resizeCanvas(gl, camera, canvas) {
   camera.setAspect(width / height);
 }
 
-export function createGame(canvas, status) {
+export function createGame(canvas, status, mapConfig = null) {
   const gl = canvas.getContext('webgl');
 
   if (!gl) {
@@ -189,7 +189,7 @@ export function createGame(canvas, status) {
 
   const camera = new Camera();
   const world = new World();
-  customizeMap(world);
+  customizeMap(world, mapConfig);
   const textureManager = new TextureManager(gl);
   const input = new InputState();
   canvas.addEventListener('wheel', (event) => {

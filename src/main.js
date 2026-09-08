@@ -49,6 +49,22 @@ function finishLoading() {
   loadingScreen.setAttribute('aria-hidden', 'true');
 }
 
+async function loadPublishedMapConfig() {
+  const configuredUrl = import.meta.env.VITE_MULTIPLAYER_URL?.trim();
+  const httpUrl = (configuredUrl || `${window.location.protocol}//${window.location.hostname}:5174`)
+    .replace(/^wss:/, 'https:')
+    .replace(/^ws:/, 'http:')
+    .replace(/\/$/, '');
+  try {
+    const response = await fetch(`${httpUrl}/api/map-config`);
+    if (!response.ok) return null;
+    const config = await response.json();
+    return Array.isArray(config.enemyAreas) ? config : null;
+  } catch {
+    return null;
+  }
+}
+
 new InterfaceScale({
   root: document.documentElement,
   decreaseButton: document.querySelector('#ui-scale-decrease'),
@@ -175,7 +191,8 @@ function getGuestId() {
 async function start() {
   updateLoading('Preparando o mundo...');
   status.textContent = 'Carregando cena...';
-  const game = createGame(canvas, status);
+  const mapConfig = await loadPublishedMapConfig();
+  const game = createGame(canvas, status, mapConfig);
   updateLoading('Carregando cenário e personagem...');
   const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game);
   const { enemyAssets } = await loadSceneAssets(game.textureManager);
