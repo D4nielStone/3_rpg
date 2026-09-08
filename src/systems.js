@@ -9,6 +9,7 @@ import {
 import { createBuffer, createTexture } from './webgl.js';
 import {
   MeshRenderer,
+  OutlineRenderer,
   LineRenderer,
   MoveTarget,
   PlayerController,
@@ -227,6 +228,53 @@ export class RenderSystem {
     line.dirty = false;
   }
 
+  prepareOutline(outline, transform, time) {
+    const vertices = [];
+    const colors = [];
+    const indices = [];
+    const scale = 1 + Math.sin(time * 0.006) * 0.08;
+    const outerRadius = outline.radius * scale;
+    const innerRadius = outerRadius - outline.thickness;
+    const height = transform.position[1] + 0.04;
+
+    if (outline.active) {
+      for (let index = 0; index < outline.segments; index += 1) {
+        const angle = (index / outline.segments) * Math.PI * 2;
+        const nextAngle = ((index + 1) / outline.segments) * Math.PI * 2;
+        const first = vertices.length / 3;
+        vertices.push(
+          transform.position[0] + Math.cos(angle) * outerRadius, height, transform.position[2] + Math.sin(angle) * outerRadius,
+          transform.position[0] + Math.cos(angle) * innerRadius, height, transform.position[2] + Math.sin(angle) * innerRadius,
+          transform.position[0] + Math.cos(nextAngle) * outerRadius, height, transform.position[2] + Math.sin(nextAngle) * outerRadius,
+          transform.position[0] + Math.cos(nextAngle) * innerRadius, height, transform.position[2] + Math.sin(nextAngle) * innerRadius,
+        );
+        colors.push(...outline.color, ...outline.color, ...outline.color, ...outline.color);
+        indices.push(first, first + 1, first + 2, first + 1, first + 3, first + 2);
+      }
+    }
+
+    outline.vertices = new Float32Array(vertices);
+    outline.colors = new Float32Array(colors);
+    outline.indices = new Uint16Array(indices);
+    outline.dirty = true;
+  }
+
+  prepareDynamicOutline(outline) {
+    if (!outline.positionBuffer) {
+      outline.positionBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, outline.vertices);
+      outline.colorBuffer = createBuffer(this.gl, this.gl.ARRAY_BUFFER, outline.colors);
+      outline.indexBuffer = createBuffer(this.gl, this.gl.ELEMENT_ARRAY_BUFFER, outline.indices);
+    } else if (outline.dirty) {
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, outline.positionBuffer);
+      this.gl.bufferData(this.gl.ARRAY_BUFFER, outline.vertices, this.gl.DYNAMIC_DRAW);
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, outline.colorBuffer);
+      this.gl.bufferData(this.gl.ARRAY_BUFFER, outline.colors, this.gl.DYNAMIC_DRAW);
+      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, outline.indexBuffer);
+      this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, outline.indices, this.gl.DYNAMIC_DRAW);
+    }
+    outline.dirty = false;
+  }
+
   getModelMatrix(transform) {
     const [x, y, z] = transform.position;
     const [pitch, yaw, roll] = transform.rotation;
@@ -250,7 +298,7 @@ export class RenderSystem {
     for (const entity of world.query(Transform, MeshRenderer)) {
       const transform = world.getComponent(entity, Transform);
       const mesh = world.getComponent(entity, MeshRenderer);
-      const texture = world.getComponent(entity, Texture);
+      const texture = world.getComponent(entity, Texture) ?? mesh.texture;
       const water = world.getComponent(entity, Water);
       this.prepareMesh(mesh);
       this.prepareTexture(texture);
@@ -295,6 +343,24 @@ export class RenderSystem {
       gl.vertexAttribPointer(locations.color, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, line.indexBuffer);
       gl.drawElements(gl.TRIANGLES, line.indices.length, gl.UNSIGNED_SHORT, 0);
+    }
+
+    for (const entity of world.query(Transform, OutlineRenderer)) {
+      const transform = world.getComponent(entity, Transform);
+      const outline = world.getComponent(entity, OutlineRenderer);
+      this.prepareOutline(outline, transform, time);
+      this.prepareDynamicOutline(outline);
+      if (outline.indices.length === 0) continue;
+
+      gl.uniformMatrix4fv(locations.matrix, false, multiplyMatrices(projection, view));
+      gl.uniform1f(locations.useTexture, 0);
+      gl.uniform1f(locations.isWater, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, outline.positionBuffer);
+      gl.vertexAttribPointer(locations.position, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, outline.colorBuffer);
+      gl.vertexAttribPointer(locations.color, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, outline.indexBuffer);
+      gl.drawElements(gl.TRIANGLES, outline.indices.length, gl.UNSIGNED_SHORT, 0);
     }
   }
 }

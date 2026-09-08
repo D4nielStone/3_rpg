@@ -185,6 +185,25 @@ export async function loadAsset(url, formatOverride, textureManager = null) {
   throw new Error(`Loader retornou um valor inválido para: ${url}`);
 }
 
+export class AssetLoader {
+  constructor(textureManager) {
+    this.textureManager = textureManager;
+    this.cache = new Map();
+  }
+
+  async load(url, formatOverride) {
+    if (!this.cache.has(url)) {
+      this.cache.set(url, loadAsset(url, formatOverride, this.textureManager));
+    }
+    return this.cache.get(url);
+  }
+
+  async loadMany(urls) {
+    const assets = await Promise.all(urls.map((url) => this.load(url)));
+    return new Map(urls.map((url, index) => [url, assets[index]]));
+  }
+}
+
 registerAssetLoader('obj', loadOBJ);
 registerAssetLoader('gltf', loadGLTF);
 registerAssetLoader('glb', loadGLTF);

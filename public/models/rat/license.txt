@@ -1,0 +1,11 @@
+Model Information:
+* title:	Rat – Stylized Animated 3D Model
+* source:	https://sketchfab.com/3d-models/rat-stylized-animated-3d-model-3ca19e1fd0724522a4e37f1416b453fc
+* author:	AnimalMesh 3D (https://sketchfab.com/AnimalMesh3D)
+
+Model License:
+* license type:	CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)
+* requirements:	Author must be credited. No commercial use.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Rat – Stylized Animated 3D Model" (https://sketchfab.com/3d-models/rat-stylized-animated-3d-model-3ca19e1fd0724522a4e37f1416b453fc) by AnimalMesh 3D (https://sketchfab.com/AnimalMesh3D) licensed under CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)

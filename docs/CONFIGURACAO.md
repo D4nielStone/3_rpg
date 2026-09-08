@@ -44,6 +44,8 @@ No Static Site do frontend, configure durante o build:
 VITE_MULTIPLAYER_URL=wss://webgl-rpg-multiplayer.onrender.com
 ```
 
+Essa variavel deve apontar para o Web Service `webgl-rpg-multiplayer`, nunca para `webgl-rpg-frontend`. O frontend converte automaticamente `wss://` para `https://` ao chamar `/api/login` e `/api/register`.
+
 No Web Service do relay, configure:
 
 ```text

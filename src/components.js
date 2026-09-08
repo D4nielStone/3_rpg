@@ -34,23 +34,50 @@ export class NetworkTransform {
 }
 
 export class NameTag {
-  constructor({ text = 'Guest', level = 1 } = {}) {
+  constructor({ text = 'Guest', level = 1, alerted = false } = {}) {
     this.text = text;
     this.level = level;
+    this.alerted = alerted;
     this.element = document.createElement('span');
     this.element.className = 'player-name-tag';
-    this.update(text, level);
+    this.update(text, level, alerted);
     document.body.append(this.element);
   }
 
-  update(text = this.text, level = this.level) {
+  update(text = this.text, level = this.level, alerted = this.alerted) {
     this.text = text;
     this.level = Math.max(1, Number(level) || 1);
-    this.element.textContent = `${this.text} • LVL ${this.level}`;
+    this.alerted = Boolean(alerted);
+    this.element.textContent = `${this.alerted ? '! ' : ''}${this.text} • LVL ${this.level}`;
+    this.element.classList.toggle('player-name-tag-alerted', this.alerted);
   }
 
   dispose() {
     this.element.remove();
+  }
+}
+
+export class EnemyIdentity {
+  constructor({ enemyId, type = 'rat' } = {}) {
+    this.enemyId = enemyId;
+    this.type = type;
+  }
+}
+
+export class OutlineRenderer {
+  constructor({ radius = 0.65, thickness = 0.08, color = [0.84, 0.66, 0.24], segments = 24 } = {}) {
+    this.radius = radius;
+    this.thickness = thickness;
+    this.color = color;
+    this.segments = segments;
+    this.active = false;
+    this.vertices = new Float32Array();
+    this.colors = new Float32Array();
+    this.indices = new Uint16Array();
+    this.positionBuffer = null;
+    this.colorBuffer = null;
+    this.indexBuffer = null;
+    this.dirty = true;
   }
 }
 

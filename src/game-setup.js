@@ -10,6 +10,7 @@ import { InputState } from './input.js';
 import { TextureManager } from './texture-manager.js';
 import { createProgram } from './webgl.js';
 import { NameTagSystem } from './name-tags.js';
+import { EnemyHoverSystem } from './enemy-hover.js';
 
 const vertexShaderSource = `
   precision mediump float;
@@ -110,6 +111,7 @@ export function createGame(canvas, status) {
     networkInterpolationSystem: new NetworkInterpolationSystem(),
     lineSystem: new LineSystem(canvas, camera),
     nameTagSystem: new NameTagSystem(canvas, camera),
+    enemyHoverSystem: new EnemyHoverSystem(canvas, camera),
     renderSystem: new RenderSystem(gl, program, locations, camera),
   };
 }

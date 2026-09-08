@@ -6,6 +6,8 @@ import { startGameLoop } from './game-loop.js';
 import { ChatPanel } from './chat.js';
 import { PlayerStatus } from './player-status.js';
 import { createWater } from './water.js';
+import { addRemoteEnemy } from './enemy-factory.js';
+import { AssetLoader } from './asset-loader.js';
 import { InterfaceScale } from './interface-scale.js';
 
 const canvas = document.querySelector('#canvas');
@@ -79,7 +81,22 @@ function followPlayer(game, playerEntity) {
   });
 }
 
-function createMultiplayer(game, playerEntity) {
+function addPlayerNameTag(world, playerEntity) {
+  world.addComponent(playerEntity, new NameTag({
+    text: window.localStorage.getItem('webgl-rpg-nickname') ?? 'Guest',
+  }));
+}
+
+function addMovementMarker(world, playerEntity) {
+  const lineEntity = world.createEntity();
+  world.addComponent(lineEntity, new LineRenderer({
+    sourceEntity: playerEntity,
+    radius: 0.35,
+    thickness: 0.06,
+  }));
+}
+
+function createMultiplayer(game, playerEntity, enemyAssets) {
   // Em producao, a URL vem do Render; localmente usamos o relay na porta 5174.
   const localUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:5174`;
   const configuredUrl = import.meta.env.VITE_MULTIPLAYER_URL?.trim();
@@ -104,11 +121,19 @@ function createMultiplayer(game, playerEntity) {
     onPlayerState: (player) => playerStatus.update(player),
     onChat: (message) => chat.addMessage(message),
     createRemoteEntity: (peerId, nickname, level) => addRemotePlayer(game.world, playerEntity, peerId, nickname, level),
+    createEnemyEntity: (enemy) => addRemoteEnemy(game.world, enemyAssets, enemy),
   });
   chat.connect((message) => multiplayer.sendChat(message));
   multiplayer.setLocalEntity(playerEntity);
   multiplayer.connect();
   return multiplayer;
+}
+
+async function loadSceneAssets(game) {
+  updateLoading('Carregando modelos de inimigos...');
+  const assetLoader = new AssetLoader(game.textureManager);
+  const enemyAssets = await assetLoader.loadMany(['/models/rat/scene.gltf']);
+  return { assetLoader, enemyAssets };
 }
 
 function getGuestId() {
@@ -126,26 +151,19 @@ async function start() {
   status.textContent = 'Carregando cena...';
   const game = createGame(canvas, status);
   updateLoading('Carregando cenário e personagem...');
-  createWater(game.world);
+  //createWater(game.world);
   const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game);
-  game.world.addComponent(playerEntity, new NameTag({
-    text: window.localStorage.getItem('webgl-rpg-nickname') ?? 'Guest',
-  }));
+  const { enemyAssets } = await loadSceneAssets(game);
+  addPlayerNameTag(game.world, playerEntity);
 
   updateLoading('Finalizando cena...');
   followPlayer(game, playerEntity);
-  const lineEntity = game.world.createEntity();
-  // Entidade visual separada: o jogador continua sendo controlado apenas pelo ECS.
-  game.world.addComponent(lineEntity, new LineRenderer({
-    sourceEntity: playerEntity,
-    radius: 0.35,
-    thickness: 0.06,
-  }));
+  addMovementMarker(game.world, playerEntity);
 
   // adicionando o mapa 3d
-  
+  // createMap(game.world);
 
-  const multiplayerSystem = createMultiplayer(game, playerEntity);
+  const multiplayerSystem = createMultiplayer(game, playerEntity, enemyAssets);
 
   status.textContent = usedFallback
     ? 'Modelo 3D indisponível; usando modelo de fallback.'
@@ -165,6 +183,10 @@ async function authenticateAccount(nickname, password, mode = 'login') {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ nickname, password }),
   });
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    throw new Error('O relay multiplayer nao respondeu JSON. Verifique VITE_MULTIPLAYER_URL: ela deve apontar para o servidor multiplayer, nao para o frontend.');
+  }
   const result = await response.json();
   if (!response.ok) throw new Error(result.error ?? 'Falha na autenticacao.');
   window.sessionStorage.setItem('webgl-rpg-session-token', result.token);

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { WebSocketServer } from 'ws';
 import { ServerLogger } from './logger.js';
 import { PlayerStore } from './player-store.js';
+import { EnemyArea } from './enemy-area.js';
 import {
   createAccountId,
   createSession,
@@ -118,6 +119,14 @@ const activeGuestSessions = new Map();
 const sessions = new Map();
 const logger = new ServerLogger();
 const playerStore = new PlayerStore();
+const enemyAreas = [new EnemyArea({
+  id: 'starting-rat-area',
+  center: [0, 0, 0],
+  width: 25,
+  depth: 25,
+  maxEnemies: 5,
+  enemyType: 'rat',
+})];
 
 function getConnectionIdentity(requestUrl) {
   try {
@@ -171,6 +180,7 @@ function broadcastSnapshot() {
   const snapshot = JSON.stringify({
     type: 'snapshot',
     players: [...players.values()].map((player) => player.toSnapshot()),
+    enemies: enemyAreas.flatMap((area) => area.toSnapshots()),
   });
   for (const client of socketServer.clients) {
     if (client.readyState === 1) client.send(snapshot);
@@ -298,6 +308,19 @@ socketServer.on('connection', async (socket, request) => {
 playerStore.ready
   .then(() => {
     databaseReady = true;
+    const initialSpawnAt = Date.now();
+    for (const area of enemyAreas) area.update(initialSpawnAt, [], 0);
+    let previousUpdateAt = initialSpawnAt;
+    setInterval(() => {
+      const now = Date.now();
+      const deltaSeconds = Math.min((now - previousUpdateAt) / 1000, 0.25);
+      previousUpdateAt = now;
+      let changed = false;
+      for (const area of enemyAreas) {
+        changed = area.update(now, players.values(), deltaSeconds) || changed;
+      }
+      if (changed) broadcastSnapshot();
+    }, 1000);
     server.listen(port, host, () => {
       logger.info(`Multiplayer relay ouvindo em ws://${host}:${port}`);
     });

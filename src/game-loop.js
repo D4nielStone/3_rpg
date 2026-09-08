@@ -6,6 +6,7 @@ export function startGameLoop({
   multiplayerSystem,
   lineSystem,
   nameTagSystem,
+  enemyHoverSystem,
   renderSystem,
 }) {
   let previousTime = 0;
@@ -22,6 +23,7 @@ export function startGameLoop({
     networkInterpolationSystem.update(world, deltaSeconds);
     lineSystem.update(world, time);
     nameTagSystem.update(world);
+    enemyHoverSystem.update(world);
     renderSystem.render(world, time);
     requestAnimationFrame(frame);
   }

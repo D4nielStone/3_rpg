@@ -1,4 +1,4 @@
-import { NameTag, NetworkIdentity, NetworkTransform, Transform } from './components.js';
+import { EnemyIdentity, NameTag, NetworkIdentity, NetworkTransform, Transform } from './components.js';
 
 const MESSAGE_LIMIT = 32;
 
@@ -7,6 +7,7 @@ export class MultiplayerSystem {
     url,
     world,
     createRemoteEntity,
+    createEnemyEntity = () => null,
     onStatus = () => {},
     onChat = () => {},
     onPlayerState = () => {},
@@ -14,6 +15,7 @@ export class MultiplayerSystem {
     this.url = url;
     this.world = world;
     this.createRemoteEntity = createRemoteEntity;
+    this.createEnemyEntity = createEnemyEntity;
     this.onStatus = onStatus;
     this.onChat = onChat;
     this.onPlayerState = onPlayerState;
@@ -21,6 +23,7 @@ export class MultiplayerSystem {
     this.localEntity = null;
     this.localPeerId = null;
     this.remoteEntities = new Map();
+    this.enemyEntities = new Map();
     this.lastSentAt = 0;
     this.pendingState = null;
     this.localStateRestored = false;
@@ -84,6 +87,7 @@ export class MultiplayerSystem {
     if (message.type === 'snapshot' && Array.isArray(message.players)) {
       // O snapshot apenas agenda dados; a criacao/remoção ECS ocorre em update().
       this.pendingState = message.players.slice(0, MESSAGE_LIMIT);
+      this.pendingEnemies = Array.isArray(message.enemies) ? message.enemies : [];
       return;
     }
 
@@ -167,10 +171,34 @@ export class MultiplayerSystem {
       }
     }
 
+    const activeEnemies = new Set();
+    for (const enemy of this.pendingEnemies ?? []) {
+      if (!enemy.id || !Array.isArray(enemy.position)) continue;
+      activeEnemies.add(enemy.id);
+      let entity = this.enemyEntities.get(enemy.id);
+      if (!entity) {
+        entity = this.createEnemyEntity(enemy);
+        if (!entity) continue;
+        this.enemyEntities.set(enemy.id, entity);
+      }
+      const transform = world.getComponent(entity, Transform);
+      if (transform) transform.position = [...enemy.position];
+      const nameTag = world.getComponent(entity, NameTag);
+      nameTag?.update(enemy.name, enemy.level, enemy.alerted);
+      const enemyIdentity = world.getComponent(entity, EnemyIdentity);
+      if (enemyIdentity) enemyIdentity.type = enemy.type;
+    }
+
     for (const [peerId, entity] of this.remoteEntities) {
       if (!activePeers.has(peerId)) {
         world.removeEntity(entity);
         this.remoteEntities.delete(peerId);
+      }
+    }
+    for (const [enemyId, entity] of this.enemyEntities) {
+      if (!activeEnemies.has(enemyId)) {
+        world.removeEntity(entity);
+        this.enemyEntities.delete(enemyId);
       }
     }
     this.pendingState = null;

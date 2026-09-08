@@ -1,0 +1,11 @@
+Model Information:
+* title:	PS1 Rat
+* source:	https://sketchfab.com/3d-models/ps1-rat-896e654c7fdc41a78cf554005e3bdfcd
+* author:	Neisium (https://sketchfab.com/Neisium)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "PS1 Rat" (https://sketchfab.com/3d-models/ps1-rat-896e654c7fdc41a78cf554005e3bdfcd) by Neisium (https://sketchfab.com/Neisium) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

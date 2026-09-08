@@ -722,3 +722,9 @@ html,
   background: rgb(13 15 18 / 90%);
   font-family: 'Pixelify Sans', sans-serif;
 }
+
+.player-name-tag-alerted {
+  color: #f0c34e;
+  border-color: #a83b3b;
+  text-shadow: 0 0 0.35rem rgb(168 59 59 / 90%);
+}
