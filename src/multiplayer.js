@@ -43,6 +43,7 @@ export class MultiplayerSystem {
     this.pendingState = null;
     this.localStateRestored = false;
     this.localPlayerDead = false;
+    this.respawnPending = false;
     this.attackTargetEntity = null;
     this.lastAttackRequestAt = 0;
   }
@@ -109,9 +110,21 @@ export class MultiplayerSystem {
     }
 
     if (message.type === 'respawned') {
-      // O próximo snapshot contém a posição inicial restaurada pelo servidor.
+      const transform = this.localEntity
+        ? this.world.getComponent(this.localEntity, Transform)
+        : null;
+      if (transform && Array.isArray(message.position) && Array.isArray(message.rotation)) {
+        transform.position = [...message.position];
+        transform.rotation = [...message.rotation];
+      }
+      const moveTarget = this.localEntity
+        ? this.world.getComponent(this.localEntity, MoveTarget)
+        : null;
+      if (moveTarget) moveTarget.position = null;
+      this.attackTargetEntity = null;
       this.localStateRestored = false;
       this.localPlayerDead = false;
+      this.respawnPending = false;
       this.onRespawn();
       return;
     }
@@ -153,6 +166,8 @@ export class MultiplayerSystem {
 
   sendRespawn() {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    this.respawnPending = true;
+    this.localPlayerDead = true;
     this.socket.send(JSON.stringify({ type: 'respawn' }));
     return true;
   }
@@ -171,7 +186,7 @@ export class MultiplayerSystem {
     this.applySnapshot(world);
     this.updateAttackTarget(world, time);
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN || !this.localEntity) return;
-    if (this.localPlayerDead) return;
+    if (this.localPlayerDead || this.respawnPending) return;
     if (this.input?.consumePressed('f')) {
       this.sendAttack();
     }

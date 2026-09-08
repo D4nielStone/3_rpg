@@ -354,7 +354,11 @@ socketServer.on('connection', async (socket, request) => {
         if (!player.dead) return;
         player.respawn();
         await playerStore.save(playerId, player);
-        socket.send(JSON.stringify({ type: 'respawned' }));
+        socket.send(JSON.stringify({
+          type: 'respawned',
+          position: [...player.position],
+          rotation: [...player.rotation],
+        }));
         broadcastSnapshot();
         return;
       }
