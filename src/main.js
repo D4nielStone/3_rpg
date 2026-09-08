@@ -5,11 +5,11 @@ import { createGame } from './game-setup.js';
 import { startGameLoop } from './game-loop.js';
 import { ChatPanel } from './chat.js';
 import { PlayerStatus } from './player-status.js';
-import { createWater } from './water.js';
 import { addRemoteEnemy } from './enemy-factory.js';
 import { loadGameAssets } from './asset-loader.js';
 import { InterfaceScale } from './interface-scale.js';
 import { createUiController } from './ui-controller.js';
+import { createAccountController } from './account-controller.js';
 import {
   addMovementMarker,
   addPlayerNameTag,
@@ -37,7 +37,6 @@ const rankingButton = document.querySelector('#ranking-button');
 const rankingMenu = document.querySelector('#ranking-menu');
 const chatToggle = document.querySelector('#chat-toggle');
 const chatElement = document.querySelector('#chat');
-let gameStarted = false;
 
 function updateLoading(message, title = 'Carregando cena') {
   loadingTitle.textContent = title;
@@ -180,7 +179,6 @@ async function start() {
   status.textContent = 'Carregando cena...';
   const game = createGame(canvas, status);
   updateLoading('Carregando cenário e personagem...');
-  //createWater(game.world);
   const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game);
   const { enemyAssets } = await loadSceneAssets(game.textureManager);
   addPlayerNameTag(game.world, playerEntity);
@@ -188,9 +186,6 @@ async function start() {
   updateLoading('Finalizando cena...');
   followPlayer(game, playerEntity);
   addMovementMarker(game.world, playerEntity);
-
-  // adicionando o mapa 3d
-  // createMap(game.world);
 
   const multiplayerSystem = createMultiplayer(game, playerEntity, enemyAssets);
   respawnButton.addEventListener('click', () => multiplayerSystem.sendRespawn());
@@ -210,45 +205,6 @@ async function start() {
   startGameLoop({ ...game, multiplayerSystem });
 }
 
-async function authenticateAccount(nickname, password, mode = 'login') {
-  const configuredUrl = import.meta.env.VITE_MULTIPLAYER_URL?.trim();
-  const httpUrl = (configuredUrl || `${window.location.protocol}//${window.location.hostname}:5174`)
-    .replace(/^wss:/, 'https:')
-    .replace(/^ws:/, 'http:')
-    .replace(/\/$/, '');
-  const response = await fetch(`${httpUrl}/api/${mode}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ nickname, password }),
-  });
-  const contentType = response.headers.get('content-type') ?? '';
-  if (!contentType.includes('application/json')) {
-    throw new Error('O relay multiplayer nao respondeu JSON. Verifique VITE_MULTIPLAYER_URL: ela deve apontar para o servidor multiplayer, nao para o frontend.');
-  }
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error ?? 'Falha na autenticacao.');
-  window.sessionStorage.setItem('webgl-rpg-session-token', result.token);
-  return result.nickname;
-}
-
-async function beginGame(nickname, password = null, mode = 'login') {
-  if (gameStarted) return;
-  if (password) {
-    try {
-      nickname = await authenticateAccount(nickname, password, mode);
-    } catch (error) {
-      accountMessage.textContent = error.message;
-      return;
-    }
-  } else {
-    window.sessionStorage.removeItem('webgl-rpg-session-token');
-  }
-  gameStarted = true;
-  window.localStorage.setItem('webgl-rpg-nickname', nickname);
-  startScreen.classList.add('start-screen-hidden');
-  start().catch(handleStartError);
-}
-
 function handleStartError(error) {
   updateLoading(error.message, 'Não foi possível carregar');
   loadingScreen.classList.add('loading-screen-error');
@@ -256,28 +212,13 @@ function handleStartError(error) {
   console.error(error);
 }
 
-accountForm.addEventListener('submit', (event) => {
-  event.preventDefault();
-  const nickname = nicknameInput.value.trim();
-  const password = document.querySelector('#password').value;
-  if (nickname.length < 2 || password.length < 8) {
-    accountMessage.textContent = 'Use um nickname com 2 caracteres e uma senha com 8.';
-    return;
-  }
-  beginGame(nickname, password);
-});
-
-guestButton.addEventListener('click', () => {
-  const guestNickname = `Guest-${window.crypto.randomUUID().slice(0, 4).toUpperCase()}`;
-  beginGame(guestNickname);
-});
-
-registerButton.addEventListener('click', () => {
-  const nickname = nicknameInput.value.trim();
-  const password = document.querySelector('#password').value;
-  if (nickname.length < 2 || password.length < 8) {
-    accountMessage.textContent = 'Use nickname valido e senha com pelo menos 8 caracteres.';
-    return;
-  }
-  beginGame(nickname, password, 'register');
+createAccountController({
+  startScreen,
+  accountForm,
+  guestButton,
+  registerButton,
+  nicknameInput,
+  passwordInput: document.querySelector('#password'),
+  messageElement: accountMessage,
+  startGame: () => start().catch(handleStartError),
 });

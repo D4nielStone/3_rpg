@@ -14,7 +14,7 @@ import { TextureManager } from './texture-manager.js';
 import { createProgram } from './webgl.js';
 import { NameTagSystem } from './name-tags.js';
 import { EnemyHoverSystem } from './enemy-hover.js';
-import { EnemyAreaRenderer, MeshRenderer, Transform } from './components.js';
+import { customizeMap } from './map-customization.js';
 
 const vertexShaderSource = `
   precision mediump float;
@@ -169,23 +169,6 @@ function resizeCanvas(gl, camera, canvas) {
   camera.setAspect(width / height);
 }
 
-function createEnemyAreaMarker(world, center) {
-  const entity = world.createEntity();
-  world.addComponent(entity, new Transform({ position: [center[0], -0.04, center[2]] }));
-  world.addComponent(entity, new EnemyAreaRenderer());
-  world.addComponent(entity, new MeshRenderer({
-    vertices: new Float32Array([
-      -12.5, 0, -12.5, 12.5, 0, -12.5,
-      12.5, 0, 12.5, -12.5, 0, 12.5,
-    ]),
-    colors: new Float32Array([
-      0.015, 0.06, 0.16, 0.015, 0.06, 0.16,
-      0.015, 0.06, 0.16, 0.015, 0.06, 0.16,
-    ]),
-    indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
-  }));
-}
-
 export function createGame(canvas, status) {
   const gl = canvas.getContext('webgl');
 
@@ -206,8 +189,7 @@ export function createGame(canvas, status) {
 
   const camera = new Camera();
   const world = new World();
-  createEnemyAreaMarker(world, [0, 0, 0]);
-  createEnemyAreaMarker(world, [35, 0, 0]);
+  customizeMap(world);
   const textureManager = new TextureManager(gl);
   const input = new InputState();
   canvas.addEventListener('wheel', (event) => {
