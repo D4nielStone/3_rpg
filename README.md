@@ -1,4 +1,5 @@
 # WebGL RPG
+<img width="1365" height="629" alt="Captura de tela 2026-09-09 124629" src="https://github.com/user-attachments/assets/b4390a78-3762-49fd-a69b-230c52e095f0" />
 
 Projeto simples de renderizacao 3D com WebGL, Vite e ECS.
 
