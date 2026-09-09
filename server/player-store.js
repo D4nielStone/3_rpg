@@ -52,6 +52,13 @@ export class PlayerStore {
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE
     `);
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS world_configs (
+        id SMALLINT PRIMARY KEY CHECK (id = 1),
+        config JSONB NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
   }
 
   async get(guestId, peerId, nickname = 'Guest') {
@@ -134,5 +141,21 @@ export class PlayerStore {
       ON CONFLICT (guest_id)
       DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()
     `, [guestId, JSON.stringify(player.toPersistence())]);
+  }
+
+  async getMapConfig() {
+    await this.ready;
+    const result = await this.pool.query('SELECT config FROM world_configs WHERE id = 1');
+    return result.rows[0]?.config ?? null;
+  }
+
+  async saveMapConfig(config) {
+    await this.ready;
+    await this.pool.query(`
+      INSERT INTO world_configs (id, config, updated_at)
+      VALUES (1, $1::jsonb, NOW())
+      ON CONFLICT (id)
+      DO UPDATE SET config = EXCLUDED.config, updated_at = NOW()
+    `, [JSON.stringify(config)]);
   }
 }

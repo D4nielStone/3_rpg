@@ -240,23 +240,43 @@ export class Texture {
   }
 }
 
-export class MeshRenderer {
-  constructor({ vertices, colors, indices, normals = null, uvs = null, texture = null }) {
-    this.vertices = vertices;
-    this.colors = colors;
-    this.indices = indices;
-    this.normals = normals ?? new Float32Array(vertices.length).fill(0);
-    if (!normals) {
-      for (let index = 1; index < this.normals.length; index += 3) this.normals[index] = 1;
-    }
-    this.uvs = uvs;
+export class Material {
+  constructor({ diffuseColor = [1, 1, 1], texture = null, name = 'material' } = {}) {
+    this.diffuseColor = [...diffuseColor];
     this.texture = texture;
-    this.positionBuffer = null;
-    this.colorBuffer = null;
-    this.indexBuffer = null;
-    this.uvBuffer = null;
-    this.dirty = false;
+    this.name = name;
   }
+}
+
+export class MeshRenderer {
+  constructor({ meshes = null, vertices, colors, indices, normals = null, uvs = null, texture = null, material = null }) {
+    this.meshes = meshes ?? [{
+      vertices,
+      colors,
+      indices,
+      normals,
+      uvs,
+      material: material ?? new Material({ texture }),
+    }];
+    this.meshes.forEach((mesh) => {
+      if (!mesh.normals) {
+        mesh.normals = new Float32Array(mesh.vertices.length).fill(0);
+        for (let index = 1; index < mesh.normals.length; index += 3) mesh.normals[index] = 1;
+      }
+      mesh.positionBuffer = null;
+      mesh.colorBuffer = null;
+      mesh.indexBuffer = null;
+      mesh.uvBuffer = null;
+      mesh.dirty = false;
+    });
+  }
+
+  get vertices() { return this.meshes[0]?.vertices; }
+  get colors() { return this.meshes[0]?.colors; }
+  get indices() { return this.meshes[0]?.indices; }
+  get normals() { return this.meshes[0]?.normals; }
+  get uvs() { return this.meshes[0]?.uvs; }
+  get texture() { return this.meshes[0]?.material?.texture ?? null; }
 }
 
 export class Water {

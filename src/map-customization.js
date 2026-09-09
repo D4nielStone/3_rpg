@@ -1,12 +1,10 @@
-import { MeshRenderer, Transform } from './components.js';
+import { AnimationPlayer, MeshRenderer, Texture, Transform } from './components.js';
+import { loadAsset } from './asset-loader.js';
 import { createWater } from './water.js';
 import { readSavedMapConfig } from './map-config.js';
 
 export const DEFAULT_MAP_CONFIG = Object.freeze({
-  enemyAreas: [
-    { center: [0, 0, 0], width: 25, depth: 25 },
-    { center: [35, 0, 0], width: 25, depth: 25 },
-  ],
+  enemyAreas: [],
   water: {
     enabled: false,
     size: 50,
@@ -62,10 +60,45 @@ function createTerrain(world, terrain) {
   }));
 }
 
-export function customizeMap(world, config = null) {
+async function createWorldEntities(world, config, textureManager) {
+  const assets = new Map((config.assets ?? []).map((asset) => [asset.id, asset]));
+  for (const definition of config.entities ?? []) {
+    const asset = assets.get(definition.assetId);
+    if (!asset?.url || asset.url.startsWith('blob:') || asset.url.startsWith('local:')) continue;
+    try {
+      const loaded = await loadAsset(asset.url, asset.format, textureManager, asset.dependencies);
+      const entity = world.createEntity();
+      world.addComponent(entity, new Transform({
+        position: definition.position,
+        rotation: definition.rotation,
+        scale: definition.scale,
+      }));
+      (definition.materials ?? []).forEach((materialDefinition, index) => {
+        const material = loaded.mesh.meshes[index]?.material;
+        if (material && Array.isArray(materialDefinition.diffuseColor)) material.diffuseColor = [...materialDefinition.diffuseColor];
+      });
+      world.addComponent(entity, loaded.mesh);
+      if (loaded.texture) world.addComponent(entity, loaded.texture);
+      if (loaded.animations) {
+        world.addComponent(entity, new AnimationPlayer({
+          animations: loaded.animations,
+          mixer: loaded.animationMixer,
+          onUpdate: loaded.animationUpdate,
+        }));
+      }
+    } catch {
+      // Um asset ausente não deve impedir o carregamento do restante do mundo.
+    }
+  }
+}
+
+export function customizeMap(world, config = null, textureManager = null) {
   const activeConfig = config ?? readSavedMapConfig() ?? DEFAULT_MAP_CONFIG;
   createTerrain(world, activeConfig.terrain);
   if (activeConfig.water?.enabled && !activeConfig.terrain?.cells) {
     createWater(world, activeConfig.water);
+  }
+  if (textureManager && Array.isArray(activeConfig.entities)) {
+    createWorldEntities(world, activeConfig, textureManager);
   }
 }

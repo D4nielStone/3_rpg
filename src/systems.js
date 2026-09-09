@@ -191,12 +191,17 @@ export class LineSystem {
 }
 
 export class RenderSystem {
-  constructor(gl, program, locations, camera) {
+  constructor(gl, program, locations, camera, lighting = null) {
     this.gl = gl;
     this.program = program;
     this.locations = locations;
     this.camera = camera;
-    this.lightDirection = [-0.45, -1, -0.35];
+    this.ambientColor = [0, 1, 2].map((index) => {
+      const value = Number(lighting?.ambientColor?.[index]);
+      return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1;
+    });
+    const intensity = Number(lighting?.ambientIntensity);
+    this.ambientIntensity = Number.isFinite(intensity) ? Math.min(2, Math.max(0, intensity)) : 1;
   }
 
   prepareMesh(mesh) {
@@ -320,85 +325,54 @@ export class RenderSystem {
     const { gl, locations } = this;
     const view = this.camera.getViewMatrix();
     const projection = this.camera.getProjectionMatrix();
-    const [lightX, lightY, lightZ] = this.lightDirection;
-    gl.uniform3f(locations.lightDirection, lightX, lightY, lightZ);
+    gl.uniform3f(locations.ambientColor, ...this.ambientColor);
+    gl.uniform1f(locations.ambientIntensity, this.ambientIntensity);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.enableVertexAttribArray(locations.normal);
 
-    for (const entity of world.query(Transform, ShadowRenderer)) {
-      const transform = world.getComponent(entity, Transform);
-      const shadow = world.getComponent(entity, ShadowRenderer);
-      this.prepareShadow(shadow);
-      const shadowTransform = {
-        ...transform,
-        position: [
-          transform.position[0] - lightX * 0.18,
-          transform.position[1],
-          transform.position[2] - lightZ * 0.18,
-        ],
-        scale: [transform.scale[0] * 1.1, transform.scale[1], transform.scale[2] * 1.1],
-      };
-      const shadowModel = this.getModelMatrix(shadowTransform);
-      gl.uniformMatrix4fv(locations.modelMatrix, false, shadowModel);
-      gl.uniformMatrix4fv(locations.matrix, false, multiplyMatrices(
-        projection,
-        multiplyMatrices(view, shadowModel),
-      ));
-      gl.uniform1f(locations.isShadow, 1);
-      gl.uniform1f(locations.useTexture, 0);
-      gl.uniform1f(locations.isWater, 0);
-      gl.bindBuffer(gl.ARRAY_BUFFER, shadow.positionBuffer);
-      gl.vertexAttribPointer(locations.position, 3, gl.FLOAT, false, 0, 0);
-      gl.bindBuffer(gl.ARRAY_BUFFER, shadow.colorBuffer);
-      gl.vertexAttribPointer(locations.color, 3, gl.FLOAT, false, 0, 0);
-      gl.bindBuffer(gl.ARRAY_BUFFER, shadow.normalBuffer);
-      gl.vertexAttribPointer(locations.normal, 3, gl.FLOAT, false, 0, 0);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shadow.indexBuffer);
-      gl.drawElements(gl.TRIANGLES, shadow.indices.length, gl.UNSIGNED_SHORT, 0);
-    }
-
     for (const entity of world.query(Transform, MeshRenderer)) {
       const transform = world.getComponent(entity, Transform);
-      const mesh = world.getComponent(entity, MeshRenderer);
-      const texture = world.getComponent(entity, Texture) ?? mesh.texture;
-      const water = world.getComponent(entity, Water);
-      this.prepareMesh(mesh);
-      this.prepareTexture(texture);
-
       const matrix = multiplyMatrices(
         projection,
         multiplyMatrices(view, this.getModelMatrix(transform)),
       );
-
-      gl.uniformMatrix4fv(locations.matrix, false, matrix);
-      gl.uniformMatrix4fv(locations.modelMatrix, false, this.getModelMatrix(transform));
-      gl.uniform3f(locations.lightDirection, -0.45, -1.0, -0.35);
-      gl.uniform1f(locations.isShadow, 0);
-        gl.uniform1f(locations.isEnemyArea, 0);
+      const renderer = world.getComponent(entity, MeshRenderer);
+      const water = world.getComponent(entity, Water);
+      renderer.meshes.forEach((mesh) => {
+        const material = mesh.material;
+        const texture = material?.texture ?? world.getComponent(entity, Texture) ?? null;
+        this.prepareMesh(mesh);
+        this.prepareTexture(texture);
+        gl.uniformMatrix4fv(locations.matrix, false, matrix);
+        gl.uniformMatrix4fv(locations.modelMatrix, false, this.getModelMatrix(transform));
+        gl.uniform3f(locations.diffuseColor, ...(material?.diffuseColor ?? [1, 1, 1]));
+        gl.uniform1f(locations.isShadow, 0);
         gl.uniform1f(locations.isEnemyArea, 0);
         const enemyArea = world.getComponent(entity, EnemyAreaRenderer);
         gl.uniform1f(locations.isEnemyArea, enemyArea ? 1 : 0);
-      gl.uniform1f(locations.useTexture, texture ? 1 : 0);
-      gl.uniform1f(locations.isWater, water ? 1 : 0);
-      gl.uniform1f(locations.time, time);
-      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.positionBuffer);
-      gl.vertexAttribPointer(locations.position, 3, gl.FLOAT, false, 0, 0);
-      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.colorBuffer);
-      gl.vertexAttribPointer(locations.color, 3, gl.FLOAT, false, 0, 0);
-      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalBuffer);
-      gl.vertexAttribPointer(locations.normal, 3, gl.FLOAT, false, 0, 0);
+        const textured = Boolean(texture && mesh.uvs);
+        gl.uniform1f(locations.useTexture, textured ? 1 : 0);
+        gl.uniform1f(locations.isWater, water ? 1 : 0);
+        gl.uniform1f(locations.time, time);
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.positionBuffer);
+        gl.vertexAttribPointer(locations.position, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.colorBuffer);
+        gl.vertexAttribPointer(locations.color, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalBuffer);
+        gl.vertexAttribPointer(locations.normal, 3, gl.FLOAT, false, 0, 0);
 
-      if (mesh.uvs && texture) {
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
-        gl.uniform1i(locations.uTexture, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.uvBuffer);
-        gl.vertexAttribPointer(locations.uv, 2, gl.FLOAT, false, 0, 0);
-      }
+        if (textured) {
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
+          gl.uniform1i(locations.uTexture, 0);
+          gl.bindBuffer(gl.ARRAY_BUFFER, mesh.uvBuffer);
+          gl.vertexAttribPointer(locations.uv, 2, gl.FLOAT, false, 0, 0);
+        }
 
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
-      gl.drawElements(gl.TRIANGLES, mesh.indices.length, gl.UNSIGNED_SHORT, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
+        gl.drawElements(gl.TRIANGLES, mesh.indices.length, gl.UNSIGNED_SHORT, 0);
+      });
     }
 
     for (const entity of world.query(LineRenderer)) {

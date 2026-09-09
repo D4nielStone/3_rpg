@@ -122,7 +122,7 @@
 #chat-form { width: 100%; }
 
 #chat-toggle {
-  z-index: 14;
+  z-index: 12 !important;
 }
 
 #loading-screen:not(.loading-screen-hidden) ~ main #chat-toggle {

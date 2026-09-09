@@ -1,0 +1,40 @@
+#attributes-menu {
+  position: fixed !important;
+  z-index: 13 !important;
+  inset: auto max(1rem, env(safe-area-inset-right)) auto auto !important;
+  top: 3.75rem !important;
+  left: auto !important;
+  display: block !important;
+  width: min(18rem, calc(100vw - 2rem)) !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: calc(100dvh - 5rem) !important;
+  padding: .9rem !important;
+  overflow-y: auto !important;
+  transform: none !important;
+  border: 1px solid rgb(255 255 255 / 18%) !important;
+  border-radius: 6px !important;
+  color: var(--ui-text) !important;
+  background: rgb(8 12 24 / 94%) !important;
+  box-shadow: 0 .8rem 2rem rgb(0 0 0 / 35%) !important;
+  font-family: 'Pixelify Sans', sans-serif !important;
+  text-shadow: none !important;
+}
+
+#attributes-menu::before { display: none !important; }
+#attributes-menu.attributes-menu-hidden { display: none !important; }
+#attributes-menu h2 { width: auto !important; margin: 0 0 .65rem !important; padding-bottom: .65rem !important; border-bottom: 1px solid rgb(255 255 255 / 14%) !important; color: var(--ui-gold) !important; font-size: .95rem !important; letter-spacing: .04em !important; text-align: left !important; }
+#attributes-menu .attribute-row { width: auto !important; min-height: 0 !important; margin: 0 !important; padding: .55rem 0 !important; border-bottom: 1px solid rgb(255 255 255 / 10%) !important; color: var(--ui-text) !important; font-size: .78rem !important; }
+#attributes-menu .attribute-row span, #attributes-menu .attribute-row strong { color: inherit !important; }
+#attributes-menu .attribute-row strong { color: var(--ui-gold) !important; }
+#attributes-menu .attribute-meter { height: .42rem !important; margin-top: .35rem !important; border-color: rgb(255 255 255 / 18%) !important; background: rgb(255 255 255 / 10%) !important; }
+#attributes-menu .attribute-meter span { background: var(--ui-gold) !important; }
+#attributes-menu .combat-mode-title { width: auto !important; margin: .9rem 0 .5rem !important; padding-top: .75rem !important; border-top: 1px solid rgb(255 255 255 / 10%) !important; color: var(--ui-gold) !important; font-size: .72rem !important; text-align: left !important; }
+#attributes-menu .combat-mode-controls { width: auto !important; grid-template-columns: 1fr !important; gap: .35rem !important; margin: 0 !important; }
+#attributes-menu .combat-mode-button { min-height: 2.15rem !important; border: 1px solid rgb(255 255 255 / 18%) !important; border-radius: 3px !important; color: var(--ui-text) !important; background: rgb(255 255 255 / 6%) !important; font-size: .72rem !important; text-shadow: none !important; box-shadow: none !important; }
+#attributes-menu .combat-mode-button:hover, #attributes-menu .combat-mode-button:focus-visible, #attributes-menu .combat-mode-button.combat-mode-selected { border-color: var(--ui-gold) !important; color: #17130a !important; background: var(--ui-gold) !important; }
+#attributes-menu #logout-button { width: 100% !important; min-height: 2.25rem !important; margin-top: .85rem !important; border-radius: 3px !important; font-size: .72rem !important; }
+
+@media (max-width: 640px) {
+  #attributes-menu { inset: auto .65rem auto auto !important; top: 3.5rem !important; width: min(16rem, calc(100vw - 1.3rem)) !important; max-height: calc(100dvh - 4.25rem) !important; }
+}

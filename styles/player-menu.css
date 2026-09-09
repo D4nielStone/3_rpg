@@ -307,6 +307,38 @@
 
 #attributes-menu::before { display: none; }
 
+/* Final compact HUD treatment. */
+#attributes-menu {
+  inset: auto max(1rem, env(safe-area-inset-right)) auto auto;
+  top: 3.75rem;
+  display: block;
+  width: min(18rem, calc(100vw - 2rem));
+  height: auto;
+  min-height: 0;
+  max-height: calc(100dvh - 5rem);
+  padding: .9rem;
+  overflow-y: auto;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 6px;
+  color: var(--ui-text);
+  background: rgb(8 12 24 / 94%);
+  box-shadow: 0 .8rem 2rem rgb(0 0 0 / 35%);
+  font-family: 'Pixelify Sans', sans-serif;
+  text-shadow: none;
+}
+
+#attributes-menu h2 { width: auto; margin: 0 0 .65rem; padding-bottom: .65rem; border-bottom: 1px solid rgb(255 255 255 / 14%); color: var(--ui-gold); font-size: .95rem; letter-spacing: .04em; text-align: left; }
+#attributes-menu .attribute-row { width: auto; min-height: 0; margin: 0; padding: .55rem 0; border-bottom: 1px solid rgb(255 255 255 / 10%); color: var(--ui-text); font-size: .78rem; }
+#attributes-menu .attribute-row span, #attributes-menu .attribute-row strong { color: inherit; }
+#attributes-menu .attribute-row strong { color: var(--ui-gold); }
+#attributes-menu .attribute-meter { height: .42rem; margin-top: .35rem; border-color: rgb(255 255 255 / 18%); background: rgb(255 255 255 / 10%); }
+#attributes-menu .attribute-meter span { background: var(--ui-gold); }
+#attributes-menu .combat-mode-title { width: auto; margin: .9rem 0 .5rem; padding-top: .75rem; border-top: 1px solid rgb(255 255 255 / 10%); color: var(--ui-gold); font-size: .72rem; text-align: left; }
+#attributes-menu .combat-mode-controls { width: auto; grid-template-columns: 1fr; gap: .35rem; margin: 0; }
+#attributes-menu .combat-mode-button { min-height: 2.15rem; border: 1px solid rgb(255 255 255 / 18%); border-radius: 3px; color: var(--ui-text); background: rgb(255 255 255 / 6%); font-size: .72rem; text-shadow: none; box-shadow: none; }
+#attributes-menu .combat-mode-button:hover, #attributes-menu .combat-mode-button:focus-visible, #attributes-menu .combat-mode-button.combat-mode-selected { border-color: var(--ui-gold); color: #17130a; background: var(--ui-gold); }
+#attributes-menu #logout-button { width: 100%; min-height: 2.25rem; margin-top: .85rem; border-radius: 3px; font-size: .72rem; }
+
 #attributes-menu h2 {
   width: min(42rem, 100%);
   margin: 0 auto 1.5rem;
@@ -398,51 +430,92 @@
   .combat-mode-controls { grid-template-columns: 1fr; }
 }
 
-#attributes-menu #ui-scale-controls {
-  position: static;
-  width: min(42rem, 100%);
-  box-sizing: border-box;
-  justify-content: center;
-  align-items: center;
-  gap: 0.7rem;
-  margin: 1.5rem auto 0;
-  padding-top: 1rem;
-  border-top: 1px solid rgb(255 255 255 / 22%);
-  zoom: 1;
+#attributes-menu {
+  inset: auto max(1rem, env(safe-area-inset-right)) auto auto !important;
+  top: 3.75rem !important;
+  left: auto !important;
+  display: block !important;
+  width: min(18rem, calc(100vw - 2rem)) !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: calc(100dvh - 5rem) !important;
+  padding: .9rem !important;
+  transform: none !important;
+  overflow-y: auto !important;
+  border: 1px solid rgb(255 255 255 / 18%) !important;
+  border-radius: 6px !important;
+  color: var(--ui-text) !important;
+  background: rgb(8 12 24 / 94%) !important;
+  box-shadow: 0 .8rem 2rem rgb(0 0 0 / 35%) !important;
+  font-family: 'Pixelify Sans', sans-serif !important;
+  text-shadow: none !important;
 }
 
-#attributes-menu #ui-scale-controls button {
-  display: grid;
-  width: 3rem;
-  height: 2.7rem;
-  place-items: center;
-  border: 1px solid #fff;
-  border-radius: 0;
-  color: #fff;
-  background: #000;
-  font: 500 1.4rem/1 'Pixelify Sans', sans-serif;
-  transition: color 120ms ease, background 120ms ease, transform 120ms ease;
+#attributes-menu::before { display: none !important; }
+#attributes-menu h2 { width: auto !important; margin: 0 0 .65rem !important; padding-bottom: .65rem !important; border-bottom: 1px solid rgb(255 255 255 / 14%) !important; color: var(--ui-gold) !important; font-size: .95rem !important; letter-spacing: .04em !important; text-align: left !important; }
+#attributes-menu .attribute-row { width: auto !important; min-height: 0 !important; margin: 0 !important; padding: .55rem 0 !important; border-bottom: 1px solid rgb(255 255 255 / 10%) !important; color: var(--ui-text) !important; font-size: .78rem !important; }
+#attributes-menu .attribute-row span, #attributes-menu .attribute-row strong { color: inherit !important; }
+#attributes-menu .attribute-row strong { color: var(--ui-gold) !important; }
+#attributes-menu .attribute-meter { height: .42rem !important; margin-top: .35rem !important; border-color: rgb(255 255 255 / 18%) !important; background: rgb(255 255 255 / 10%) !important; }
+#attributes-menu .attribute-meter span { background: var(--ui-gold) !important; }
+#attributes-menu .combat-mode-title { width: auto !important; margin: .9rem 0 .5rem !important; padding-top: .75rem !important; border-top: 1px solid rgb(255 255 255 / 10%) !important; color: var(--ui-gold) !important; font-size: .72rem !important; text-align: left !important; }
+#attributes-menu .combat-mode-controls { width: auto !important; grid-template-columns: 1fr !important; gap: .35rem !important; margin: 0 !important; }
+#attributes-menu .combat-mode-button { min-height: 2.15rem !important; border: 1px solid rgb(255 255 255 / 18%) !important; border-radius: 3px !important; color: var(--ui-text) !important; background: rgb(255 255 255 / 6%) !important; font-size: .72rem !important; text-shadow: none !important; box-shadow: none !important; }
+#attributes-menu #logout-button { width: 100% !important; min-height: 2.25rem !important; margin-top: .85rem !important; border-radius: 3px !important; font-size: .72rem !important; }
+
+/* Compact attributes panel aligned with the rest of the HUD. */
+#attributes-menu {
+  inset: auto max(1rem, env(safe-area-inset-right)) auto auto;
+  top: 3.75rem;
+  display: block;
+  width: min(18rem, calc(100vw - 2rem));
+  height: auto;
+  min-height: 0;
+  max-height: calc(100dvh - 5rem);
+  padding: .9rem;
+  overflow-y: auto;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 6px;
+  color: var(--ui-text);
+  background: rgb(8 12 24 / 94%);
+  box-shadow: 0 .8rem 2rem rgb(0 0 0 / 35%);
+  font-family: 'Pixelify Sans', sans-serif;
+  text-shadow: none;
 }
 
-#attributes-menu #ui-scale-controls button:hover,
-#attributes-menu #ui-scale-controls button:focus-visible {
-  color: #000;
-  background: #fff;
-  outline: none;
+#attributes-menu h2 {
+  width: auto;
+  margin: 0 0 .65rem;
+  padding-bottom: .65rem;
+  border-bottom: 1px solid rgb(255 255 255 / 14%);
+  color: var(--ui-gold);
+  font-size: .95rem;
+  letter-spacing: .04em;
+  text-align: left;
 }
 
-#attributes-menu #ui-scale-controls button:active {
-  transform: translateY(1px);
+#attributes-menu .attribute-row {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  padding: .55rem 0;
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  color: var(--ui-text);
+  font-size: .78rem;
 }
 
-#attributes-menu #ui-scale-controls::before {
-  content: 'Interface';
-  margin-right: 0.35rem;
-  color: #999;
-  font: 0.75rem/1 'Pixelify Sans', sans-serif;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
+#attributes-menu .attribute-row span,
+#attributes-menu .attribute-row strong { color: inherit; }
+#attributes-menu .attribute-row strong { color: var(--ui-gold); }
+#attributes-menu .attribute-meter { height: .42rem; margin-top: .35rem; border-color: rgb(255 255 255 / 18%); background: rgb(255 255 255 / 10%); }
+#attributes-menu .attribute-meter span { background: var(--ui-gold); }
+#attributes-menu .combat-mode-title { width: auto; margin: .9rem 0 .5rem; padding-top: .75rem; border-top: 1px solid rgb(255 255 255 / 10%); color: var(--ui-gold); font-size: .72rem; text-align: left; }
+#attributes-menu .combat-mode-controls { width: auto; grid-template-columns: 1fr; margin: 0; }
+#attributes-menu .combat-mode-button { min-height: 2.15rem; border: 1px solid rgb(255 255 255 / 18%); border-radius: 3px; color: var(--ui-text); background: rgb(255 255 255 / 6%); font-size: .72rem; }
+#attributes-menu .combat-mode-button:hover,
+#attributes-menu .combat-mode-button:focus-visible,
+#attributes-menu .combat-mode-button.combat-mode-selected { border-color: var(--ui-gold); color: #17130a; background: var(--ui-gold); }
+#attributes-menu #logout-button { width: 100%; min-height: 2.25rem; margin-top: .85rem; border-radius: 3px; font-size: .72rem; }
 
 #logout-button {
   display: block;

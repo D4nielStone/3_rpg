@@ -834,8 +834,8 @@ html,
   text-shadow: 2px 2px 0 #7e2028;
 }
 
-#menu-button { right: 8.2rem; }
-#ranking-button { right: 4.5rem; background: #d5d8d2; color: #202426; text-shadow: none; }
+#menu-button { right: 4.5rem; }
+#ranking-button { right: 1rem; background: #d5d8d2; color: #202426; text-shadow: none; }
 
 #action-bar {
   position: fixed;

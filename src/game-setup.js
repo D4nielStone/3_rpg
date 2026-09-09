@@ -66,7 +66,9 @@ const fragmentShaderSource = `
   uniform float isWater;
   uniform float time;
 
-  uniform vec3 lightDirection;
+  uniform vec3 ambientColor;
+  uniform float ambientIntensity;
+  uniform vec3 diffuseColor;
   uniform float isShadow;
   uniform float isEnemyArea;
 
@@ -81,20 +83,6 @@ const fragmentShaderSource = `
       finalColor = vec3(0.015, 0.06, 0.16);
       alpha = 0.24;
     } else {
-      vec3 normal = normalize(vWorldNormal);
-      vec3 light = normalize(-lightDirection);
-
-      float directional = max(
-        dot(normal, light),
-        0.0
-      );
-
-      float ambient = 0.15;
-
-      float lighting =
-        ambient +
-        (1.0 - ambient) * directional;
-
       if (isWater > 0.5) {
         vec2 movingUv = vUv +
           vec2(
@@ -118,14 +106,14 @@ const fragmentShaderSource = `
           highlights
         );
 
-        finalColor *= lighting;
+        finalColor *= ambientColor * ambientIntensity;
       } else {
         vec3 baseColor =
           useTexture > 0.5
             ? texture2D(uTexture, vUv).rgb
             : color;
 
-        finalColor = baseColor * lighting;
+        finalColor = baseColor * diffuseColor * ambientColor * ambientIntensity;
       }
     }
 
@@ -181,6 +169,10 @@ export function createGame(canvas, status, mapConfig = null) {
     );
   }
 
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.BACK);
+  gl.frontFace(gl.CCW);
+
   const program = createProgram(
     gl,
     vertexShaderSource,
@@ -189,8 +181,8 @@ export function createGame(canvas, status, mapConfig = null) {
 
   const camera = new Camera();
   const world = new World();
-  customizeMap(world, mapConfig);
   const textureManager = new TextureManager(gl);
+  customizeMap(world, mapConfig, textureManager);
   const input = new InputState();
   canvas.addEventListener('wheel', (event) => {
     event.preventDefault();
@@ -248,9 +240,19 @@ export function createGame(canvas, status, mapConfig = null) {
       'time'
     ),
 
-    lightDirection: gl.getUniformLocation(
+    ambientColor: gl.getUniformLocation(
       program,
-      'lightDirection'
+      'ambientColor'
+    ),
+
+    ambientIntensity: gl.getUniformLocation(
+      program,
+      'ambientIntensity'
+    ),
+
+    diffuseColor: gl.getUniformLocation(
+      program,
+      'diffuseColor'
     ),
 
     isShadow: gl.getUniformLocation(
@@ -306,6 +308,7 @@ export function createGame(canvas, status, mapConfig = null) {
     camera,
     world,
     textureManager,
+    skyColor: mapConfig?.scene?.skyColor ?? [0.039, 0.051, 0.047],
     input,
 
     animationSystem:
@@ -340,7 +343,8 @@ export function createGame(canvas, status, mapConfig = null) {
         gl,
         program,
         locations,
-        camera
+        camera,
+        mapConfig?.lighting
       ),
   };
 }

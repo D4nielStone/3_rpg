@@ -1,4 +1,4 @@
-import { MeshRenderer, Texture } from './components.js';
+import { Material, MeshRenderer, Texture } from './components.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { AnimationMixer, Color, SkinnedMesh, Vector3 } from 'three';
 
@@ -7,17 +7,40 @@ function parseIndex(value, length) {
   return index < 0 ? length + index : index - 1;
 }
 
-export async function loadOBJ(url) {
+function dependency(dependencies, name) { if (!dependencies) return null; const key = String(name).replaceAll('\\', '/').split('/').pop(); return dependencies[key] ?? dependencies[name] ?? null; }
+
+export async function loadOBJ(url, textureManager = null, dependencies = null) {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Não foi possível carregar o modelo OBJ: ${response.status}`);
   }
 
   const source = await response.text();
+  const materialNames = new Map();
+  let mtlUrl = null;
+  let mtlSource = null;
+  const mtllib = source.split(/\r?\n/).map((line) => line.trim()).find((line) => line.startsWith('mtllib '))?.slice(7).trim();
+  if (mtllib) {
+    const embeddedMtl = dependency(dependencies, mtllib);
+    if (embeddedMtl) mtlSource = await (await fetch(embeddedMtl)).text();
+    else if (!url.startsWith('data:')) { mtlUrl = new URL(mtllib, url); mtlSource = await (await fetch(mtlUrl)).text(); }
+    if (mtlSource) {
+      let current = null;
+      for (const rawLine of mtlSource.split(/\r?\n/)) {
+        const line = rawLine.trim();
+        const [command, ...values] = line.split(/\s+/);
+        if (command === 'newmtl') { current = { name: values.join(' '), diffuseColor: [1, 1, 1], map: null }; materialNames.set(current.name, current); }
+        else if (current && command === 'Kd') current.diffuseColor = values.slice(0, 3).map(Number);
+        else if (current && command === 'map_Kd') current.map = values.join(' ');
+      }
+    }
+  }
   const positions = [];
-  const vertices = [];
-  const colors = [];
-  const indices = [];
+  const texcoords = [];
+  const normals = [];
+  const groups = new Map();
+  let activeMaterial = 'default';
+  const getGroup = () => { if (!groups.has(activeMaterial)) groups.set(activeMaterial, { vertices: [], colors: [], normals: [], uvs: [], indices: [] }); return groups.get(activeMaterial); };
 
   for (const line of source.split('\n')) {
     const values = line.trim().split(/\s+/);
@@ -27,34 +50,56 @@ export async function loadOBJ(url) {
       positions.push(values.slice(0, 3).map(Number));
       continue;
     }
+    if (command === 'vt') { texcoords.push(values.slice(0, 2).map(Number)); continue; }
+    if (command === 'vn') { normals.push(values.slice(0, 3).map(Number)); continue; }
+    if (command === 'usemtl') { activeMaterial = values.join(' ') || 'default'; continue; }
 
     if (command !== 'f' || values.length < 3) {
       continue;
     }
 
+    const group = getGroup();
     const face = values.map((value) => {
-      const positionIndex = parseIndex(value.split('/')[0], positions.length);
-      const position = positions[positionIndex];
-      const vertexIndex = vertices.length / 3;
-      vertices.push(...position);
-      colors.push(0.95, 0.55, 0.2);
+      const [positionToken, uvToken, normalToken] = value.split('/');
+      const position = positions[parseIndex(positionToken, positions.length)] ?? [0, 0, 0];
+      const uv = uvToken ? texcoords[parseIndex(uvToken, texcoords.length)] : null;
+      const normal = normalToken ? normals[parseIndex(normalToken, normals.length)] : null;
+      const vertexIndex = group.vertices.length / 3;
+      group.vertices.push(...position);
+      group.colors.push(1, 1, 1);
+      group.normals.push(...(normal ?? [0, 1, 0]));
+      if (uv) group.uvs.push(uv[0], uv[1]);
       return vertexIndex;
     });
 
     for (let index = 1; index < face.length - 1; index += 1) {
-      indices.push(face[0], face[index], face[index + 1]);
+      group.indices.push(face[0], face[index], face[index + 1]);
     }
   }
 
-  if (vertices.length === 0 || indices.length === 0) {
+  const meshes = [...groups.entries()].filter(([, group]) => group.indices.length).map(([name, group]) => {
+    const definition = materialNames.get(name) ?? { name, diffuseColor: [0.95, 0.55, 0.2], map: null };
+    return {
+      vertices: new Float32Array(group.vertices), colors: new Float32Array(group.colors), normals: new Float32Array(group.normals),
+      indices: new Uint16Array(group.indices), uvs: group.uvs.length ? new Float32Array(group.uvs) : null,
+      material: new Material({ diffuseColor: definition.diffuseColor, name: definition.name }),
+    };
+  });
+  if (!meshes.length) {
     throw new Error(`O arquivo OBJ não contém uma malha válida: ${url}`);
   }
 
-  return new MeshRenderer({
-    vertices: new Float32Array(vertices),
-    colors: new Float32Array(colors),
-    indices: new Uint16Array(indices),
-  });
+  for (const mesh of meshes) {
+    const definition = materialNames.get(mesh.material.name);
+    if (definition?.map) {
+      const imageUrl = dependency(dependencies, definition.map) ?? (mtlUrl ? new URL(definition.map, mtlUrl) : null);
+      if (!imageUrl) continue;
+      const image = await new Promise((resolve, reject) => { const loaded = new Image(); loaded.onload = () => resolve(loaded); loaded.onerror = reject; loaded.src = imageUrl; });
+      mesh.material.texture = new Texture({ image, name: `${mesh.material.name}-diffuse` });
+      if (textureManager) mesh.material.texture.glTexture = textureManager.ensure(image, mesh.material.texture.name);
+    }
+  }
+  return new MeshRenderer({ meshes });
 }
 
 export async function loadGLTF(url, textureManager = null) {
@@ -72,14 +117,7 @@ export async function loadGLTF(url, textureManager = null) {
     throw new Error(`O arquivo GLTF/GLB não contém malhas válidas: ${url}`);
   }
 
-  const mergedVertices = [];
-  const mergedColors = [];
-  const mergedNormals = [];
-  const mergedIndices = [];
-  const mergedUVs = [];
-  const animationEntries = [];
-  let vertexOffset = 0;
-  let texture = null;
+  const meshData = [];
   gltf.scene.updateMatrixWorld(true);
 
   for (const mesh of meshes) {
@@ -97,8 +135,6 @@ export async function loadGLTF(url, textureManager = null) {
     if (skinnedMesh) {
       skinnedMesh.bind(mesh.skeleton, mesh.bindMatrix);
     }
-    animationEntries.push({ mesh, positionAttribute, skinnedMesh, vertexOffset });
-
     const material = mesh.material;
     const materialColor = material && material.color ? material.color : new Color(0.95, 0.55, 0.2);
     const colorAttribute = nonIndexed.getAttribute('color');
@@ -106,12 +142,15 @@ export async function loadGLTF(url, textureManager = null) {
     const uvAttribute = nonIndexed.getAttribute('uv');
     const indexAttribute = nonIndexed.getIndex();
 
-    if (!texture && material && material.map && material.map.image) {
-      texture = new Texture({ image: material.map.image, name: 'gltf-material' });
-      if (textureManager && texture.image) {
-        texture.glTexture = textureManager.ensure(texture.image, texture.name);
-      }
-    }
+    const texture = material && material.map && material.map.image
+      ? new Texture({ image: material.map.image, name: material.name ?? 'gltf-material' })
+      : null;
+    if (texture && textureManager) texture.glTexture = textureManager.ensure(texture.image, texture.name);
+    const vertices = [];
+    const colors = [];
+    const normals = [];
+    const uvs = [];
+    const indices = [];
 
     for (let i = 0; i < positionAttribute.count; i += 1) {
       const position = new Vector3(
@@ -121,87 +160,70 @@ export async function loadGLTF(url, textureManager = null) {
       );
       if (skinnedMesh) skinnedMesh.getVertexPosition(i, position);
       position.applyMatrix4(mesh.matrixWorld);
-      mergedVertices.push(
+      vertices.push(
         position.x,
         position.y,
         position.z,
       );
 
       if (colorAttribute) {
-        mergedColors.push(
+        colors.push(
           colorAttribute.getX(i),
           colorAttribute.getY(i),
           colorAttribute.getZ(i),
         );
       } else {
-        mergedColors.push(materialColor.r, materialColor.g, materialColor.b);
+        colors.push(1, 1, 1);
       }
 
       if (normalAttribute) {
-        mergedNormals.push(
+        normals.push(
           normalAttribute.getX(i),
           normalAttribute.getY(i),
           normalAttribute.getZ(i),
         );
       } else {
-        mergedNormals.push(0, 1, 0);
+        normals.push(0, 1, 0);
       }
 
       if (uvAttribute) {
-        mergedUVs.push(uvAttribute.getX(i), uvAttribute.getY(i));
+        uvs.push(uvAttribute.getX(i), uvAttribute.getY(i));
       }
     }
 
     if (indexAttribute) {
       for (let i = 0; i < indexAttribute.count; i += 1) {
-        mergedIndices.push(indexAttribute.getX(i) + vertexOffset);
+        indices.push(indexAttribute.getX(i));
       }
     } else {
       for (let i = 0; i < positionAttribute.count; i += 1) {
-        mergedIndices.push(i + vertexOffset);
+        indices.push(i);
       }
     }
-
-    vertexOffset += positionAttribute.count;
+    const submesh = {
+      vertices: new Float32Array(vertices),
+      colors: new Float32Array(colors),
+      normals: new Float32Array(normals),
+      indices: new Uint16Array(indices),
+      uvs: uvs.length ? new Float32Array(uvs) : null,
+      material: new Material({
+        diffuseColor: [materialColor.r, materialColor.g, materialColor.b],
+        texture,
+        name: material?.name ?? `material-${meshData.length}`,
+      }),
+    };
+    meshData.push(submesh);
   }
 
-  if (mergedVertices.length === 0 || mergedIndices.length === 0) {
+  if (!meshData.length || meshData.every((mesh) => mesh.vertices.length === 0 || mesh.indices.length === 0)) {
     throw new Error(`Não foi possível converter o GLTF/GLB em mesh renderizável: ${url}`);
   }
 
-  const renderMesh = new MeshRenderer({
-      vertices: new Float32Array(mergedVertices),
-      colors: new Float32Array(mergedColors),
-      normals: new Float32Array(mergedNormals),
-      indices: new Uint16Array(mergedIndices),
-      uvs: mergedUVs.length ? new Float32Array(mergedUVs) : null,
-      texture,
-  });
-
-  const animationUpdate = () => {
-    gltf.scene.updateMatrixWorld(true);
-    const position = new Vector3();
-    for (const entry of animationEntries) {
-      for (let index = 0; index < entry.positionAttribute.count; index += 1) {
-        position.set(
-          entry.positionAttribute.getX(index),
-          entry.positionAttribute.getY(index),
-          entry.positionAttribute.getZ(index),
-        );
-        if (entry.skinnedMesh) entry.skinnedMesh.getVertexPosition(index, position);
-        position.applyMatrix4(entry.mesh.matrixWorld);
-        const offset = (entry.vertexOffset + index) * 3;
-        renderMesh.vertices[offset] = position.x;
-        renderMesh.vertices[offset + 1] = position.y;
-        renderMesh.vertices[offset + 2] = position.z;
-      }
-    }
-    renderMesh.dirty = true;
-  };
+  const renderMesh = new MeshRenderer({ meshes: meshData });
+  const animationUpdate = () => { gltf.scene.updateMatrixWorld(true); };
 
   return {
     mesh: renderMesh,
-    texture,
     animations: gltf.animations,
     animationMixer: gltf.animations.length ? new AnimationMixer(gltf.scene) : null,
     animationUpdate,
@@ -220,7 +242,7 @@ export function registerAssetLoader(format, loader) {
   return loader;
 }
 
-export async function loadAsset(url, formatOverride, textureManager = null) {
+export async function loadAsset(url, formatOverride, textureManager = null, dependencies = null) {
   const format = (formatOverride ?? url.split('?')[0].match(/\.([a-z0-9]+)$/i)?.[1] ?? '').toLowerCase();
   const loader = loaders.get(format);
 
@@ -228,7 +250,7 @@ export async function loadAsset(url, formatOverride, textureManager = null) {
     throw new Error(`Formato de asset não suportado: ${format || 'desconhecido'} (${url})`);
   }
 
-  const result = await loader(url, textureManager);
+  const result = await loader(url, textureManager, dependencies);
 
   if (result instanceof MeshRenderer) {
     return { mesh: result, texture: null };

@@ -66,22 +66,27 @@ function getSessionFromRequest(request) {
 }
 
 function isValidMapConfig(config) {
-  return config && typeof config === 'object'
-    && Array.isArray(config.enemyAreas)
-    && config.enemyAreas.every((area) => area && typeof area === 'object'
+  if (!config || typeof config !== 'object') return false;
+  const enemyAreasValid = config.enemyAreas === undefined
+    || (Array.isArray(config.enemyAreas) && config.enemyAreas.every((area) => area && typeof area === 'object'
       && Array.isArray(area.center)
       && area.center.length === 3
       && area.center.every((value) => Number.isFinite(value))
       && Number.isFinite(area.width) && area.width > 0
-      && Number.isFinite(area.depth) && area.depth > 0)
-    && config.water && typeof config.water.enabled === 'boolean';
+      && Number.isFinite(area.depth) && area.depth > 0));
+  const waterValid = config.water === undefined
+    || (config.water && typeof config.water.enabled === 'boolean');
+  return Array.isArray(config.assets)
+    && Array.isArray(config.entities)
+    && enemyAreasValid
+    && waterValid;
 }
 
 async function readJson(request) {
   let body = '';
   for await (const chunk of request) {
     body += chunk;
-    if (body.length > 16_384) throw new Error('Payload too large');
+    if (body.length > 32 * 1024 * 1024) throw new Error('Payload too large');
   }
   return JSON.parse(body || '{}');
 }
@@ -133,6 +138,7 @@ const server = createServer(async (request, response) => {
         sendJson(response, 400, { error: 'Configuracao de mapa invalida.' });
         return;
       }
+      await playerStore.saveMapConfig(body);
       publishedMapConfig = body;
       enemyAreas = createEnemyAreas(body);
       sendJson(response, 200, { saved: true });
@@ -244,15 +250,8 @@ const mapAccessTickets = new Map();
 let publishedMapConfig = null;
 const logger = new ServerLogger();
 const playerStore = new PlayerStore();
-const DEFAULT_ENEMY_AREAS = [
-  { id: 'starting-rat-area', center: [0, 0, 0], width: 25, depth: 25, areaLevel: 1 },
-  { id: 'second-rat-area', center: [35, 0, 0], width: 25, depth: 25, areaLevel: 2 },
-];
-
 function createEnemyAreas(config = null) {
-  const definitions = Array.isArray(config?.enemyAreas)
-    ? config.enemyAreas
-    : DEFAULT_ENEMY_AREAS;
+  const definitions = Array.isArray(config?.enemyAreas) ? config.enemyAreas : [];
   return definitions.map((area, index) => new EnemyArea({
     id: area.id ?? (index === 0 ? 'starting-rat-area' : `map-area-${index + 1}`),
     center: area.center,
@@ -261,6 +260,7 @@ function createEnemyAreas(config = null) {
     maxEnemies: area.maxEnemies ?? 5,
     enemyType: area.enemyType ?? 'rat',
     areaLevel: area.areaLevel ?? Math.min(index + 1, 2),
+    spawnIntervalMs: area.spawnIntervalMs ?? 3000,
   }));
 }
 
@@ -651,6 +651,13 @@ socketServer.on('connection', async (socket, request) => {
 playerStore.ready
   .then(() => {
     databaseReady = true;
+    return playerStore.getMapConfig();
+  })
+  .then((savedMapConfig) => {
+    if (savedMapConfig && isValidMapConfig(savedMapConfig)) {
+      publishedMapConfig = savedMapConfig;
+      enemyAreas = createEnemyAreas(savedMapConfig);
+    }
     const initialSpawnAt = Date.now();
     for (const area of enemyAreas) area.update(initialSpawnAt, [], 0);
     let previousUpdateAt = initialSpawnAt;

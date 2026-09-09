@@ -49,6 +49,12 @@ export function createUiController({
     if (isOpen) document.querySelector('#chat-input').focus();
   }
 
+  function closeChat() {
+    if (chatElement.hidden) return;
+    chatElement.hidden = true;
+    chatToggle.setAttribute('aria-expanded', 'false');
+  }
+
   function updateAttributes({ strength, strengthXp, maxStrengthXp, accuracy, magic }) {
     strengthValue.textContent = `${strength} (${strengthXp}/${maxStrengthXp})`;
     accuracyValue.textContent = String(accuracy);
@@ -97,7 +103,10 @@ export function createUiController({
       onlinePlayersPanel.classList.toggle('online-players-hidden');
       return;
     }
-    if (event.key === 'Escape') closeMenus();
+    if (event.key === 'Escape') {
+      closeMenus();
+      closeChat();
+    }
   });
 
   return {

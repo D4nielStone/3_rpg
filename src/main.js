@@ -7,7 +7,6 @@ import { ChatPanel } from './chat.js';
 import { PlayerStatus } from './player-status.js';
 import { addRemoteEnemy } from './enemy-factory.js';
 import { loadGameAssets } from './asset-loader.js';
-import { InterfaceScale } from './interface-scale.js';
 import { createUiController } from './ui-controller.js';
 import { createAccountController } from './account-controller.js';
 import {
@@ -49,6 +48,7 @@ function finishLoading() {
   loadingScreen.setAttribute('aria-hidden', 'true');
 }
 
+// Retorna o json do mapa
 async function loadPublishedMapConfig() {
   const configuredUrl = import.meta.env.VITE_MULTIPLAYER_URL?.trim();
   const httpUrl = (configuredUrl || `${window.location.protocol}//${window.location.hostname}:5174`)
@@ -56,7 +56,7 @@ async function loadPublishedMapConfig() {
     .replace(/^ws:/, 'http:')
     .replace(/\/$/, '');
   try {
-    const response = await fetch(`${httpUrl}/api/map-config`);
+    const response = await fetch(`${httpUrl}/api/map-config`, { credentials: 'include' });
     if (!response.ok) return null;
     const config = await response.json();
     return Array.isArray(config.enemyAreas) ? config : null;
@@ -65,11 +65,6 @@ async function loadPublishedMapConfig() {
   }
 }
 
-new InterfaceScale({
-  root: document.documentElement,
-  decreaseButton: document.querySelector('#ui-scale-decrease'),
-  increaseButton: document.querySelector('#ui-scale-increase'),
-});
 const ui = createUiController({
   menuButton,
   attributesMenu,

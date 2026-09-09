@@ -3,86 +3,118 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Editor de mapa | WebRPG</title>
+  <title>World Editor | WebRPG</title>
   <link rel="stylesheet" href="styles/map-editor.css" />
 </head>
 <body>
   <main class="editor-shell">
     <header class="editor-header">
-      <div>
-        <p class="editor-kicker">WEBrpg / ferramentas</p>
-        <h1>Editor de mapa</h1>
-      </div>
+      <div><p class="editor-kicker">WEBrpg / world editor</p><h1>Editor de mundo</h1></div>
       <div class="editor-actions">
-        <button id="undo-button" class="icon-button" type="button" title="Desfazer" aria-label="Desfazer">↶</button>
-        <button id="redo-button" class="icon-button" type="button" title="Refazer" aria-label="Refazer">↷</button>
-        <button id="clear-button" class="secondary-button" type="button">Limpar</button>
+        <button id="assets-toggle" class="secondary-button" type="button" aria-controls="assets-panel" aria-expanded="false">Assets</button>
+        <button id="inspector-toggle" class="secondary-button" type="button" aria-controls="inspector-panel" aria-expanded="false">Inspector</button>
+        <button id="undo-button" class="icon-button" type="button" title="Desfazer">↶</button>
+        <button id="redo-button" class="icon-button" type="button" title="Refazer">↷</button>
+        <button id="clear-button" class="secondary-button" type="button">Limpar cena</button>
         <button id="apply-button" class="secondary-button" type="button">Aplicar no jogo</button>
-        <button id="export-button" class="primary-button" type="button">Exportar JSON</button>
+        <label class="file-button secondary-button" for="import-world">Abrir .world</label>
+        <input id="import-world" type="file" accept=".world,.json,application/json" hidden />
+        <button id="export-button" class="primary-button" type="button">Exportar .world</button>
       </div>
     </header>
 
-    <section class="editor-workspace" aria-label="Área de edição do mapa">
-      <aside class="tool-panel">
+    <section class="editor-workspace" aria-label="Editor de mundo 3D">
+      <aside id="assets-panel" class="asset-panel" aria-label="Assets">
+        <button class="panel-close icon-button" type="button" data-close-panel="assets-panel" title="Fechar assets">×</button>
         <div class="panel-section">
-          <div class="section-heading"><h2>Terreno</h2><span id="selected-terrain">Grama</span></div>
-          <div id="terrain-palette" class="terrain-palette" role="radiogroup" aria-label="Tipos de terreno"></div>
-        </div>
-        <div class="panel-section">
-          <h2>Ferramenta</h2>
-          <div class="tool-grid">
-            <button class="tool-button tool-button-active" type="button" data-tool="brush">✎<span>Pincel</span></button>
-            <button class="tool-button" type="button" data-tool="eraser">⌫<span>Borracha</span></button>
-            <button class="tool-button" type="button" data-tool="fill">▧<span>Preencher</span></button>
-            <button class="tool-button" type="button" data-tool="pan">✥<span>Mover</span></button>
-          </div>
-        </div>
-        <div class="panel-section panel-section-compact">
-          <label for="brush-size">Tamanho do pincel <output id="brush-size-value">1</output></label>
-          <input id="brush-size" type="range" min="1" max="5" value="1" />
-        </div>
-        <div class="panel-section map-options">
-          <h2>Mapa</h2>
-          <label class="check-row"><input id="water-enabled" type="checkbox" /> Água ativa</label>
-          <label for="map-size">Escala da célula</label>
-          <input id="map-size" type="range" min="16" max="48" value="28" />
+          <div class="section-heading"><h2>Assets</h2><span id="asset-count">0</span></div>
+          <label class="upload-button" for="model-file">Importar modelo 3D</label>
+          <input id="model-file" type="file" multiple accept=".glb,.gltf,.obj,.mtl,.png,.jpg,.jpeg,.webp,model/gltf-binary,model/gltf+json,text/plain,image/png,image/jpeg,image/webp,application/octet-stream" hidden />
+          <div class="asset-url-row"><input id="model-url" type="url" placeholder="/models/objeto.glb ou objeto.obj" /><button id="add-url-button" type="button" title="Adicionar modelo por URL">+</button></div>
+          <p class="panel-note">GLB, GLTF e OBJ. Para OBJ, selecione também o MTL e as texturas.</p>
+          <div id="asset-list" class="asset-list" aria-label="Biblioteca de assets"></div>
         </div>
       </aside>
 
       <section class="canvas-stage">
         <div class="stage-toolbar">
-          <span id="map-coordinates">x: 0, z: 0</span>
+          <div class="mode-switch" role="toolbar" aria-label="Ferramentas de transformação">
+            <button class="mode-button mode-button-active" data-mode="select" type="button">Selecionar</button>
+            <button class="mode-button" data-mode="translate" type="button">Mover</button>
+            <button class="mode-button" data-mode="rotate" type="button">Rotacionar</button>
+            <button class="mode-button" data-mode="scale" type="button">Escalar</button>
+          </div>
           <span id="map-status" role="status">Pronto para editar</span>
-          <div class="zoom-controls"><button id="zoom-out" type="button" aria-label="Diminuir zoom">−</button><strong id="zoom-value">100%</strong><button id="zoom-in" type="button" aria-label="Aumentar zoom">+</button></div>
+          <span id="map-coordinates">x: 0, y: 0, z: 0</span>
         </div>
-        <div id="canvas-wrap" class="canvas-wrap">
-          <canvas id="map-canvas" width="896" height="560" aria-label="Grade do mapa editável"></canvas>
-        </div>
-        <p class="stage-hint">Clique para pintar. Arraste com “Mover” para navegar.</p>
+        <div class="canvas-wrap"><canvas id="map-canvas" aria-label="Viewport 3D do mundo"></canvas></div>
+        <p class="stage-hint">Selecione uma entidade para editar seus transformes. Use o botão direito ou Mover para navegar pela cena.</p>
       </section>
 
-      <aside class="inspector-panel">
-        <div class="panel-section">
-          <h2>Configuração</h2>
-          <dl class="map-summary">
-            <div><dt>Células</dt><dd id="cell-count">640</dd></div>
-            <div><dt>Áreas inimigas</dt><dd id="enemy-area-count">2</dd></div>
-            <div><dt>Água</dt><dd id="water-status">Inativa</dd></div>
-          </dl>
+      <aside id="inspector-panel" class="inspector-panel" aria-label="Inspector">
+        <button class="panel-close icon-button" type="button" data-close-panel="inspector-panel" title="Fechar inspector">×</button>
+        <nav class="inspector-tabs" role="tablist" aria-label="Seções do editor">
+          <button class="inspector-tab inspector-tab-active" type="button" role="tab" aria-selected="true" data-inspector-tab="scene-tree">Cena</button>
+          <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="entities">Entidades</button>
+          <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="areas">Áreas</button>
+          <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="entity-inspector">Inspector</button>
+          <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="scene-settings">Config</button>
+          <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="world-json">JSON</button>
+        </nav>
+        <div class="panel-section inspector-tab-panel panel-section-active" data-inspector-panel="scene-tree">
+          <div class="section-heading"><h2>Scene</h2><span id="scene-tree-count">0</span></div>
+          <div id="scene-tree" class="scene-tree" role="tree" aria-label="Árvore da cena"></div>
         </div>
-        <div class="panel-section">
-          <h2>Legenda</h2>
-          <ul class="legend-list">
-            <li><span class="legend-swatch legend-grass"></span>Grama</li>
-            <li><span class="legend-swatch legend-water"></span>Água</li>
-            <li><span class="legend-swatch legend-stone"></span>Pedra</li>
-            <li><span class="legend-swatch legend-enemy"></span>Área inimiga</li>
-          </ul>
+        <div class="panel-section inspector-tab-panel" data-inspector-panel="entities">
+          <div class="section-heading"><h2>Entidades</h2><span id="entity-count">0</span></div>
+          <button id="create-empty-button" class="secondary-button full-button" type="button">+ Entidade vazia</button>
+          <div id="entity-list" class="entity-list" aria-label="Entidades da cena"></div>
         </div>
-        <div class="panel-section export-preview">
-          <h2>Saída</h2>
-          <pre id="json-preview">{}</pre>
+        <div class="panel-section inspector-tab-panel" data-inspector-panel="areas">
+          <div class="section-heading"><h2>Áreas inimigas</h2><span id="enemy-area-count">0</span></div>
+          <button id="create-enemy-area-button" class="secondary-button full-button" type="button">+ Área inimiga</button>
+          <div id="enemy-area-list" class="entity-list" aria-label="Áreas inimigas da cena"></div>
+          <div id="enemy-area-inspector" hidden>
+            <label for="enemy-area-id">ID</label><input id="enemy-area-id" type="text" />
+            <div class="transform-heading"><strong>Centro</strong><span>unidades</span></div>
+            <div class="vector-fields" data-area-vector="center"></div>
+            <label for="enemy-area-width">Largura</label><input id="enemy-area-width" data-area-field="width" type="number" min="0.1" step="0.1" />
+            <label for="enemy-area-depth">Profundidade</label><input id="enemy-area-depth" data-area-field="depth" type="number" min="0.1" step="0.1" />
+            <label for="enemy-area-max-enemies">Máximo de inimigos</label><input id="enemy-area-max-enemies" data-area-field="maxEnemies" type="number" min="0" step="1" />
+            <label for="enemy-area-type">Tipo</label><input id="enemy-area-type" data-area-field="enemyType" type="text" />
+            <label for="enemy-area-level">Nível</label><input id="enemy-area-level" data-area-field="areaLevel" type="number" min="1" step="1" />
+            <label for="enemy-area-interval">Intervalo (ms)</label><input id="enemy-area-interval" data-area-field="spawnIntervalMs" type="number" min="0" step="100" />
+            <button id="delete-enemy-area-button" class="danger-button full-button" type="button">Excluir área</button>
+          </div>
         </div>
+        <div class="panel-section inspector-tab-panel inspector-section" data-inspector-panel="entity-inspector">
+          <div class="section-heading"><h2>Inspector</h2><span id="selected-entity-label">Nenhuma</span></div>
+          <div id="empty-inspector" class="empty-inspector">Selecione uma entidade na cena ou na hierarquia.</div>
+          <div id="entity-inspector" hidden>
+            <label for="entity-name">Nome</label><input id="entity-name" type="text" />
+            <div class="transform-heading"><strong>Meshes</strong><span id="mesh-count">0</span></div>
+            <div id="mesh-list" class="mesh-list" aria-label="Meshes do objeto"></div>
+            <label for="entity-diffuse-color">Cor difusa</label><input id="entity-diffuse-color" type="color" value="#ffffff" />
+            <div class="transform-heading"><strong>Posição</strong><span>unidades</span></div>
+            <div class="vector-fields" data-vector="position"></div>
+            <div class="transform-heading"><strong>Rotação</strong><span>graus</span></div>
+            <div class="vector-fields" data-vector="rotation"></div>
+            <div class="transform-heading"><strong>Escala</strong><span>fator</span></div>
+            <div class="vector-fields" data-vector="scale"></div>
+            <button id="delete-entity-button" class="danger-button full-button" type="button">Excluir entidade</button>
+          </div>
+        </div>
+        <div class="panel-section inspector-tab-panel scene-section" data-inspector-panel="scene-settings">
+          <h2>Cena</h2>
+          <div class="transform-heading"><strong>Cor do céu</strong><span>fundo</span></div>
+          <label for="sky-color">Cor</label><input id="sky-color" type="color" value="#0a0d0c" />
+          <div class="transform-heading"><strong>Luz ambiente</strong><span>global</span></div>
+          <label for="ambient-color">Cor</label><input id="ambient-color" type="color" value="#ffffff" />
+          <label for="ambient-intensity">Intensidade <output id="ambient-intensity-value">1.00</output></label>
+          <input id="ambient-intensity" type="range" min="0" max="2" value="1" step="0.01" />
+          <dl class="map-summary"><div><dt>Entidades</dt><dd id="entity-summary-count">0</dd></div></dl>
+        </div>
+        <div class="panel-section inspector-tab-panel export-preview" data-inspector-panel="world-json"><h2>World JSON</h2><pre id="json-preview">{}</pre></div>
       </aside>
     </section>
   </main>

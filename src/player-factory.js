@@ -70,10 +70,13 @@ export async function loadPlayer(world, textureManager) {
     mixer: asset.animationMixer,
     onUpdate: asset.animationUpdate,
   }));
-  world.addComponent(entity, asset.texture ?? new Texture({
-    image: createPatternTexture(),
-    name: 'fallback-texture',
-  }));
+  const hasMaterialTexture = asset.mesh?.meshes?.some((mesh) => mesh.material?.texture);
+  if (asset.texture || !hasMaterialTexture) {
+    world.addComponent(entity, asset.texture ?? new Texture({
+      image: createPatternTexture(),
+      name: 'fallback-texture',
+    }));
+  }
   return entity;
 }
 

@@ -9,6 +9,7 @@ export function startGameLoop({
   nameTagSystem,
   enemyHoverSystem,
   renderSystem,
+  skyColor = [0.039, 0.051, 0.047],
 }) {
   let previousTime = 0;
 
@@ -16,7 +17,7 @@ export function startGameLoop({
     const deltaSeconds = Math.min((time - previousTime) * 0.001, 0.1);
     previousTime = time;
 
-    gl.clearColor(0, 0.4, 0.1, 1.0);
+    gl.clearColor(skyColor[0], skyColor[1], skyColor[2], 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     // A ordem importa: movimento local, rede, interpolacao, marcador e renderizacao.
     animationSystem.update(world, deltaSeconds);

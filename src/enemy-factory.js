@@ -53,11 +53,7 @@ export function addRemoteEnemy(world, enemyAssets, enemy) {
     alerted: enemy.alerted,
   }));
   const mesh = new MeshRenderer({
-    vertices: asset.mesh.vertices,
-    colors: asset.mesh.colors,
-    indices: asset.mesh.indices,
-    uvs: asset.mesh.uvs,
-    texture: asset.texture,
+    meshes: asset.mesh.meshes,
   });
   world.addComponent(entity, mesh);
   if (asset.animations?.length && asset.animationMixer) {
