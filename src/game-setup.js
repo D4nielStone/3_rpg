@@ -184,10 +184,48 @@ export function createGame(canvas, status, mapConfig = null) {
   const textureManager = new TextureManager(gl);
   customizeMap(world, mapConfig, textureManager);
   const input = new InputState();
+
+  // Event listener
   canvas.addEventListener('wheel', (event) => {
     event.preventDefault();
     camera.zoom(event.deltaY * 0.01);
   }, { passive: false });
+  const ROTATE_SENSITIVITY = 0.005;
+  let isRightDragging = false;
+  let lastMouseX = 0;
+  let lastMouseY = 0;
+   // Impede o menu de contexto do navegador ao clicar com o botão direito
+  canvas.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+  });
+
+  canvas.addEventListener('mousedown', (event) => {
+    if (event.button === 2) {
+      isRightDragging = true;
+      lastMouseX = event.clientX;
+      lastMouseY = event.clientY;
+    }
+  });
+
+  window.addEventListener('mousemove', (event) => {
+    if (!isRightDragging) return;
+
+    const deltaX = event.clientX - lastMouseX;
+    const deltaY = event.clientY - lastMouseY;
+    lastMouseX = event.clientX;
+    lastMouseY = event.clientY;
+
+    camera.rotateOrbit(
+      deltaX * ROTATE_SENSITIVITY,
+      deltaY * ROTATE_SENSITIVITY,
+    );
+  });
+
+  window.addEventListener('mouseup', (event) => {
+    if (event.button === 2) {
+      isRightDragging = false;
+    }
+  });
 
   const locations = {
     position: gl.getAttribLocation(

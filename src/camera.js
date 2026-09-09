@@ -35,7 +35,7 @@ export class Camera {
     return perspective(this.fieldOfView, this.aspect, this.near, this.far);
   }
 
-  screenToGround(clientX, clientY, canvas, groundY = 0) {
+    screenToGround(clientX, clientY, canvas, groundY = 0) {
     this.updatePosition();
     const bounds = canvas.getBoundingClientRect();
     const normalizedX = ((clientX - bounds.left) / bounds.width) * 2 - 1;
@@ -47,13 +47,13 @@ export class Camera {
     const cosineYaw = Math.cos(this.yaw);
     const sineYaw = Math.sin(this.yaw);
     const forward = [
-      sineYaw * cosinePitch,
+      -sineYaw * cosinePitch,
       sinePitch,
       -cosineYaw * cosinePitch,
     ];
-    const right = [cosineYaw, 0, sineYaw];
+    const right = [cosineYaw, 0, -sineYaw];
     const up = [
-      -sineYaw * sinePitch,
+      sineYaw * sinePitch,
       cosinePitch,
       cosineYaw * sinePitch,
     ];
@@ -150,6 +150,18 @@ export class Camera {
     this.orbit.distance = Math.min(
       maxDistance,
       Math.max(minDistance, this.orbit.distance + amount),
+    );
+  }
+
+  rotateOrbit(deltaAzimuth, deltaElevation, {
+    minElevation = -Math.PI / 2 + 2,
+    maxElevation = Math.PI / 2 - 0.5,
+  } = {}) {
+    if (!this.orbit) return;
+    this.orbit.azimuth -= deltaAzimuth;
+    this.orbit.elevation = Math.min(
+      maxElevation,
+      Math.max(minElevation, this.orbit.elevation + deltaElevation),
     );
   }
 }

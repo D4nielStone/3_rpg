@@ -110,6 +110,11 @@ export class LineSystem {
     };
 
     canvas.addEventListener('pointerdown', (event) => {
+      // Apenas o botão principal (esquerdo) aciona o movimento.
+      // O botão direito é usado para orbitar a câmera e não deve
+      // ser interpretado como um comando de destino.
+      if (event.button !== 0) return;
+
       this.pointerHeld = true;
       canvas.setPointerCapture?.(event.pointerId);
       updateTarget(event);
@@ -117,7 +122,8 @@ export class LineSystem {
     canvas.addEventListener('pointermove', (event) => {
       if (this.pointerHeld) updateTarget(event);
     });
-    canvas.addEventListener('pointerup', () => {
+    canvas.addEventListener('pointerup', (event) => {
+      if (event.button !== 0) return;
       this.pointerHeld = false;
     });
     canvas.addEventListener('pointercancel', () => {
