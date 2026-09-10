@@ -31,9 +31,11 @@ const vertexShaderSource = `
   varying vec3 vWorldNormal;
   varying vec3 vWorldPosition;
   varying vec2 vUv;
+  varying vec4 vShadowPosition;
 
   uniform float isWater;
   uniform float time;
+  uniform mat4 shadowMatrix;
 
   void main() {
     vec3 animatedPosition = position;
@@ -53,6 +55,7 @@ const vertexShaderSource = `
     vWorldPosition = (modelMatrix * vec4(animatedPosition, 1.0)).xyz;
 
     vUv = uv;
+    vShadowPosition = shadowMatrix * vec4(animatedPosition, 1.0);
   }
 `;
 
@@ -63,6 +66,7 @@ const fragmentShaderSource = `
   varying vec3 vWorldNormal;
   varying vec3 vWorldPosition;
   varying vec2 vUv;
+  varying vec4 vShadowPosition;
 
   uniform sampler2D uTexture;
   uniform float useTexture;
@@ -83,6 +87,11 @@ const fragmentShaderSource = `
   uniform int pointLightCount;
   uniform float isShadow;
   uniform float isEnemyArea;
+  uniform sampler2D shadowMap;
+  float unpackDepth(const vec4 packed) {
+    const vec4 bitShift = vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 16581375.0);
+    return dot(packed, bitShift);
+  }
 
   void main() {
     vec3 finalColor;
@@ -126,9 +135,25 @@ const fragmentShaderSource = `
       }
 
       vec3 normal = normalize(vWorldNormal);
+      vec3 shadowCoordinate = vShadowPosition.xyz / max(vShadowPosition.w, 0.0001);
+      float shadow = 1.0;
+      if (shadowCoordinate.x >= 0.0 && shadowCoordinate.x <= 1.0 &&
+          shadowCoordinate.y >= 0.0 && shadowCoordinate.y <= 1.0 &&
+          shadowCoordinate.z <= 1.0) {
+        float currentDepth = shadowCoordinate.z - 0.0015;
+        vec2 texelSize = 1.0 / vec2(1024.0);
+        shadow = 0.0;
+        for (int x = -1; x <= 1; x++) {
+          for (int y = -1; y <= 1; y++) {
+            float depth = unpackDepth(texture2D(shadowMap, shadowCoordinate.xy + vec2(x, y) * texelSize));
+            shadow += currentDepth <= depth ? 1.0 : 0.0;
+          }
+        }
+        shadow /= 9.0;
+      }
       float directionalDiffuse = max(dot(normal, normalize(directionalLightDirection)), 0.0);
       vec3 light = ambientColor * ambientIntensity;
-      light += directionalLightColor * directionalDiffuse * directionalLightIntensity;
+      light += directionalLightColor * directionalDiffuse * directionalLightIntensity * shadow;
       for (int index = 0; index < MAX_POINT_LIGHTS; index++) {
         if (index >= pointLightCount) break;
         vec3 pointVector = pointLightPositions[index] - vWorldPosition;
@@ -142,6 +167,25 @@ const fragmentShaderSource = `
 
     gl_FragColor = vec4(finalColor, alpha);
   }
+`;
+
+const shadowVertexShaderSource = `
+  precision highp float;
+  attribute vec3 position;
+  uniform mat4 matrix;
+  void main() { gl_Position = matrix * vec4(position, 1.0); }
+`;
+
+const shadowFragmentShaderSource = `
+  precision highp float;
+  vec4 packDepth(const float depth) {
+    const vec4 bitShift = vec4(1.0, 255.0, 65025.0, 16581375.0);
+    const vec4 bitMask = vec4(0.0, 1.0 / 255.0, 1.0 / 255.0, 1.0 / 255.0);
+    vec4 packed = fract(depth * bitShift);
+    packed -= packed.xxyz * bitMask;
+    return packed;
+  }
+  void main() { gl_FragColor = packDepth(gl_FragCoord.z); }
 `;
 
 function resizeCanvas(gl, camera, canvas) {
@@ -201,6 +245,7 @@ export function createGame(canvas, status, mapConfig = null) {
     vertexShaderSource,
     fragmentShaderSource
   );
+  const shadowProgram = createProgram(gl, shadowVertexShaderSource, shadowFragmentShaderSource);
 
   const camera = new Camera();
   const world = new World();
@@ -377,6 +422,12 @@ export function createGame(canvas, status, mapConfig = null) {
       program,
       'isEnemyArea'
     ),
+    shadowMatrix: gl.getUniformLocation(program, 'shadowMatrix'),
+    shadowMap: gl.getUniformLocation(program, 'shadowMap'),
+  };
+  const shadowLocations = {
+    position: gl.getAttribLocation(shadowProgram, 'position'),
+    matrix: gl.getUniformLocation(shadowProgram, 'matrix'),
   };
 
   resizeCanvas(
@@ -457,7 +508,9 @@ export function createGame(canvas, status, mapConfig = null) {
         program,
         locations,
         camera,
-        lighting
+        lighting,
+        shadowProgram,
+        shadowLocations
       ),
   };
 }

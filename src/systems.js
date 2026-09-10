@@ -24,6 +24,7 @@ import {
   EnemyAreaRenderer,
 } from './components.js';
 import { PhysicsWorld } from './physics-world.js';
+import { Camera } from './camera.js';
 
 function shortestAngleDelta(target, current) {
   return Math.atan2(Math.sin(target - current), Math.cos(target - current));
@@ -221,11 +222,32 @@ export class PlayerPathSystem {
 }
 
 export class RenderSystem {
-  constructor(gl, program, locations, camera, lighting = null) {
+  constructor(gl, program, locations, camera, lighting = null, shadowProgram = null, shadowLocations = null) {
     this.gl = gl;
     this.program = program;
     this.locations = locations;
     this.camera = camera;
+    this.shadowProgram = shadowProgram;
+    this.shadowLocations = shadowLocations;
+    this.shadowSize = 1024;
+    this.shadowFramebuffer = gl.createFramebuffer();
+    this.shadowTexture = gl.createTexture();
+    this.shadowDepthBuffer = gl.createRenderbuffer();
+    gl.bindTexture(gl.TEXTURE_2D, this.shadowTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.shadowSize, this.shadowSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.shadowFramebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.shadowTexture, 0);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, this.shadowDepthBuffer);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, this.shadowSize, this.shadowSize);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.shadowDepthBuffer);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    this.shadowCamera = new Camera({ position: [0, 40, 0], near: 0.1, far: 160 });
     this.ambientColor = [0, 1, 2].map((index) => {
       const value = Number(lighting?.ambientColor?.[index]);
       return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1;
@@ -380,8 +402,51 @@ export class RenderSystem {
     );
   }
 
+  getShadowMatrix() {
+    const direction = this.directionalLightDirection;
+    const length = Math.hypot(direction[0], direction[1], direction[2]) || 1;
+    const position = direction.map((value) => value / length * 45);
+    this.shadowCamera.position = position;
+    this.shadowCamera.lookAt([0, 0, 0]);
+    const projection = this.shadowCamera.getProjectionMatrix();
+    const view = this.shadowCamera.getViewMatrix();
+    const bias = new Float32Array([
+      0.5, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0.5, 0, 0.5, 0.5, 0.5, 1,
+    ]);
+    return multiplyMatrices(bias, multiplyMatrices(projection, view));
+  }
+
+  renderShadowMap(world, shadowMatrix) {
+    const { gl, shadowLocations } = this;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.shadowFramebuffer);
+    gl.viewport(0, 0, this.shadowSize, this.shadowSize);
+    gl.clearColor(1, 1, 1, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(this.shadowProgram);
+    gl.enableVertexAttribArray(shadowLocations.position);
+    for (const entity of world.query(Transform, MeshRenderer)) {
+      const transform = world.getComponent(entity, Transform);
+      const matrix = multiplyMatrices(shadowMatrix, this.getModelMatrix(transform));
+      gl.uniformMatrix4fv(shadowLocations.matrix, false, matrix);
+      const renderer = world.getComponent(entity, MeshRenderer);
+      renderer.meshes.forEach((mesh) => {
+        this.prepareMesh(mesh);
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.positionBuffer);
+        gl.vertexAttribPointer(shadowLocations.position, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
+        gl.drawElements(gl.TRIANGLES, mesh.indices.length, gl.UNSIGNED_SHORT, 0);
+      });
+    }
+    gl.disableVertexAttribArray(shadowLocations.position);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.useProgram(this.program);
+  }
+
   render(world, time = 0) {
     const { gl, locations } = this;
+    const shadowMatrix = this.getShadowMatrix();
+    this.renderShadowMap(world, shadowMatrix);
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     const view = this.camera.getViewMatrix();
     const projection = this.camera.getProjectionMatrix();
     gl.uniform3f(locations.ambientColor, ...this.ambientColor);
@@ -404,6 +469,11 @@ export class RenderSystem {
     gl.uniform1fv(locations.pointLightIntensities, pointLightIntensities);
     gl.uniform1fv(locations.pointLightDistances, pointLightDistances);
     gl.uniform1i(locations.pointLightCount, this.pointLights.length);
+    gl.uniformMatrix4fv(locations.shadowMatrix, false, shadowMatrix);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.shadowTexture);
+    gl.uniform1i(locations.shadowMap, 1);
+    gl.activeTexture(gl.TEXTURE0);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.enableVertexAttribArray(locations.normal);
