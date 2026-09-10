@@ -6,7 +6,7 @@ import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js';
 import { AnimationMixer, LoopOnce, LoopRepeat } from 'three';
 import { createEditorGizmos } from './editor-gizmos.js';
-import { readSavedMapConfig, saveMapConfig } from './map-config.js';
+import { readSavedMapConfig, saveMapConfig } from '../map-config.js';
 
 const configuredUrl = import.meta.env.VITE_MULTIPLAYER_URL?.trim();
 const httpUrl = (configuredUrl || `${window.location.protocol}//${window.location.hostname}:5174`).replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/$/, '');
