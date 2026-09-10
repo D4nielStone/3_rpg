@@ -102,7 +102,19 @@ export class MultiplayerSystem {
             reject(new Error('Este jogador já está aberto em outra aba.'));
             return;
           }
-          this.onStatus('Multiplayer offline. Inicie o relay para conectar.');
+          if (event.code === 4001) {
+            this.connectionPromise = null;
+            this.onStatus('O relay recusou a identidade do jogador.');
+            reject(new Error('O relay recusou a identidade do jogador.'));
+            return;
+          }
+          if (event.code === 1011) {
+            this.onStatus('O relay está sem acesso ao banco de dados. Tentando novamente...');
+          } else if (event.code === 1013) {
+            this.onStatus('O relay está cheio. Tentando novamente...');
+          } else {
+            this.onStatus('Multiplayer offline. Inicie o relay para conectar.');
+          }
           if (retry) {
             window.setTimeout(attempt, 3000);
           } else {

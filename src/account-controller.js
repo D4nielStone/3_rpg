@@ -14,11 +14,7 @@ function validateCredentials({ nickname, password }, messageElement, registratio
 }
 
 function getHttpUrl() {
-  const configuredUrl = import.meta.env.VITE_MULTIPLAYER_URL?.trim();
-  return (configuredUrl || `${window.location.protocol}//${window.location.hostname}:5174`)
-    .replace(/^wss:/, 'https:')
-    .replace(/^ws:/, 'http:')
-    .replace(/\/$/, '');
+  return getMultiplayerHttpUrl();
 }
 
 async function authenticate(nickname, password, mode, messageElement) {
@@ -124,3 +120,4 @@ export function createAccountController({
     if (nickname) begin(nickname);
   });
 }
+import { getMultiplayerHttpUrl } from './multiplayer-url.js';

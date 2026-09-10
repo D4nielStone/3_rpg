@@ -9,6 +9,7 @@ import { addRemoteEnemy } from './enemy-factory.js';
 import { loadGameAssets } from './asset-loader.js';
 import { createUiController } from './ui-controller.js';
 import { createAccountController } from './account-controller.js';
+import { getMultiplayerHttpUrl, getMultiplayerUrl } from './multiplayer-url.js';
 import {
   addMovementMarker,
   addPlayerNameTag,
@@ -50,11 +51,7 @@ function finishLoading() {
 
 // Retorna o json do mapa
 async function loadPublishedMapConfig() {
-  const configuredUrl = import.meta.env.VITE_MULTIPLAYER_URL?.trim();
-  const httpUrl = (configuredUrl || `${window.location.protocol}//${window.location.hostname}:5174`)
-    .replace(/^wss:/, 'https:')
-    .replace(/^ws:/, 'http:')
-    .replace(/\/$/, '');
+  const httpUrl = getMultiplayerHttpUrl();
   try {
     const response = await fetch(`${httpUrl}/api/map-config`, { credentials: 'include' });
     if (!response.ok) {
@@ -64,7 +61,7 @@ async function loadPublishedMapConfig() {
     return Array.isArray(config.enemyAreas) ? config : null;
   } catch (error) {
     if (error instanceof Error && error.message.startsWith('Servidor multiplayer')) throw error;
-    throw new Error('Não foi possível conectar ao servidor multiplayer em :5174.', { cause: error });
+    throw new Error(`Não foi possível conectar ao servidor multiplayer em ${httpUrl}.`, { cause: error });
   }
 }
 
@@ -126,12 +123,7 @@ chatToggle.addEventListener('click', () => {
 
 function createMultiplayer(game, playerEntity, enemyAssets) {
   // Em producao, a URL vem do Render; localmente usamos o relay na porta 5174.
-  const localUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:5174`;
-  const configuredUrl = import.meta.env.VITE_MULTIPLAYER_URL?.trim();
-  const multiplayerUrl = (configuredUrl || (import.meta.env.PROD ? '' : localUrl))
-    .replace(/^http:/, 'ws:')
-    .replace(/^https:/, 'wss:')
-    .replace(/\/$/, '');
+  const multiplayerUrl = getMultiplayerUrl();
   const guestId = getGuestId();
   const url = multiplayerUrl ? new URL(multiplayerUrl) : null;
   url?.searchParams.set('guestId', guestId);

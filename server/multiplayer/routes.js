@@ -50,7 +50,7 @@ export function createRequestHandler({
       const session = getSessionFromRequest(request, state.sessions);
 
       if (!session) {
-        sendJson(response, 401, {
+        sendJson(response, 200, {
           authenticated: false,
         });
         return;
