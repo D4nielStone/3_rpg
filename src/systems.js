@@ -23,6 +23,7 @@ import {
   Water,
   EnemyAreaRenderer,
 } from './components.js';
+import { PhysicsWorld } from './physics-world.js';
 
 function shortestAngleDelta(target, current) {
   return Math.atan2(Math.sin(target - current), Math.cos(target - current));
@@ -62,8 +63,9 @@ export class NetworkInterpolationSystem {
 }
 
 export class MovementSystem {
-  constructor(input) {
+  constructor(input, mapConfig = null) {
     this.input = input;
+    this.physics = new PhysicsWorld(mapConfig);
   }
 
   update(world, deltaSeconds) {
@@ -93,8 +95,15 @@ export class MovementSystem {
       const z = deltaZ / distanceToTarget;
       const distance = controller.speed * deltaSeconds;
       const step = Math.min(distance, distanceToTarget);
-      transform.position[0] += x * step;
-      transform.position[2] += z * step;
+      const candidate = [
+        transform.position[0] + x * step,
+        transform.position[1],
+        transform.position[2] + z * step,
+      ];
+      const next = this.physics.movePlayer(entity, transform.position, candidate, deltaSeconds);
+      transform.position[0] = next[0];
+      transform.position[2] = next[2];
+      if (Math.hypot(next[0] - candidate[0], next[2] - candidate[2]) > 0.05) moveTarget.position = null;
       transform.rotation[1] = Math.atan2(x, z);
     }
   }

@@ -66,7 +66,7 @@ let enemyTypes = [];
 let lighting = { ambientColor: [1, 1, 1], ambientIntensity: 1 };
 let skyColor = [0.039, 0.051, 0.047];
 let player = {
-  model: '/models/test/source/AmongUS[Red].glb', modelFormat: 'glb',
+  model: '', modelFormat: 'glb',
   position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1], speed: 3,
   status: { level: 1, hp: 20, mana: 20, xp: 0, strength: 1, accuracy: 1, magic: 1, money: 0 },
   inventory: [], collision: { enabled: false, shape: 'model' }, animation: { name: '', loop: true, speed: 1 },
@@ -439,7 +439,12 @@ function removeAsset(assetId) {
   entities = entities.filter((entity) => entity.assetId !== assetId);
   if (selectedEntityId && !selectedEntity()) { selectedEntityId = null; gizmos.detach(); }
   assets = assets.filter((item) => item.id !== assetId);
-  renderAssets(); renderEntities(); updateInspector(); updateSummary(); setStatus(`Asset ${asset.name} removido`);
+  if (player.assetId === assetId) {
+    player.assetId = null;
+    player.model = '';
+    player.modelFormat = 'glb';
+  }
+  renderAssets(); renderEntities(); updateInspector(); updatePlayerInspector(); updateSummary(); setStatus(`Asset ${asset.name} removido`);
 }
 function makeVectorFields() {
   document.querySelectorAll('[data-vector]').forEach((container) => {
@@ -476,10 +481,22 @@ function updateVector(input) {
 }
 function setMode(next) { mode = next; document.querySelectorAll('.mode-button').forEach((button) => button.classList.toggle('mode-button-active', button.dataset.mode === mode)); orbit.enabled = true; gizmos.setMode(mode); canvas.style.cursor = 'default'; }
 function exportConfig() { return { format: 'webrpg.world', version: 2, scene: { name: 'main-world', units: 'world', skyColor: [...skyColor] }, lighting: { ambientColor: [...lighting.ambientColor], ambientIntensity: lighting.ambientIntensity }, player: { ...player, position: [...player.position], rotation: [...player.rotation], scale: [...player.scale], status: { ...player.status }, inventory: [...player.inventory], collision: { ...player.collision }, animation: { ...player.animation } }, assets: assets.map(({ id, name, url, source, format, dependencies }) => ({ id, name, url, source, format, dependencies })), entities: entities.map(({ object, ...entity }) => entitySnapshot(entity)), enemyTypes: enemyTypes.map((type, index) => normalizeEnemyType({ ...type, gold: { ...type.gold }, itemDrops: [...type.itemDrops] }, index)), enemyAreas: enemyAreas.map((area) => ({ ...normalizeEnemyArea(area), center: [...area.center] })) }; }
-function updateSummary() { const config = exportConfig(); document.querySelector('#entity-summary-count').textContent = String(config.entities.length); document.querySelector('#enemy-area-count').textContent = String(config.enemyAreas.length); preview.textContent = JSON.stringify(config, null, 2); }
+function updateSummary() {
+  const config = exportConfig();
+  document.querySelector('#entity-summary-count').textContent = String(config.entities.length);
+  document.querySelector('#enemy-area-count').textContent = String(config.enemyAreas.length);
+  preview.textContent = JSON.stringify(config, null, 2);
+}
 function updatePlayerInspector() {
   const set = (id, value) => { const input = document.querySelector(`#${id}`); if (input) input.value = value; };
-  set('player-model', player.model); set('player-model-format', player.modelFormat);
+  const assetSelect = document.querySelector('#player-asset');
+  if (assetSelect) {
+    assetSelect.replaceChildren(new Option('Modelo padrão', ''));
+    assets.forEach((asset) => assetSelect.add(new Option(asset.name, asset.id)));
+    assetSelect.value = player.assetId ?? '';
+  }
+  const selectedAsset = assets.find((asset) => asset.id === player.assetId);
+  set('player-model-format', selectedAsset?.format ?? player.modelFormat);
   set('player-position', JSON.stringify(player.position)); set('player-rotation', JSON.stringify(player.rotation)); set('player-scale', JSON.stringify(player.scale));
   set('player-speed', player.speed); set('player-animation', player.animation.name); set('player-status', JSON.stringify(player.status)); set('player-inventory', JSON.stringify(player.inventory));
   document.querySelector('#player-collision-enabled').checked = player.collision.enabled;
@@ -488,8 +505,15 @@ function updatePlayerInspector() {
 function readPlayerInspector() {
   const vector = (id, fallback) => { try { const value = JSON.parse(document.querySelector(`#${id}`).value); return normalizeVector(value, fallback); } catch { return fallback; } };
   const json = (id, fallback) => { try { const value = JSON.parse(document.querySelector(`#${id}`).value); return value && typeof value === 'object' ? value : fallback; } catch { return fallback; } };
-  player.model = document.querySelector('#player-model').value.trim() || player.model;
-  player.modelFormat = document.querySelector('#player-model-format').value;
+  const selectedAsset = assets.find((asset) => asset.id === document.querySelector('#player-asset').value);
+  player.assetId = selectedAsset?.id ?? null;
+  if (selectedAsset) {
+    player.model = selectedAsset.url;
+    player.modelFormat = selectedAsset.format;
+  } else {
+    player.model = player.model || '';
+    player.modelFormat = document.querySelector('#player-model-format').value;
+  }
   player.position = vector('player-position', [0, 0, 0]); player.rotation = vector('player-rotation', [0, 0, 0]); player.scale = vector('player-scale', [1, 1, 1]);
   player.speed = Math.max(0, Number(document.querySelector('#player-speed').value) || 0);
   player.animation.name = document.querySelector('#player-animation').value.trim();
@@ -497,21 +521,29 @@ function readPlayerInspector() {
   player.collision = { enabled: document.querySelector('#player-collision-enabled').checked, shape: document.querySelector('#player-collision-shape').value };
   updateSummary();
 }
-async function loadModel(url, format = null, dependencies = null) { const extension = format ?? url.split('?')[0].split('.').pop().toLowerCase(); if (extension === 'obj') { const loader = new OBJLoader(); const mtlName = Object.keys(dependencies ?? {}).find((name) => name.toLowerCase().endsWith('.mtl')); const mtlData = mtlName ? dependencies[mtlName] : null; try { if (mtlData) { let text = await (await fetch(mtlData)).text(); text = text.replace(/^\s*map_Kd\s+(.+)$/gim, (line, path) => { const key = path.trim().replaceAll('\\', '/').split('/').pop(); return dependencies[key] ? `map_Kd ${dependencies[key]}` : line; }); const materials = new MTLLoader().parse(text, '/'); materials.preload(); loader.setMaterials(materials); } } catch { /* OBJ sem MTL continua usando material padrão. */ } return { object: await loader.loadAsync(url), animations: [] }; } const result = await new GLTFLoader().loadAsync(url); return { object: result.scene, animations: result.animations }; }
+async function loadModel(url, format = null, dependencies = null) { const extension = format ?? url.split('?')[0].split('.').pop().toLowerCase(); if (extension === 'obj') { const loader = new OBJLoader(); const mtlName = Object.keys(dependencies ?? {}).find((name) => name.toLowerCase().endsWith('.mtl')); const mtlData = mtlName ? dependencies[mtlName] : null; try { if (mtlData) { let text = await (await fetch(mtlData)).text(); text = text.replace(/^\s*map_Kd\s+(.+)$/gim, (line, path) => { const key = path.trim().replaceAll('\\', '/').split('/').pop(); return dependencies[key] ? `map_Kd ${dependencies[key]}` : line; }); const materials = new MTLLoader().parse(text, '/'); materials.preload(); loader.setMaterials(materials); } } catch { /* OBJ sem MTL continua usando material padrão. */ } return { object: await loader.loadAsync(url), animations: [] }; } const manager = new THREE.LoadingManager();
+manager.setURLModifier((resourceUrl) => {
+  const key = decodeURIComponent(resourceUrl).replaceAll('\\', '/').split('/').pop().toLowerCase();
+  const dependency = Object.entries(dependencies ?? {}).find(([name]) => (
+    name.replaceAll('\\', '/').split('/').pop().toLowerCase() === key
+  ));
+  return dependency?.[1] ?? resourceUrl;
+});
+const result = await new GLTFLoader(manager).loadAsync(url); return { object: result.scene, animations: result.animations }; }
 async function instantiateAsset(asset) { try { setStatus(`Carregando ${asset.name}...`); const loaded = await loadModel(asset.url, asset.format, asset.dependencies); const object = loaded.object; object.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } }); const entity = asset._definition ? { ...asset._definition, object } : { ...createEntity(asset.name, asset.id), materials: readObjectMaterials(object), object }; addEntity(entity, object, loaded.animations); setMode('translate'); setStatus(`${asset.name} adicionado à cena`); } catch (error) { setStatus(`Falha ao carregar ${asset.name}: ${error.message}`); } }
-async function registerAsset(url, name, source = url, format = assetFormat(name), dependencies = null) { const asset = { id: newId('asset'), name, url, source, format, dependencies }; assets.push(asset); renderAssets(); updateSummary(); await instantiateAsset(asset); }
-function download() { const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(exportConfig(), null, 2)], { type: 'application/json' })); link.download = 'main-world.world'; link.click(); URL.revokeObjectURL(link.href); setStatus('Cena .world exportada'); }
-async function applyToGame() { const config = exportConfig(); const response = await fetch(`${httpUrl}/api/map-config`, { method: 'PUT', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify(config) }).catch(() => null); if (!response?.ok) { const result = await response?.json().catch(() => null); setStatus(result?.error ?? 'Não foi possível aplicar o mundo no servidor'); return; } saveMapConfig(config); setStatus('Mundo aplicado no jogo'); }
+async function registerAsset(url, name, source = url, format = assetFormat(name), dependencies = null) { const asset = { id: newId('asset'), name, url, source, format, dependencies }; assets.push(asset); renderAssets(); updatePlayerInspector(); updateSummary(); await instantiateAsset(asset); }
+function download() { readPlayerInspector(); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(exportConfig(), null, 2)], { type: 'application/json' })); link.download = 'main-world.world'; link.click(); URL.revokeObjectURL(link.href); setStatus('Cena .world exportada'); }
+async function applyToGame() { readPlayerInspector(); const config = exportConfig(); const response = await fetch(`${httpUrl}/api/map-config`, { method: 'PUT', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify(config) }).catch(() => null); if (!response?.ok) { const result = await response?.json().catch(() => null); setStatus(result?.error ?? 'Não foi possível aplicar o mundo no servidor'); return; } saveMapConfig(config); setStatus('Mundo aplicado no jogo'); }
 // Carrega o mundo a partir de uma configuração JSON, normalizando os dados e atualizando a cena.
 async function loadWorld(config) {
   normalizeSkyColor(config?.scene?.skyColor);
   updateSkyColor();
   normalizeLighting(config?.lighting); 
   updateLightingInspector();   player = { ...player, ...(config?.player ?? {}), position: normalizeVector(config?.player?.position, [0, 0, 0]), rotation: normalizeVector(config?.player?.rotation, [0, 0, 0]), scale: normalizeVector(config?.player?.scale, [1, 1, 1]), status: { ...player.status, ...(config?.player?.status ?? {}) }, inventory: Array.isArray(config?.player?.inventory) ? config.player.inventory : [], collision: { ...player.collision, ...(config?.player?.collision ?? {}) }, animation: { ...player.animation, ...(config?.player?.animation ?? {}) } };
-  updatePlayerInspector();
-  assets = []; entities = []; enemyTypes = (Array.isArray(config?.enemyTypes) ? config.enemyTypes : [{ id: 'rat', name: 'Rato', model: '/models/test/source/AmongUS[Red].glb', level: 1, maxHp: 3, speed: 1.2, defense: 1, damage: 1, experience: 2, scale: 0.35, gold: { min: 3, max: 5 }, itemDrops: [] }]).map((type, index) => normalizeEnemyType({ ...type, gold: { ...type.gold }, itemDrops: [...(type.itemDrops ?? [])] }, index)); selectedEnemyTypeId = null; enemyAreas = (Array.isArray(config?.enemyAreas) ? config.enemyAreas : []).map((area) => normalizeEnemyArea({ ...area })); entityGroup.clear(); selectedEntityId = null; selectedEnemyAreaId = null;
+  assets = []; entities = []; enemyTypes = (Array.isArray(config?.enemyTypes) ? config.enemyTypes : [{ id: 'rat', name: 'Rato', model: '', level: 1, maxHp: 3, speed: 1.2, defense: 1, damage: 1, experience: 2, scale: 0.35, gold: { min: 3, max: 5 }, itemDrops: [] }]).map((type, index) => normalizeEnemyType({ ...type, gold: { ...type.gold }, itemDrops: [...(type.itemDrops ?? [])] }, index)); selectedEnemyTypeId = null; enemyAreas = (Array.isArray(config?.enemyAreas) ? config.enemyAreas : []).map((area) => normalizeEnemyArea({ ...area })); entityGroup.clear(); selectedEntityId = null; selectedEnemyAreaId = null;
   for (const asset of config?.assets ?? []) { if (asset.url && !asset.url.startsWith('blob:')) assets.push({ ...asset, format: asset.format ?? assetFormat(asset.name ?? asset.url) }); }
   renderAssets();
+  updatePlayerInspector();
   renderEnemyTypes();
   renderEnemyAreas();
   for (const definition of config?.entities ?? []) { 
@@ -557,6 +589,7 @@ entityDiffuseColorInput.addEventListener('input', () => { const entity = selecte
 document.querySelector('#clear-button').addEventListener('click', () => { pushHistory(); entities.slice().forEach((entity) => removeEntity(entity.id)); updateSummary(); setStatus('Cena limpa'); });
 document.querySelector('#export-button').addEventListener('click', download);
 document.querySelectorAll('#player-settings input, #player-settings select, #player-settings textarea').forEach((input) => {
+  input.addEventListener('input', readPlayerInspector);
   input.addEventListener('change', readPlayerInspector);
 });
 document.querySelector('#apply-button').addEventListener('click', applyToGame);

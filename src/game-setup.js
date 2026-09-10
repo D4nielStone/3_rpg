@@ -353,7 +353,7 @@ export function createGame(canvas, status, mapConfig = null) {
       new AnimationSystem(),
 
     movementSystem:
-      new MovementSystem(input),
+      new MovementSystem(input, mapConfig),
 
     networkInterpolationSystem:
       new NetworkInterpolationSystem(),

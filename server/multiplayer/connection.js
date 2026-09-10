@@ -175,6 +175,23 @@ export function registerConnectionHandler({
           sendSystemMessage(socket, 'Não é possível caminhar sobre a água.');
           return;
         }
+        const physicsPosition = state.physics.movePlayer(
+          playerId,
+          player.position,
+          message.position,
+        );
+        if (Math.hypot(
+          physicsPosition[0] - message.position[0],
+          physicsPosition[2] - message.position[2],
+        ) > 0.05) {
+          socket.send(JSON.stringify({
+            type: 'collision-blocked',
+            position: [...player.position],
+            rotation: [...player.rotation],
+          }));
+          sendSystemMessage(socket, 'Não é possível atravessar um objeto.');
+          return;
+        }
         const destinationArea = state.findPlayerArea(message.position);
         player.area = destinationArea
           ? {

@@ -2,7 +2,7 @@ export const DEFAULT_ENEMY_TYPES = Object.freeze([
   {
     id: 'rat',
     name: 'Rato',
-    model: '/models/test/source/AmongUS[Red].glb',
+    model: '',
     modelFormat: 'glb',
     level: 1,
     maxHp: 3,

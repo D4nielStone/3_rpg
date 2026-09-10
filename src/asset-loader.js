@@ -1,5 +1,6 @@
 import { Material, MeshRenderer, Texture } from './components.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { LoadingManager } from 'three';
 import { AnimationMixer, Color, Matrix3, SkinnedMesh, Vector3 } from 'three';
 
 function parseIndex(value, length) {
@@ -7,7 +8,20 @@ function parseIndex(value, length) {
   return index < 0 ? length + index : index - 1;
 }
 
-function dependency(dependencies, name) { if (!dependencies) return null; const key = String(name).replaceAll('\\', '/').split('/').pop(); return dependencies[key] ?? dependencies[name] ?? null; }
+function dependency(dependencies, name) {
+  if (!dependencies) return null;
+  const rawName = decodeURIComponent(String(name)).split(/[?#]/, 1)[0];
+  const key = rawName.replaceAll('\\', '/').split('/').pop().toLowerCase();
+  const entry = Object.entries(dependencies).find(([dependencyName]) => (
+    decodeURIComponent(String(dependencyName))
+      .split(/[?#]/, 1)[0]
+      .replaceAll('\\', '/')
+      .split('/')
+      .pop()
+      .toLowerCase() === key
+  ));
+  return entry?.[1] ?? null;
+}
 
 export async function loadOBJ(url, textureManager = null, dependencies = null) {
   const response = await fetch(url);
@@ -102,8 +116,10 @@ export async function loadOBJ(url, textureManager = null, dependencies = null) {
   return new MeshRenderer({ meshes });
 }
 
-export async function loadGLTF(url, textureManager = null) {
-  const loader = new GLTFLoader();
+export async function loadGLTF(url, textureManager = null, dependencies = null) {
+  const manager = new LoadingManager();
+  manager.setURLModifier((resourceUrl) => dependency(dependencies, resourceUrl) ?? resourceUrl);
+  const loader = new GLTFLoader(manager);
   const gltf = await loader.loadAsync(url);
   const meshes = [];
 
@@ -270,7 +286,7 @@ const loaders = new Map();
 
 // Mantém os caminhos dos assets da cena fora da lógica de inicialização.
 const GAME_ASSETS = {
-  enemies: ['/models/test/source/AmongUS[Red].glb'],
+  enemies: [''],
 };
 
 export function registerAssetLoader(format, loader) {
@@ -326,15 +342,21 @@ export class AssetLoader {
 // Carrega os assets compartilhados pela cena e os agrupa por categoria.
 export async function loadGameAssets(textureManager, enemyTypes = null, assetDefinitions = null) {
   const assetLoader = new AssetLoader(textureManager);
+  const findAssetDefinition = (url) => assetDefinitions?.find((asset) => (
+    asset.url === url || asset.source === url || asset.name === url
+  ));
   const configuredTypes = Array.isArray(enemyTypes) && enemyTypes.length
     ? enemyTypes.filter((type) => type?.model).map((type) => ({
       url: type.model,
       format: type.modelFormat
-        || assetDefinitions?.find((asset) => asset.url === type.model)?.format,
+        || findAssetDefinition(type.model)?.format,
+      dependencies: findAssetDefinition(type.model)?.dependencies ?? null,
     }))
-    : GAME_ASSETS.enemies.map((url) => ({ url }));
+    : GAME_ASSETS.enemies.filter((url) => url).map((url) => ({ url }));
   const models = [...new Map(configuredTypes.map((model) => [model.url, model])).values()];
-  const loaded = await Promise.all(models.map(({ url, format }) => assetLoader.load(url, format)));
+  const loaded = await Promise.all(models.map(({ url, format, dependencies }) => (
+    loadAsset(url, format, textureManager, dependencies)
+  )));
   const enemyAssets = new Map(models.map(({ url }, index) => [url, loaded[index]]));
 
   return { assetLoader, enemyAssets };

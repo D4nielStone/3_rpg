@@ -58,18 +58,29 @@ export function spawnFallbackPlayer(world, definition = {}) {
   return entity;
 }
 
-export async function loadPlayer(world, textureManager, definition = {}) {
+export async function loadPlayer(world, textureManager, definition = {}, assetDefinitions = []) {
+  const configuredAsset = assetDefinitions.find((assetDefinition) => (
+    assetDefinition.id === definition.assetId
+    || (!definition.assetId && assetDefinition.url === definition.model)
+  ));
+  const modelUrl = configuredAsset?.url || definition.model || '';
+  const modelFormat = configuredAsset?.format || definition.modelFormat || modelUrl.split('?')[0].match(/\.([a-z0-9]+)$/i)?.[1];
+  if (!modelUrl) {
+    throw new Error('Nenhum modelo de jogador foi configurado.');
+  }
+
+  const asset = await loadAsset(
+    modelUrl,
+    modelFormat,
+    textureManager,
+    configuredAsset?.dependencies ?? null,
+  );
+
   const entity = world.createEntity();
   world.addComponent(entity, new Transform({ position: definition.position, rotation: definition.rotation, scale: definition.scale }));
   world.addComponent(entity, new AnimationPlayer());
   world.addComponent(entity, new PlayerController({ speed: definition.speed }));
   world.addComponent(entity, new MoveTarget());
-
-  const asset = await loadAsset(
-    definition.model || '/models/test/source/AmongUS[Red].glb',
-    definition.modelFormat,
-    textureManager,
-  );
   world.addComponent(entity, asset.mesh ?? asset);
   world.addComponent(entity, new AnimationPlayer({
     animations: asset.animations,

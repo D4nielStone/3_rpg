@@ -57,11 +57,14 @@ async function loadPublishedMapConfig() {
     .replace(/\/$/, '');
   try {
     const response = await fetch(`${httpUrl}/api/map-config`, { credentials: 'include' });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      throw new Error(`Servidor multiplayer indisponível (HTTP ${response.status}).`);
+    }
     const config = await response.json();
     return Array.isArray(config.enemyAreas) ? config : null;
-  } catch {
-    return null;
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Servidor multiplayer')) throw error;
+    throw new Error('Não foi possível conectar ao servidor multiplayer em :5174.', { cause: error });
   }
 }
 
@@ -189,7 +192,7 @@ async function start() {
   const mapConfig = await loadPublishedMapConfig();
   const game = createGame(canvas, status, mapConfig);
   updateLoading('Carregando cenário e personagem...');
-  const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game, mapConfig?.player);
+  const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game, mapConfig?.player, mapConfig?.assets);
   const { enemyAssets } = await loadSceneAssets(game.textureManager, mapConfig?.enemyTypes, mapConfig?.assets);
   addPlayerNameTag(game.world, playerEntity);
 

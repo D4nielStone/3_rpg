@@ -13,6 +13,7 @@
     "vite": "latest"
   },
   "dependencies": {
+    "cannon-es": "^0.20.0",
     "pg": "^8.16.3",
     "three": "^0.185.1",
     "ws": "^8.18.3"

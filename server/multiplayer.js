@@ -35,8 +35,8 @@ const requestHandler = createRequestHandler({
   allowedOrigins,
 
   onMapConfigChanged(mapConfig) {
-    gameState.publishedMapConfig = mapConfig;
-    enemyAreas = createEnemyAreas(mapConfig);
+    gameState.setMapConfig(mapConfig);
+    enemyAreas = gameState.enemyAreas;
   },
 });
 
@@ -1143,13 +1143,8 @@ playerStore.ready
         savedMapConfig
       )
     ) {
-      gameState.publishedMapConfig =
-        savedMapConfig;
-
-      enemyAreas =
-        createEnemyAreas(
-          savedMapConfig
-        );
+      gameState.setMapConfig(savedMapConfig);
+      enemyAreas = gameState.enemyAreas;
     }
 
     const initialSpawnAt =

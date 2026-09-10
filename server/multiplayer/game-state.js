@@ -1,4 +1,5 @@
 import { createEnemyAreas } from '../world/enemy-areas.js';
+import { PhysicsWorld } from '../world/physics.js';
 
 export class GameState {
   constructor() {
@@ -8,12 +9,14 @@ export class GameState {
     this.mapAccessTickets = new Map(); // ticket -> { userId, expiresAt }
     this.publishedMapConfig = null;
     this.enemyAreas = createEnemyAreas();
+    this.physics = new PhysicsWorld();
     this.databaseReady = false;
   }
 
   setMapConfig(config) {
     this.publishedMapConfig = config;
     this.enemyAreas = createEnemyAreas(config);
+    this.physics = new PhysicsWorld(config);
   }
 
   findPlayerArea(position) {
