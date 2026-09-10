@@ -10,6 +10,7 @@ export class EnemyArea {
     enemyType = 'rat',
     areaLevel = 1,
     spawnIntervalMs = 3000,
+    enemyDefinitions = null,
   } = {}) {
     this.id = id;
     this.center = [...center];
@@ -19,6 +20,7 @@ export class EnemyArea {
     this.enemyType = enemyType;
     this.areaLevel = areaLevel;
     this.spawnIntervalMs = spawnIntervalMs;
+    this.enemyDefinitions = enemyDefinitions;
     this.enemies = new Map();
     this.lastSpawnAt = 0;
   }
@@ -48,6 +50,7 @@ export class EnemyArea {
         type: this.enemyType,
         level: this.areaLevel,
         position: this.randomPosition(),
+        definitions: this.enemyDefinitions,
       });
       this.enemies.set(enemy.id, enemy);
       this.lastSpawnAt = time;

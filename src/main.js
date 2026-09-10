@@ -154,6 +154,7 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
     onChat: (message) => chat.addMessage(message),
     createRemoteEntity: (peerId, nickname, level) => addRemotePlayer(game.world, playerEntity, peerId, nickname, level),
     createEnemyEntity: (enemy) => addRemoteEnemy(game.world, enemyAssets, enemy),
+    onAttackTargetChanged: (entity) => game.PlayerPathSystem.setCombatTarget(entity),
   });
   chat.connect((message) => multiplayer.sendChat(message));
   combatModeButtons.forEach((button) => {
@@ -163,14 +164,13 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
     if (ui.toggleRanking()) multiplayer.requestRanking();
   });
   multiplayer.setLocalEntity(playerEntity);
-  multiplayer.connect();
   return multiplayer;
 }
 
-async function loadSceneAssets(textureManager) {
+async function loadSceneAssets(textureManager, enemyTypes, assetDefinitions) {
   // O main controla apenas o estado visual; o catálogo fica no asset-loader.
   updateLoading('Carregando modelos de inimigos...');
-  return loadGameAssets(textureManager);
+  return loadGameAssets(textureManager, enemyTypes, assetDefinitions);
 }
 
 function getGuestId() {
@@ -189,8 +189,8 @@ async function start() {
   const mapConfig = await loadPublishedMapConfig();
   const game = createGame(canvas, status, mapConfig);
   updateLoading('Carregando cenário e personagem...');
-  const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game);
-  const { enemyAssets } = await loadSceneAssets(game.textureManager);
+  const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game, mapConfig?.player);
+  const { enemyAssets } = await loadSceneAssets(game.textureManager, mapConfig?.enemyTypes, mapConfig?.assets);
   addPlayerNameTag(game.world, playerEntity);
 
   updateLoading('Finalizando cena...');
@@ -208,6 +208,8 @@ async function start() {
     multiplayerSystem.setAttackTarget(null);
   };
 
+  updateLoading('Aguardando conexão com o multiplayer...', 'Conectando ao jogo');
+  await multiplayerSystem.connect();
   status.textContent = usedFallback
     ? 'Modelo 3D indisponível; usando modelo de fallback.'
     : 'WebGL ativo: clique para mover. Space cancela o destino.';

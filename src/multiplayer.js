@@ -5,6 +5,7 @@ import {
   NetworkIdentity,
   NetworkTransform,
   MoveTarget,
+  OutlineRenderer,
   Transform,
 } from './components.js';
 
@@ -26,6 +27,7 @@ export class MultiplayerSystem {
     onRanking = () => {},
     onOnlinePlayers = () => {},
     onMapAccess = () => {},
+    onAttackTargetChanged = () => {},
   }) {
     this.url = url;
     this.world = world;
@@ -40,6 +42,7 @@ export class MultiplayerSystem {
     this.onRanking = onRanking;
     this.onOnlinePlayers = onOnlinePlayers;
     this.onMapAccess = onMapAccess;
+    this.onAttackTargetChanged = onAttackTargetChanged;
     this.socket = null;
     this.localEntity = null;
     this.localPeerId = null;
@@ -51,6 +54,7 @@ export class MultiplayerSystem {
     this.localPlayerDead = false;
     this.respawnPending = false;
     this.attackTargetEntity = null;
+    this.onAttackTargetChanged(null);
     this.lastAttackRequestAt = 0;
   }
 
@@ -65,34 +69,52 @@ export class MultiplayerSystem {
   }
 
   connect({ retry = true } = {}) {
-    // Em producao o relay pode acordar depois; por isso a conexao tenta novamente.
     if (!this.url) {
       this.onStatus('URL do relay multiplayer nao configurada.');
-      return;
+      return Promise.reject(new Error('URL do relay multiplayer não configurada.'));
     }
 
     if (!('WebSocket' in window)) {
       this.onStatus('Multiplayer indisponivel neste navegador.');
-      return;
+      return Promise.reject(new Error('Multiplayer indisponível neste navegador.'));
     }
 
-    this.onStatus('Conectando ao multiplayer...');
-    this.localStateRestored = false;
-    this.socket = new WebSocket(this.url);
-    this.socket.addEventListener('open', () => this.onStatus('Multiplayer conectado.'));
-    this.socket.addEventListener('message', (event) => this.handleMessage(event.data));
-    this.socket.addEventListener('close', (event) => {
-      this.socket = null;
-      if (event.code === 4008) {
-        this.onStatus('Este jogador já está aberto em outra aba.');
-        return;
-      }
-      this.onStatus('Multiplayer offline. Inicie o relay para conectar.');
-      if (retry) {
-        window.setTimeout(() => this.connect({ retry }), 3000);
-      }
+    if (this.socket?.readyState === WebSocket.OPEN) return Promise.resolve();
+    if (this.connectionPromise) return this.connectionPromise;
+
+    this.connectionPromise = new Promise((resolve, reject) => {
+      const attempt = () => {
+        this.onStatus('Aguardando conexão com o multiplayer...');
+        this.localStateRestored = false;
+        const socket = new WebSocket(this.url);
+        this.socket = socket;
+        socket.addEventListener('open', () => {
+          this.connectionPromise = null;
+          this.onStatus('Multiplayer conectado.');
+          resolve();
+        }, { once: true });
+        socket.addEventListener('message', (event) => this.handleMessage(event.data));
+        socket.addEventListener('close', (event) => {
+          if (this.socket === socket) this.socket = null;
+          if (event.code === 4008) {
+            this.connectionPromise = null;
+            this.onStatus('Este jogador já está aberto em outra aba.');
+            reject(new Error('Este jogador já está aberto em outra aba.'));
+            return;
+          }
+          this.onStatus('Multiplayer offline. Inicie o relay para conectar.');
+          if (retry) {
+            window.setTimeout(attempt, 3000);
+          } else {
+            this.connectionPromise = null;
+            reject(new Error('Multiplayer indisponível.'));
+          }
+        }, { once: true });
+        socket.addEventListener('error', () => this.onStatus('Relay multiplayer indisponível.'));
+      };
+      attempt();
     });
-    this.socket.addEventListener('error', () => this.onStatus('Relay multiplayer indisponivel.'));
+    return this.connectionPromise;
   }
 
   handleMessage(rawMessage) {
@@ -240,7 +262,14 @@ export class MultiplayerSystem {
   }
 
   setAttackTarget(entity) {
+    if (this.attackTargetEntity === entity) return;
+    const previous = this.attackTargetEntity;
+    const previousOutline = previous ? this.world.getComponent(previous, OutlineRenderer) : null;
+    if (previousOutline) previousOutline.selected = false;
     this.attackTargetEntity = entity;
+    const targetOutline = entity ? this.world.getComponent(entity, OutlineRenderer) : null;
+    if (targetOutline) targetOutline.selected = true;
+    this.onAttackTargetChanged(entity);
   }
 
   update(world, time) {
@@ -270,6 +299,7 @@ export class MultiplayerSystem {
     const moveTarget = world.getComponent(this.localEntity, MoveTarget);
     if (!targetTransform || !playerTransform || !moveTarget) {
       this.attackTargetEntity = null;
+      this.onAttackTargetChanged(null);
       if (moveTarget) moveTarget.position = null;
       return;
     }
@@ -359,6 +389,9 @@ export class MultiplayerSystem {
       healthBar?.update(enemy.hp, enemy.maxHp);
       const enemyIdentity = world.getComponent(entity, EnemyIdentity);
       if (enemyIdentity) enemyIdentity.type = enemy.type;
+      if (this.attackTargetEntity === entity && !enemy.alerted) {
+        this.setAttackTarget(null);
+      }
     }
 
     for (const [peerId, entity] of this.remoteEntities) {
@@ -369,6 +402,7 @@ export class MultiplayerSystem {
     }
     for (const [enemyId, entity] of this.enemyEntities) {
       if (!activeEnemies.has(enemyId)) {
+        if (this.attackTargetEntity === entity) this.setAttackTarget(null);
         world.removeEntity(entity);
         this.enemyEntities.delete(enemyId);
       }

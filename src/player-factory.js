@@ -39,9 +39,12 @@ function addController(world, entity) {
   world.addComponent(entity, new MoveTarget());
 }
 
-export function spawnFallbackPlayer(world) {
+export function spawnFallbackPlayer(world, definition = {}) {
   const entity = world.createEntity();
-  addController(world, entity);
+  world.addComponent(entity, new Transform({ position: definition.position, rotation: definition.rotation, scale: definition.scale }));
+  world.addComponent(entity, new AnimationPlayer());
+  world.addComponent(entity, new PlayerController({ speed: definition.speed }));
+  world.addComponent(entity, new MoveTarget());
   world.addComponent(entity, new MeshRenderer({
     vertices: cubeVertices,
     colors: cubeColors,
@@ -55,13 +58,16 @@ export function spawnFallbackPlayer(world) {
   return entity;
 }
 
-export async function loadPlayer(world, textureManager) {
+export async function loadPlayer(world, textureManager, definition = {}) {
   const entity = world.createEntity();
-  addController(world, entity);
+  world.addComponent(entity, new Transform({ position: definition.position, rotation: definition.rotation, scale: definition.scale }));
+  world.addComponent(entity, new AnimationPlayer());
+  world.addComponent(entity, new PlayerController({ speed: definition.speed }));
+  world.addComponent(entity, new MoveTarget());
 
   const asset = await loadAsset(
-    '/models/test/source/AmongUS[Red].glb',
-    undefined,
+    definition.model || '/models/test/source/AmongUS[Red].glb',
+    definition.modelFormat,
     textureManager,
   );
   world.addComponent(entity, asset.mesh ?? asset);
@@ -69,7 +75,10 @@ export async function loadPlayer(world, textureManager) {
     animations: asset.animations,
     mixer: asset.animationMixer,
     onUpdate: asset.animationUpdate,
+    speed: definition.animation?.speed ?? 1,
   }));
+  const animationPlayer = world.getComponent(entity, AnimationPlayer);
+  if (definition.animation?.name) animationPlayer.play(definition.animation.name, { loop: definition.animation.loop !== false });
   const hasMaterialTexture = asset.mesh?.meshes?.some((mesh) => mesh.material?.texture);
   if (asset.texture || !hasMaterialTexture) {
     world.addComponent(entity, asset.texture ?? new Texture({

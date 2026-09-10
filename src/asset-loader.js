@@ -324,9 +324,18 @@ export class AssetLoader {
 }
 
 // Carrega os assets compartilhados pela cena e os agrupa por categoria.
-export async function loadGameAssets(textureManager) {
+export async function loadGameAssets(textureManager, enemyTypes = null, assetDefinitions = null) {
   const assetLoader = new AssetLoader(textureManager);
-  const enemyAssets = await assetLoader.loadMany(GAME_ASSETS.enemies);
+  const configuredTypes = Array.isArray(enemyTypes) && enemyTypes.length
+    ? enemyTypes.filter((type) => type?.model).map((type) => ({
+      url: type.model,
+      format: type.modelFormat
+        || assetDefinitions?.find((asset) => asset.url === type.model)?.format,
+    }))
+    : GAME_ASSETS.enemies.map((url) => ({ url }));
+  const models = [...new Map(configuredTypes.map((model) => [model.url, model])).values()];
+  const loaded = await Promise.all(models.map(({ url, format }) => assetLoader.load(url, format)));
+  const enemyAssets = new Map(models.map(({ url }, index) => [url, loaded[index]]));
 
   return { assetLoader, enemyAssets };
 }

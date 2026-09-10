@@ -81,7 +81,7 @@ export class PlayerStore {
     `);
   }
 
-  async get(guestId, peerId, nickname = 'Guest') {
+  async get(guestId, peerId, nickname = 'Guest', playerDefinition = {}) {
     await this.ready;
 
     // Procura o estado persistente do jogador pelo seu UUID.
@@ -96,6 +96,8 @@ export class PlayerStore {
       peerId,
       ...(result.rows[0]?.state ?? {}),
       nickname,
+      ...(!result.rows[0] ? playerDefinition.status : {}),
+      inventory: result.rows[0]?.state?.inventory ?? playerDefinition.inventory,
     });
   }
 

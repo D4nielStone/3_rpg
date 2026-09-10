@@ -59,6 +59,7 @@
           <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="areas">Áreas</button>
           <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="entity-inspector">Inspector</button>
           <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="scene-settings">Config</button>
+          <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="player-settings">Player</button>
           <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="world-json">JSON</button>
         </nav>
         <div class="panel-section inspector-tab-panel panel-section-active" data-inspector-panel="scene-tree">
@@ -71,6 +72,27 @@
           <div id="entity-list" class="entity-list" aria-label="Entidades da cena"></div>
         </div>
         <div class="panel-section inspector-tab-panel" data-inspector-panel="areas">
+          <div class="section-heading"><h2>Tipos de inimigo</h2><span id="enemy-type-count">0</span></div>
+          <button id="create-enemy-type-button" class="secondary-button full-button" type="button">+ Tipo de inimigo</button>
+          <div id="enemy-type-list" class="entity-list" aria-label="Tipos de inimigo"></div>
+          <div id="enemy-type-inspector" class="enemy-type-inspector" hidden>
+            <label for="enemy-type-id">ID</label><input id="enemy-type-id" data-enemy-type-field="id" type="text" />
+            <label for="enemy-type-name">Nome</label><input id="enemy-type-name" data-enemy-type-field="name" type="text" />
+            <label for="enemy-type-model">Modelo 3D</label><select id="enemy-type-model" data-enemy-type-field="model"></select>
+            <div class="enemy-stat-grid">
+              <label>Nível<input id="enemy-type-level" data-enemy-type-field="level" type="number" min="1" /></label>
+              <label>Vida<input id="enemy-type-maxHp" data-enemy-type-field="maxHp" type="number" min="1" /></label>
+              <label>Velocidade<input id="enemy-type-speed" data-enemy-type-field="speed" type="number" min="0" step="0.1" /></label>
+              <label>Defesa<input id="enemy-type-defense" data-enemy-type-field="defense" type="number" min="0" /></label>
+              <label>Dano<input id="enemy-type-damage" data-enemy-type-field="damage" type="number" min="0" /></label>
+              <label>Experiência<input id="enemy-type-experience" data-enemy-type-field="experience" type="number" min="0" /></label>
+              <label>Escala<input id="enemy-type-scale" data-enemy-type-field="scale" type="number" min="0.01" step="0.01" /></label>
+              <label>Ouro mín.<input id="enemy-type-gold-min" data-enemy-type-field="gold.min" type="number" min="0" /></label>
+              <label>Ouro máx.<input id="enemy-type-gold-max" data-enemy-type-field="gold.max" type="number" min="0" /></label>
+            </div>
+            <label for="enemy-type-drops">Drops JSON (item, probability, min, max)</label>
+            <textarea id="enemy-type-drops" data-enemy-type-field="itemDrops" rows="4" placeholder='[{"item":"pocao","probability":0.25,"min":1,"max":1}]'></textarea>
+          </div>
           <div class="section-heading"><h2>Áreas inimigas</h2><span id="enemy-area-count">0</span></div>
           <button id="create-enemy-area-button" class="secondary-button full-button" type="button">+ Área inimiga</button>
           <div id="enemy-area-list" class="entity-list" aria-label="Áreas inimigas da cena"></div>
@@ -81,7 +103,7 @@
             <label for="enemy-area-width">Largura</label><input id="enemy-area-width" data-area-field="width" type="number" min="0.1" step="0.1" />
             <label for="enemy-area-depth">Profundidade</label><input id="enemy-area-depth" data-area-field="depth" type="number" min="0.1" step="0.1" />
             <label for="enemy-area-max-enemies">Máximo de inimigos</label><input id="enemy-area-max-enemies" data-area-field="maxEnemies" type="number" min="0" step="1" />
-            <label for="enemy-area-type">Tipo</label><input id="enemy-area-type" data-area-field="enemyType" type="text" />
+            <label for="enemy-area-type">Tipo</label><select id="enemy-area-type" data-area-field="enemyType"></select>
             <label for="enemy-area-level">Nível</label><input id="enemy-area-level" data-area-field="areaLevel" type="number" min="1" step="1" />
             <label for="enemy-area-interval">Intervalo (ms)</label><input id="enemy-area-interval" data-area-field="spawnIntervalMs" type="number" min="0" step="100" />
             <button id="delete-enemy-area-button" class="danger-button full-button" type="button">Excluir área</button>
@@ -92,15 +114,47 @@
           <div id="empty-inspector" class="empty-inspector">Selecione uma entidade na cena ou na hierarquia.</div>
           <div id="entity-inspector" hidden>
             <label for="entity-name">Nome</label><input id="entity-name" type="text" />
-            <div class="transform-heading"><strong>Meshes</strong><span id="mesh-count">0</span></div>
-            <div id="mesh-list" class="mesh-list" aria-label="Meshes do objeto"></div>
-            <label for="entity-diffuse-color">Cor difusa</label><input id="entity-diffuse-color" type="color" value="#ffffff" />
-            <div class="transform-heading"><strong>Posição</strong><span>unidades</span></div>
-            <div class="vector-fields" data-vector="position"></div>
-            <div class="transform-heading"><strong>Rotação</strong><span>graus</span></div>
-            <div class="vector-fields" data-vector="rotation"></div>
-            <div class="transform-heading"><strong>Escala</strong><span>fator</span></div>
-            <div class="vector-fields" data-vector="scale"></div>
+            <nav class="component-tabs" role="tablist" aria-label="Componentes da entidade">
+              <button class="component-tab component-tab-active" type="button" role="tab" aria-selected="true" data-component-tab="transform">Transform</button>
+              <button class="component-tab" type="button" role="tab" aria-selected="false" data-component-tab="mesh">MeshRenderer</button>
+              <button class="component-tab" type="button" role="tab" aria-selected="false" data-component-tab="collision">Collision</button>
+              <button class="component-tab" type="button" role="tab" aria-selected="false" data-component-tab="animation">AnimationPlayer</button>
+            </nav>
+            <div class="component-panel component-panel-active" data-component-panel="transform">
+              <div class="transform-heading"><strong>Posição</strong><span>unidades</span></div>
+              <div class="vector-fields" data-vector="position"></div>
+              <div class="transform-heading"><strong>Rotação</strong><span>graus</span></div>
+              <div class="vector-fields" data-vector="rotation"></div>
+              <div class="transform-heading"><strong>Escala</strong><span>fator</span></div>
+              <div class="vector-fields" data-vector="scale"></div>
+            </div>
+            <div class="component-panel" data-component-panel="collision">
+              <div class="transform-heading"><strong>Colisão</strong><span>linhas verdes</span></div>
+              <label class="check-row"><input id="collision-enabled" type="checkbox" /> Ativar colisão</label>
+              <label for="collision-shape">Forma</label>
+              <select id="collision-shape">
+                <option value="model">Modelo</option>
+                <option value="box">Caixa</option>
+                <option value="convex">Convexa</option>
+              </select>
+            </div>
+            <div class="component-panel" data-component-panel="mesh">
+              <div class="transform-heading"><strong>Meshes</strong><span id="mesh-count">0</span></div>
+              <div id="mesh-list" class="mesh-list" aria-label="Meshes do objeto"></div>
+              <label for="entity-diffuse-color">Cor difusa</label><input id="entity-diffuse-color" type="color" value="#ffffff" />
+            </div>
+            <div id="animation-controls" class="component-panel" data-component-panel="animation" hidden>
+              <div class="transform-heading"><strong>Animação</strong><span>AnimationPlayer</span></div>
+              <label for="animation-select">Clip</label><select id="animation-select"></select>
+              <div class="animation-buttons">
+                <button id="animation-play" type="button">Reproduzir</button>
+                <button id="animation-pause" type="button">Pausar</button>
+                <button id="animation-stop" type="button">Parar</button>
+              </div>
+              <label class="check-row"><input id="animation-loop" type="checkbox" checked /> Repetir</label>
+              <label for="animation-speed">Velocidade <output id="animation-speed-value">1.00x</output></label>
+              <input id="animation-speed" type="range" min="0" max="3" value="1" step="0.05" />
+            </div>
             <button id="delete-entity-button" class="danger-button full-button" type="button">Excluir entidade</button>
           </div>
         </div>
@@ -113,6 +167,20 @@
           <label for="ambient-intensity">Intensidade <output id="ambient-intensity-value">1.00</output></label>
           <input id="ambient-intensity" type="range" min="0" max="2" value="1" step="0.01" />
           <dl class="map-summary"><div><dt>Entidades</dt><dd id="entity-summary-count">0</dd></div></dl>
+        </div>
+        <div class="panel-section inspector-tab-panel scene-section" data-inspector-panel="player-settings">
+          <h2>Player (entidade)</h2>
+          <label for="player-model">Modelo</label><input id="player-model" type="text" />
+          <label for="player-model-format">Formato</label><select id="player-model-format"><option value="glb">GLB</option><option value="gltf">glTF</option><option value="obj">OBJ</option></select>
+          <label for="player-position">Posição [x,y,z]</label><input id="player-position" type="text" />
+          <label for="player-rotation">Rotação [x,y,z]</label><input id="player-rotation" type="text" />
+          <label for="player-scale">Escala [x,y,z]</label><input id="player-scale" type="text" />
+          <label for="player-speed">Velocidade inicial</label><input id="player-speed" type="number" min="0" step="0.1" />
+          <label for="player-animation">Animação</label><input id="player-animation" type="text" placeholder="nome do clip" />
+          <label for="player-status">Status iniciais (JSON)</label><textarea id="player-status" rows="3"></textarea>
+          <label for="player-inventory">Itens iniciais (JSON)</label><textarea id="player-inventory" rows="3"></textarea>
+          <label class="check-row"><input id="player-collision-enabled" type="checkbox" /> Ativar colisão</label>
+          <label for="player-collision-shape">Colisão</label><select id="player-collision-shape"><option value="model">Modelo</option><option value="box">Caixa</option><option value="convex">Convexa</option></select>
         </div>
         <div class="panel-section inspector-tab-panel export-preview" data-inspector-panel="world-json"><h2>World JSON</h2><pre id="json-preview">{}</pre></div>
       </aside>

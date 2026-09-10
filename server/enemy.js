@@ -1,23 +1,9 @@
 import { randomUUID } from 'node:crypto';
-
-const ENEMY_TYPES = {
-  rat: {
-    name: 'Rato',
-    model: '/models/test/source/AmongUS[Red].glb',
-    level: 1,
-    maxHp: 3,
-    defense: 1,
-    damage: 1,
-    experience: 2,
-    goldMin: 3,
-    goldMax: 5,
-    size_multiplier: 0.35,
-  },
-};
+import { createEnemyTypeMap } from './world/enemy-types.js';
 
 export class Enemy {
-  constructor({ id = randomUUID(), type = 'rat', level, position = [0, 0, 0] } = {}) {
-    const definition = ENEMY_TYPES[type];
+  constructor({ id = randomUUID(), type = 'rat', level, position = [0, 0, 0], definitions = null } = {}) {
+    const definition = (definitions ?? createEnemyTypeMap()).get(type);
     if (!definition) throw new Error(`Tipo de inimigo desconhecido: ${type}`);
 
     this.id = id;
@@ -29,15 +15,16 @@ export class Enemy {
     this.maxHp = definition.maxHp;
     this.defense = Math.max(0, Number(definition.defense) || 0);
     this.experience = definition.experience;
-    this.goldMin = definition.goldMin;
-    this.goldMax = definition.goldMax;
-    this.sizeMultiplier = definition.size_multiplier;
+    this.goldMin = definition.gold.min;
+    this.goldMax = definition.gold.max;
+    this.itemDrops = definition.itemDrops;
+    this.sizeMultiplier = definition.scale;
 
     this.detectionRadius = 6;
     this.attackRange = 1;
     this.attackDamage = definition.damage;
     this.attackCooldown = 0;
-    this.moveSpeed = 1.2;
+    this.moveSpeed = definition.speed;
     this.alerted = false;
     this.targetPeerId = null;
     this.wanderTarget = null;
@@ -166,9 +153,14 @@ export class Enemy {
   }
 
   getDrop() {
+    const items = this.itemDrops.filter((drop) => Math.random() <= drop.probability).map((drop) => ({
+      item: drop.item,
+      quantity: Math.floor(drop.min + Math.random() * (drop.max - drop.min + 1)),
+    }));
     return {
       experience: this.experience,
       gold: Math.floor(this.goldMin + Math.random() * (this.goldMax - this.goldMin + 1)),
+      items,
     };
   }
 

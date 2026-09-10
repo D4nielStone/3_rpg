@@ -40,6 +40,17 @@ label { display: flex; align-items: center; justify-content: space-between; gap:
 .vector-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: .3rem; } .vector-fields label { display: block; } .vector-fields input { margin-top: .2rem; padding: .3rem .25rem; text-align: center; }
 .enemy-area-section input { margin: .25rem 0 .55rem; } .enemy-area-section .vector-fields { margin-bottom: .45rem; }
 .check-row { justify-content: flex-start; margin-bottom: .75rem; color: var(--text); } .check-row input { accent-color: var(--accent); }
+.animation-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: .25rem; margin: .45rem 0; }
+.animation-buttons button { min-height: 1.9rem; padding: 0 .25rem; font-size: .62rem; }
+select { width: 100%; min-height: 2rem; margin: .25rem 0 .35rem; border: 1px solid var(--line); color: var(--text); background: #0d100f; font-size: .7rem; }
+.enemy-stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .35rem; margin: .35rem 0; }
+.enemy-stat-grid label { display: block; }
+textarea { width: 100%; resize: vertical; border: 1px solid var(--line); color: var(--text); background: #0d100f; font: .65rem 'DM Mono', monospace; }
+.component-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: .25rem; margin: .75rem 0; }
+.component-tab { min-height: 2rem; padding: 0 .25rem; color: var(--muted); background: transparent; font-size: .6rem; }
+.component-tab:hover, .component-tab-active { border-color: var(--accent); color: var(--accent); background: var(--panel-soft); }
+.component-panel { display: none; padding-bottom: .4rem; }
+.component-panel-active { display: block; }
 .scene-section input[type='color'] { width: 100%; height: 2rem; padding: .15rem; } .scene-section input[type='range'] { margin-bottom: .55rem; }
 .inspector-section input[type='color'] { width: 100%; height: 2rem; padding: .15rem; margin: .25rem 0 .55rem; }
 .map-summary { display: grid; gap: .55rem; margin: .9rem 0 0; } .map-summary div { display: flex; justify-content: space-between; padding-bottom: .4rem; border-bottom: 1px solid var(--line); } dt { color: var(--muted); font-size: .68rem; } dd { margin: 0; font: .65rem 'DM Mono', monospace; }

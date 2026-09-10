@@ -94,7 +94,7 @@ export class AnimationPlayer {
 
 export class PlayerController {
   constructor({ speed = 3 } = {}) {
-    this.speed = speed;
+    this.speed = Math.max(0, Number(speed) || 0);
   }
 }
 
@@ -184,6 +184,7 @@ export class OutlineRenderer {
     this.color = color;
     this.segments = segments;
     this.active = false;
+    this.selected = false;
     this.vertices = new Float32Array();
     this.colors = new Float32Array();
     this.indices = new Uint16Array();

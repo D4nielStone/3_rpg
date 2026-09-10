@@ -39,7 +39,7 @@ export class EnemyHoverSystem {
     for (const entity of world.query(OutlineRenderer)) {
       const outline = world.getComponent(entity, OutlineRenderer);
 
-      const active = entity === closestEntity;
+      const active = entity === closestEntity || outline.selected;
 
       if (outline.active !== active) {
         outline.active = active;

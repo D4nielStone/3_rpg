@@ -1,10 +1,10 @@
 import { LineRenderer, NameTag, Transform } from './components.js';
 import { loadPlayer, spawnFallbackPlayer } from './player-factory.js';
 
-export async function loadLocalPlayer(game) {
+export async function loadLocalPlayer(game, definition = {}) {
   try {
     const entity = await Promise.race([
-      loadPlayer(game.world, game.textureManager),
+      loadPlayer(game.world, game.textureManager, definition),
       new Promise((_, reject) => {
         window.setTimeout(() => reject(new Error('Tempo limite ao carregar o modelo 3D.')), 10000);
       }),
@@ -12,7 +12,7 @@ export async function loadLocalPlayer(game) {
     return { entity, usedFallback: false };
   } catch (error) {
     console.error(error);
-    return { entity: spawnFallbackPlayer(game.world), usedFallback: true };
+    return { entity: spawnFallbackPlayer(game.world, definition), usedFallback: true };
   }
 }
 

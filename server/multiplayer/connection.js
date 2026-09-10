@@ -36,7 +36,12 @@ export function registerConnectionHandler({
 
     let player;
     try {
-      player = await playerStore.get(playerId, peerId, identity.nickname);
+      player = await playerStore.get(
+        playerId,
+        peerId,
+        identity.nickname,
+        state.publishedMapConfig?.player ?? {},
+      );
     } catch (error) {
       logger.error('Falha ao carregar jogador', { peerId, error: error.message });
       state.activeGuestSessions.delete(playerId);

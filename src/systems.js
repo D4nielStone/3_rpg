@@ -107,6 +107,7 @@ export class PlayerPathSystem {
     this.camera = camera;
     this.lastClick = null;
     this.pointerHeld = false;
+    this.combatTarget = null;
     // Pointer Events funcionam para mouse, toque e caneta com a mesma implementacao.
     const updateTarget = (event) => {
       this.lastClick = camera.screenToGround(event.clientX, event.clientY, canvas);
@@ -134,9 +135,20 @@ export class PlayerPathSystem {
     });
   }
 
+  setCombatTarget(entity) {
+    this.combatTarget = entity;
+  }
+
   update(world, time = 0) {
     for (const entity of world.query(LineRenderer)) {
       const line = world.getComponent(entity, LineRenderer);
+      if (this.combatTarget) {
+        line.vertices = new Float32Array();
+        line.colors = new Float32Array();
+        line.indices = new Uint16Array();
+        line.dirty = true;
+        continue;
+      }
       const moveTarget = world.getComponent(line.sourceEntity, MoveTarget);
       if (!moveTarget) {
         line.vertices = new Float32Array();
