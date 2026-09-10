@@ -36,6 +36,8 @@ const emptyInspector = document.querySelector('#empty-inspector');
 const selectedEntityLabel = document.querySelector('#selected-entity-label');
 const entityDiffuseColorInput = document.querySelector('#entity-diffuse-color');
 const entityTextureFileInput = document.querySelector('#entity-texture-file');
+const entityReceiveLightInput = document.querySelector('#entity-receive-light');
+const entityCastShadowInput = document.querySelector('#entity-cast-shadow');
 const playerPreviewInspector = document.querySelector('#player-preview-inspector');
 const meshList = document.querySelector('#mesh-list');
 const meshCount = document.querySelector('#mesh-count');
@@ -101,6 +103,7 @@ function normalizeVector(value, fallback) { return Array.from({ length: 3 }, (_,
 function normalizeEntityTransform(entity) { entity.position = normalizeVector(entity.position, [0, 0, 0]); entity.rotation = normalizeVector(entity.rotation, [0, 0, 0]); entity.scale = normalizeVector(entity.scale, [1, 1, 1]); return entity; }
 function normalizeColor(value, fallback = [1, 1, 1]) { return normalizeVector(value, fallback).map((channel) => Math.min(1, Math.max(0, channel))); }
 function normalizeEntityMaterials(entity) { entity.materials = Array.isArray(entity.materials) ? entity.materials.map((material) => ({ ...material, diffuseColor: normalizeColor(material.diffuseColor) })) : []; return entity; }
+function normalizeEntityShadows(entity) { entity.receiveLight = entity.receiveLight !== false; entity.castShadow = entity.castShadow !== false; return entity; }
 function normalizeEntityAnimation(entity) {
   entity.animation = {
     name: String(entity.animation?.name ?? ''),
@@ -175,7 +178,7 @@ function updateLightingInspector() {
   directionalIntensityValue.textContent = lighting.directional.intensity.toFixed(2);
   updateSceneAmbientLight();
 }
-function entitySnapshot(entity) { normalizeEntityTransform(entity); normalizeEntityMaterials(entity); normalizeEntityAnimation(entity); normalizeCollision(entity); return { id: entity.id, name: entity.name, assetId: entity.assetId, primitive: entity.primitive ?? null, type: entity.type ?? null, light: entity.type === 'pointLight' ? { ...normalizePointLight(entity).light, color: [...entity.light.color] } : null, position: [...entity.position], rotation: [...entity.rotation], scale: [...entity.scale], materials: entity.materials.map((material) => ({ ...material, diffuseColor: [...material.diffuseColor], texture: material.texture ?? null })), animation: { ...entity.animation }, collision: { ...entity.collision } }; }
+function entitySnapshot(entity) { normalizeEntityTransform(entity); normalizeEntityMaterials(entity); normalizeEntityAnimation(entity); normalizeCollision(entity); normalizeEntityShadows(entity); return { id: entity.id, name: entity.name, assetId: entity.assetId, primitive: entity.primitive ?? null, type: entity.type ?? null, light: entity.type === 'pointLight' ? { ...normalizePointLight(entity).light, color: [...entity.light.color] } : null, position: [...entity.position], rotation: [...entity.rotation], scale: [...entity.scale], receiveLight: entity.receiveLight, castShadow: entity.castShadow, materials: entity.materials.map((material) => ({ ...material, diffuseColor: [...material.diffuseColor], texture: material.texture ?? null })), animation: { ...entity.animation }, collision: { ...entity.collision } }; }
 function captureState() { return exportConfig(); }
 function pushHistory() { history.push(captureState()); if (history.length > 20) history.shift(); future.length = 0; }
 async function undo() { const state = history.pop(); if (!state) return; future.push(captureState()); await loadWorld(state); setStatus('Alteração desfeita'); }
@@ -310,6 +313,7 @@ function addEntity(entity, object = null, animations = []) {
   normalizeEntityTransform(entity);
   normalizeEntityAnimation(entity);
   normalizeCollision(entity);
+  normalizeEntityShadows(entity);
   if (entity.type === 'pointLight') normalizePointLight(entity);
   entity.object = object ?? new THREE.Group();
   entity.animations = animations;
@@ -320,6 +324,11 @@ function addEntity(entity, object = null, animations = []) {
   markSelectable(entity.object, entity.id);
   applyEntityTransform(entity);
   applyEntityMaterials(entity);
+  entity.object.traverse((child) => {
+    if (!child.isMesh) return;
+    child.castShadow = entity.castShadow;
+    child.receiveShadow = entity.receiveLight;
+  });
   applyEntityAnimation(entity);
   entityGroup.add(entity.object);
   updateCollisionVisual(entity);
@@ -710,6 +719,9 @@ function updateInspector() {
     entityLightDistanceValue.textContent = entity.light.distance.toFixed(2);
   }
   if (entity.isPlayerPreview) updatePlayerInspector();
+  normalizeEntityShadows(entity);
+  entityReceiveLightInput.checked = entity.receiveLight;
+  entityCastShadowInput.checked = entity.castShadow;
   if (selectedMaterialIndex >= (entity.materials?.length ?? 0)) selectedMaterialIndex = 0;
   renderMeshList(entity);
   entityDiffuseColorInput.value = colorToHex(entity.materials?.[selectedMaterialIndex]?.diffuseColor ?? [1, 1, 1]);
@@ -864,6 +876,21 @@ document.querySelector('#entity-name').addEventListener('change', (event) => {
 document.querySelector('#collision-enabled').addEventListener('change', (event) => { const entity = selectedEntity(); if (!entity) return; pushHistory(); entity.collision.enabled = event.target.checked; if (entity.isPlayerPreview) player.collision = { ...entity.collision }; updateCollisionVisual(entity); updateSummary(); });
 document.querySelector('#collision-shape').addEventListener('change', (event) => { const entity = selectedEntity(); if (!entity) return; pushHistory(); entity.collision.shape = event.target.value; if (entity.isPlayerPreview) player.collision = { ...entity.collision }; updateCollisionVisual(entity); updateSummary(); });
 entityDiffuseColorInput.addEventListener('input', () => { const entity = selectedEntity(); if (!entity) return; const hex = entityDiffuseColorInput.value.slice(1); const color = [0, 2, 4].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255); normalizeEntityMaterials(entity); const material = entity.materials[selectedMaterialIndex]; if (!material) return; material.diffuseColor = [...color]; applyEntityMaterials(entity); if (entity.isPlayerPreview) syncPlayerFromPreview(entity); renderMeshList(entity); updateSummary(); });
+function updateEntityShadowSettings() {
+ const entity = selectedEntity();
+ if (!entity) return;
+ pushHistory();
+ entity.receiveLight = entityReceiveLightInput.checked;
+ entity.castShadow = entityCastShadowInput.checked;
+ entity.object?.traverse((child) => {
+   if (!child.isMesh) return;
+   child.castShadow = entity.castShadow;
+   child.receiveShadow = entity.receiveLight;
+ });
+ updateSummary();
+}
+entityReceiveLightInput.addEventListener('change', updateEntityShadowSettings);
+entityCastShadowInput.addEventListener('change', updateEntityShadowSettings);
 entityTextureFileInput.addEventListener('change', async () => {
   const entity = selectedEntity();
   const file = entityTextureFileInput.files?.[0];

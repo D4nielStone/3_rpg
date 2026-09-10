@@ -423,12 +423,16 @@ export class RenderSystem {
     gl.clearColor(1, 1, 1, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(this.shadowProgram);
+    gl.disableVertexAttribArray(this.locations.color);
+    gl.disableVertexAttribArray(this.locations.normal);
+    gl.disableVertexAttribArray(this.locations.uv);
     gl.enableVertexAttribArray(shadowLocations.position);
     for (const entity of world.query(Transform, MeshRenderer)) {
       const transform = world.getComponent(entity, Transform);
       const matrix = multiplyMatrices(shadowMatrix, this.getModelMatrix(transform));
       gl.uniformMatrix4fv(shadowLocations.matrix, false, matrix);
       const renderer = world.getComponent(entity, MeshRenderer);
+      if (!renderer.castShadow) continue;
       renderer.meshes.forEach((mesh) => {
         this.prepareMesh(mesh);
         gl.bindBuffer(gl.ARRAY_BUFFER, mesh.positionBuffer);
@@ -440,6 +444,10 @@ export class RenderSystem {
     gl.disableVertexAttribArray(shadowLocations.position);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.useProgram(this.program);
+    gl.enableVertexAttribArray(this.locations.position);
+    gl.enableVertexAttribArray(this.locations.color);
+    gl.enableVertexAttribArray(this.locations.normal);
+    gl.enableVertexAttribArray(this.locations.uv);
   }
 
   render(world, time = 0) {
@@ -495,6 +503,7 @@ export class RenderSystem {
         gl.uniformMatrix4fv(locations.modelMatrix, false, this.getModelMatrix(transform));
         gl.uniform3f(locations.diffuseColor, ...(material?.diffuseColor ?? [1, 1, 1]));
         gl.uniform1f(locations.isShadow, 0);
+        gl.uniform1f(locations.receiveLight, renderer.receiveLight ? 1 : 0);
         gl.uniform1f(locations.isEnemyArea, 0);
         const enemyArea = world.getComponent(entity, EnemyAreaRenderer);
         gl.uniform1f(locations.isEnemyArea, enemyArea ? 1 : 0);
@@ -570,6 +579,34 @@ export class RenderSystem {
       gl.vertexAttribPointer(locations.color, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, outline.indexBuffer);
       gl.drawElements(gl.TRIANGLES, outline.indices.length, gl.UNSIGNED_SHORT, 0);
+    }
+
+    // Renderizar sombras
+    for (const entity of world.query(Transform, ShadowRenderer)) {
+      gl.disableVertexAttribArray(locations.normal);
+      gl.disableVertexAttribArray(locations.uv);
+      gl.vertexAttrib3f(locations.normal, 0, 1, 0);
+      gl.vertexAttrib2f(locations.uv, 0, 0);
+      const transform = world.getComponent(entity, Transform);
+      const shadow = world.getComponent(entity, ShadowRenderer);
+      this.prepareShadow(shadow);
+      if (shadow.indices.length === 0) continue;
+
+      const matrix = multiplyMatrices(
+        projection,
+        multiplyMatrices(view, this.getModelMatrix(transform)),
+      );
+      gl.uniformMatrix4fv(locations.matrix, false, matrix);
+      gl.uniformMatrix4fv(locations.modelMatrix, false, this.getModelMatrix(transform));
+      gl.uniform1f(locations.isShadow, 1);
+      gl.uniform1f(locations.useTexture, 0);
+      gl.uniform1f(locations.isWater, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, shadow.positionBuffer);
+      gl.vertexAttribPointer(locations.position, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, shadow.colorBuffer);
+      gl.vertexAttribPointer(locations.color, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shadow.indexBuffer);
+      gl.drawElements(gl.TRIANGLES, shadow.indices.length, gl.UNSIGNED_SHORT, 0);
     }
   }
 }

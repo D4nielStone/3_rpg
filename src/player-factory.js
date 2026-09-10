@@ -7,6 +7,7 @@ import {
   NetworkTransform,
   NameTag,
   PlayerController,
+  ShadowRenderer,
   Texture,
   Transform,
 } from './components.js';
@@ -51,6 +52,7 @@ export function spawnFallbackPlayer(world, definition = {}) {
     indices: cubeIndices,
     uvs: cubeUVs,
   }));
+  world.addComponent(entity, new ShadowRenderer());
   world.addComponent(entity, new Texture({
     image: createPatternTexture(),
     name: 'fallback-texture',
@@ -108,6 +110,7 @@ export async function loadPlayer(world, textureManager, definition = {}, assetDe
     }
   }
   if (asset.texture) world.addComponent(entity, asset.texture);
+  world.addComponent(entity, new ShadowRenderer());
   return entity;
 }
 
@@ -119,6 +122,7 @@ export function addRemotePlayer(world, sourceEntity, peerId, nickname = 'Guest',
   world.addComponent(entity, new NetworkTransform());
   world.addComponent(entity, new NameTag({ text: nickname, level }));
   world.addComponent(entity, world.getComponent(sourceEntity, MeshRenderer));
+  world.addComponent(entity, new ShadowRenderer());
 
   const texture = world.getComponent(sourceEntity, Texture);
   if (texture) world.addComponent(entity, texture);

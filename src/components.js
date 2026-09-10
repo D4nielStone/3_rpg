@@ -251,7 +251,9 @@ export class Material {
 }
 
 export class MeshRenderer {
-  constructor({ meshes = null, vertices, colors, indices, normals = null, uvs = null, texture = null, material = null }) {
+  constructor({ meshes = null, vertices, colors, indices, normals = null, uvs = null, texture = null, material = null, receiveLight = true, castShadow = true }) {
+    this.receiveLight = receiveLight;
+    this.castShadow = castShadow;
     this.meshes = meshes ?? [{
       vertices,
       colors,

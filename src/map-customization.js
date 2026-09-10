@@ -1,4 +1,4 @@
-import { AnimationPlayer, MeshRenderer, Texture, Transform } from './components.js';
+import { AnimationPlayer, MeshRenderer, ShadowRenderer, Texture, Transform } from './components.js';
 import { loadAsset } from './asset-loader.js';
 import { createWater } from './water.js';
 import { readSavedMapConfig } from './map-config.js';
@@ -147,9 +147,12 @@ async function createWorldEntities(world, config, textureManager) {
         scale: definition.scale,
       }));
       const material = mesh.meshes[0]?.material;
+      mesh.receiveLight = definition.receiveLight !== false;
+      mesh.castShadow = definition.castShadow !== false;
       const configuredMaterial = definition.materials?.[0]?.diffuseColor;
       if (Array.isArray(configuredMaterial)) material.diffuseColor = [...configuredMaterial];
       world.addComponent(entity, mesh);
+      if (definition.castShadow !== false) world.addComponent(entity, new ShadowRenderer());
       continue;
     }
     const asset = assets.get(definition.assetId);
@@ -166,7 +169,10 @@ async function createWorldEntities(world, config, textureManager) {
         const material = loaded.mesh.meshes[index]?.material;
         if (material && Array.isArray(materialDefinition.diffuseColor)) material.diffuseColor = [...materialDefinition.diffuseColor];
       });
+      loaded.mesh.receiveLight = definition.receiveLight !== false;
+      loaded.mesh.castShadow = definition.castShadow !== false;
       world.addComponent(entity, loaded.mesh);
+      if (definition.castShadow !== false) world.addComponent(entity, new ShadowRenderer());
       if (loaded.texture) world.addComponent(entity, loaded.texture);
       if (loaded.animations?.length) {
         console.log(`Adicionando animações para a entidade ${entity}:`, loaded.animations.map(a => a.name));

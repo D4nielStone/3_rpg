@@ -6,6 +6,7 @@ import {
   NameTag,
   NetworkTransform,
   OutlineRenderer,
+  ShadowRenderer,
   Transform,
 } from './components.js';
 
@@ -52,5 +53,6 @@ export function addRemoteEnemy(world, enemyAssets, enemy) {
     }));
   }
   if (asset.texture) world.addComponent(entity, asset.texture);
+  world.addComponent(entity, new ShadowRenderer());
   return entity;
 }

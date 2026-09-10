@@ -55,7 +55,7 @@ const vertexShaderSource = `
     vWorldPosition = (modelMatrix * vec4(animatedPosition, 1.0)).xyz;
 
     vUv = uv;
-    vShadowPosition = shadowMatrix * vec4(animatedPosition, 1.0);
+    vShadowPosition = shadowMatrix * modelMatrix * vec4(animatedPosition, 1.0);
   }
 `;
 
@@ -87,10 +87,11 @@ const fragmentShaderSource = `
   uniform int pointLightCount;
   uniform float isShadow;
   uniform float isEnemyArea;
+  uniform float receiveLight;
   uniform sampler2D shadowMap;
-  float unpackDepth(const vec4 packed) {
+  float unpackDepth(const vec4 ipacked) {
     const vec4 bitShift = vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 16581375.0);
-    return dot(packed, bitShift);
+    return dot(ipacked, bitShift);
   }
 
   void main() {
@@ -98,8 +99,8 @@ const fragmentShaderSource = `
     float alpha = 1.0;
 
     if (isShadow > 0.5) {
-      finalColor = vec3(0.02, 0.025, 0.04);
-      alpha = 0.38;
+      finalColor = vec3(0.0, 0.0, 0.0);
+      alpha = 0.5;
     } else if (isEnemyArea > 0.5) {
       finalColor = vec3(0.015, 0.06, 0.16);
       alpha = 0.24;
@@ -152,9 +153,12 @@ const fragmentShaderSource = `
         shadow /= 9.0;
       }
       float directionalDiffuse = max(dot(normal, normalize(directionalLightDirection)), 0.0);
-      vec3 light = ambientColor * ambientIntensity;
-      light += directionalLightColor * directionalDiffuse * directionalLightIntensity * shadow;
+      vec3 light = receiveLight > 0.5 ? ambientColor * ambientIntensity : vec3(0.0);
+      if (receiveLight > 0.5) {
+        light += directionalLightColor * directionalDiffuse * directionalLightIntensity * shadow;
+      }
       for (int index = 0; index < MAX_POINT_LIGHTS; index++) {
+        if (receiveLight <= 0.5) break;
         if (index >= pointLightCount) break;
         vec3 pointVector = pointLightPositions[index] - vWorldPosition;
         float pointDistance = length(pointVector);
@@ -181,9 +185,9 @@ const shadowFragmentShaderSource = `
   vec4 packDepth(const float depth) {
     const vec4 bitShift = vec4(1.0, 255.0, 65025.0, 16581375.0);
     const vec4 bitMask = vec4(0.0, 1.0 / 255.0, 1.0 / 255.0, 1.0 / 255.0);
-    vec4 packed = fract(depth * bitShift);
-    packed -= packed.xxyz * bitMask;
-    return packed;
+    vec4 ipacked = fract(depth * bitShift);
+    ipacked -= ipacked.xxyz * bitMask;
+    return ipacked;
   }
   void main() { gl_FragColor = packDepth(gl_FragCoord.z); }
 `;
@@ -422,6 +426,7 @@ export function createGame(canvas, status, mapConfig = null) {
       program,
       'isEnemyArea'
     ),
+    receiveLight: gl.getUniformLocation(program, 'receiveLight'),
     shadowMatrix: gl.getUniformLocation(program, 'shadowMatrix'),
     shadowMap: gl.getUniformLocation(program, 'shadowMap'),
   };
