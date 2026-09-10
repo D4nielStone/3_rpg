@@ -3,6 +3,15 @@ function colliderBounds(entity) {
   const scale = entity.scale ?? [1, 1, 1];
   const halfX = Math.max(0.25, Math.abs(Number(scale[0]) || 1) * 0.5);
   const halfZ = Math.max(0.25, Math.abs(Number(scale[2]) || 1) * 0.5);
+  if (entity.collision.shape === 'capsule') {
+    const radius = Math.max(0.25, Math.min(halfX, halfZ));
+    return {
+      minX: entity.position[0] - radius,
+      maxX: entity.position[0] + radius,
+      minZ: entity.position[2] - radius,
+      maxZ: entity.position[2] + radius,
+    };
+  }
   return {
     minX: entity.position[0] - halfX,
     maxX: entity.position[0] + halfX,

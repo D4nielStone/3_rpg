@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>World Editor | WebRPG</title>
-  <script type="module" crossorigin src="/assets/mapEditor-BjZJ6B9p.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/map-config-BGeViOV-.js">
+  <script type="module" crossorigin src="/assets/mapEditor-IqEtlIU-.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/map-config-BzYgIqWE.js">
   <link rel="stylesheet" crossorigin href="/assets/mapEditor-DDGiKrxC.css">
 </head>
 <body>
@@ -138,6 +138,7 @@
                 <option value="model">Modelo</option>
                 <option value="box">Caixa</option>
                 <option value="convex">Convexa</option>
+                <option value="capsule">Cápsula</option>
               </select>
             </div>
             <div class="component-panel" data-component-panel="mesh">
@@ -182,7 +183,7 @@
           <label for="player-status">Status iniciais (JSON)</label><textarea id="player-status" rows="3"></textarea>
           <label for="player-inventory">Itens iniciais (JSON)</label><textarea id="player-inventory" rows="3"></textarea>
           <label class="check-row"><input id="player-collision-enabled" type="checkbox" /> Ativar colisão</label>
-          <label for="player-collision-shape">Colisão</label><select id="player-collision-shape"><option value="model">Modelo</option><option value="box">Caixa</option><option value="convex">Convexa</option></select>
+          <label for="player-collision-shape">Colisão</label><select id="player-collision-shape"><option value="model">Modelo</option><option value="box">Caixa</option><option value="convex">Convexa</option><option value="capsule">Cápsula</option></select>
         </div>
         <div class="panel-section inspector-tab-panel export-preview" data-inspector-panel="world-json"><h2>World JSON</h2><pre id="json-preview">{}</pre></div>
       </aside>

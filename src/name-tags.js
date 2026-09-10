@@ -31,7 +31,7 @@ export class NameTagSystem {
       nameTag.element.hidden = !visible;
       if (!visible) continue;
       nameTag.element.style.left = `${bounds.left + (clipX / clipW * 0.5 + 0.5) * bounds.width}px`;
-      nameTag.element.style.top = `${bounds.top + (-clipY / clipW * 0.5 + 0.5) * bounds.height - 18}px`;
+      nameTag.element.style.top = `${bounds.top + (-clipY / clipW * 0.5 + 0.5) * bounds.height - 40}px`;
     }
 
     for (const entity of world.query(Transform, EnemyHealthBar)) {

@@ -1,6 +1,28 @@
 import { LineRenderer, NameTag, Transform } from './components.js';
 import { loadPlayer, spawnFallbackPlayer } from './player-factory.js';
 
+const CAMERA_STORAGE_KEY = 'webgl-rpg-player-camera';
+
+function readCameraSettings() {
+  try {
+    const value = JSON.parse(window.localStorage.getItem(CAMERA_STORAGE_KEY) ?? 'null');
+    if (!value || typeof value !== 'object') return {};
+    return ['distance', 'azimuth', 'elevation', 'targetHeight'].every((key) => Number.isFinite(Number(value[key])))
+      ? Object.fromEntries(['distance', 'azimuth', 'elevation', 'targetHeight'].map((key) => [key, Number(value[key])]))
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveCameraSettings(settings) {
+  try {
+    window.localStorage.setItem(CAMERA_STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+    // A câmera continua funcionando mesmo quando o armazenamento está bloqueado.
+  }
+}
+
 export async function loadLocalPlayer(game, definition = {}, assetDefinitions = []) {
   try {
     const entity = await Promise.race([
@@ -18,12 +40,16 @@ export async function loadLocalPlayer(game, definition = {}, assetDefinitions = 
 
 export function followPlayer(game, playerEntity) {
   const transform = game.world.getComponent(playerEntity, Transform);
+  const settings = readCameraSettings();
   game.camera.orbitalFollow(transform, {
     distance: 6,
     azimuth: 0,
     elevation: 0.35,
     targetHeight: 0.5,
+    ...settings,
+    onChange: saveCameraSettings,
   });
+  saveCameraSettings(game.camera.getOrbitSettings());
 }
 
 export function addPlayerNameTag(world, playerEntity) {

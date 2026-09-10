@@ -1,15 +1,30 @@
 import * as CANNON from 'cannon-es';
 
+function addCapsule(body, scale = [1, 1, 1]) {
+  const radius = Math.max(0.25, Math.min(Math.abs(scale[0] ?? 1), Math.abs(scale[2] ?? 1)) * 0.5);
+  const height = Math.max(radius * 2, Math.abs(scale[1] ?? 1));
+  const cylinderHeight = Math.max(0, height - radius * 2);
+  body.addShape(new CANNON.Cylinder(radius, radius, cylinderHeight || 0.001, 12));
+  if (cylinderHeight > 0) {
+    body.addShape(new CANNON.Sphere(radius), new CANNON.Vec3(0, cylinderHeight * 0.5, 0));
+    body.addShape(new CANNON.Sphere(radius), new CANNON.Vec3(0, -cylinderHeight * 0.5, 0));
+  }
+}
+
 function addStaticColliders(world, mapConfig) {
   for (const entity of mapConfig?.entities ?? []) {
     if (!entity.collision?.enabled) continue;
     const body = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC });
     const scale = entity.scale ?? [1, 1, 1];
-    body.addShape(new CANNON.Box(new CANNON.Vec3(
-      Math.max(0.25, Math.abs(scale[0] ?? 1) * 0.5),
-      Math.max(0.5, Math.abs(scale[1] ?? 1) * 0.5),
-      Math.max(0.25, Math.abs(scale[2] ?? 1) * 0.5),
-    )));
+    if (entity.collision.shape === 'capsule') {
+      addCapsule(body, scale);
+    } else {
+      body.addShape(new CANNON.Box(new CANNON.Vec3(
+        Math.max(0.25, Math.abs(scale[0] ?? 1) * 0.5),
+        Math.max(0.5, Math.abs(scale[1] ?? 1) * 0.5),
+        Math.max(0.25, Math.abs(scale[2] ?? 1) * 0.5),
+      )));
+    }
     body.position.set(...entity.position);
     body.quaternion.setFromEuler(...(entity.rotation ?? [0, 0, 0]));
     world.addBody(body);
@@ -25,7 +40,7 @@ export class PhysicsWorld {
 
   addPlayer(id, position) {
     const body = new CANNON.Body({ mass: 1, fixedRotation: true });
-    body.addShape(new CANNON.Sphere(0.35));
+    addCapsule(body, [0.7, 1.4, 0.7]);
     body.position.set(...position);
     this.world.addBody(body);
     this.bodies.set(id, body);

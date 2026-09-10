@@ -135,6 +135,7 @@ export class Camera {
     azimuth = 0,
     elevation = 0.35,
     targetHeight = 0,
+    onChange = null,
   } = {}) {
     this.orbit = {
       target: transform,
@@ -142,20 +143,34 @@ export class Camera {
       azimuth,
       elevation,
       targetHeight,
+      onChange,
     };
   }
 
-  zoom(amount, { minDistance = 2, maxDistance = 14 } = {}) {
+  getOrbitSettings() {
+    if (!this.orbit) return null;
+    const {
+      target,
+      onChange,
+      ...settings
+    } = this.orbit;
+    return settings;
+  }
+
+  zoom(amount, { minDistance = 14, maxDistance = 20 } = {}) {
     if (!this.orbit) return;
-    this.orbit.distance = Math.min(
+    const distance = Math.min(
       maxDistance,
       Math.max(minDistance, this.orbit.distance + amount),
     );
+    if (distance === this.orbit.distance) return;
+    this.orbit.distance = distance;
+    this.orbit.onChange?.(this.getOrbitSettings());
   }
 
   rotateOrbit(deltaAzimuth, deltaElevation, {
     minElevation = -Math.PI / 2 + 2,
-    maxElevation = Math.PI / 2 - 0.5,
+    maxElevation = Math.PI / 2 - 0.35,
   } = {}) {
     if (!this.orbit) return;
     this.orbit.azimuth -= deltaAzimuth;
@@ -163,5 +178,6 @@ export class Camera {
       maxElevation,
       Math.max(minElevation, this.orbit.elevation + deltaElevation),
     );
+    this.orbit.onChange?.(this.getOrbitSettings());
   }
 }

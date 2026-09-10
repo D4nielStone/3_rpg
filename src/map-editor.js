@@ -20,7 +20,7 @@ function normalizeCollision(entity) {
   const collision = entity.collision ?? {};
   entity.collision = {
     enabled: collision.enabled === true,
-    shape: ['model', 'box', 'convex'].includes(collision.shape) ? collision.shape : 'box',
+    shape: ['model', 'box', 'convex', 'capsule'].includes(collision.shape) ? collision.shape : 'box',
   };
   return entity;
 }
@@ -190,6 +190,14 @@ function updateCollisionVisual(entity) {
       )), material);
       box.position.copy(bounds.getCenter(new THREE.Vector3()));
       group.add(box);
+    } else if (entity.collision.shape === 'capsule') {
+      const radius = Math.max(0.25, Math.min(bounds.max.x - bounds.min.x, bounds.max.z - bounds.min.z) * 0.5);
+      const height = Math.max(radius * 2, bounds.max.y - bounds.min.y);
+      const capsule = new THREE.LineSegments(new THREE.EdgesGeometry(
+        new THREE.CapsuleGeometry(radius, Math.max(0, height - radius * 2), 8, 16),
+      ), material);
+      capsule.position.copy(bounds.getCenter(new THREE.Vector3()));
+      group.add(capsule);
     } else {
       const points = [];
       entity.object.traverse((child) => {

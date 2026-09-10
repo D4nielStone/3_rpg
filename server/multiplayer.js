@@ -21,10 +21,21 @@ import {
 
 import { GameState } from './multiplayer/game-state.js';
 import { createRequestHandler } from './multiplayer/routes.js';
+import {
+  httpRateWindowMs,
+  httpRequestsPerWindow,
+  maxWebSocketConnections,
+  webSocketMaxPayload,
+} from './multiplayer/config.js';
+import { createRateLimiter } from './rate-limit.js';
 
 const gameState = new GameState();
 const logger = new ServerLogger();
 const playerStore = new PlayerStore();
+const allowHttpRequest = createRateLimiter({
+  limit: httpRequestsPerWindow,
+  windowMs: httpRateWindowMs,
+});
 
 let enemyAreas = createEnemyAreas();
 
@@ -33,6 +44,7 @@ const requestHandler = createRequestHandler({
   playerStore,
   logger,
   allowedOrigins,
+  allowRequest: (request) => allowHttpRequest(request.socket.remoteAddress ?? 'unknown'),
 
   onMapConfigChanged(mapConfig) {
     gameState.setMapConfig(mapConfig);
@@ -41,9 +53,13 @@ const requestHandler = createRequestHandler({
 });
 
 const server = createServer(requestHandler);
+server.requestTimeout = 15_000;
+server.headersTimeout = 10_000;
+server.keepAliveTimeout = 5_000;
 
 const socketServer = new WebSocketServer({
   server,
+  maxPayload: webSocketMaxPayload,
 });
 
 function findPlayerArea(position) {

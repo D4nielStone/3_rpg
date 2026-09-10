@@ -7,3 +7,8 @@ export const allowedOrigins = new Set([
   'http://localhost:5173',
   'http://127.0.0.1:5173',
 ]);
+
+export const maxWebSocketConnections = Number(process.env.MAX_WS_CONNECTIONS ?? 100);
+export const webSocketMaxPayload = Number(process.env.WS_MAX_PAYLOAD ?? 16 * 1024);
+export const httpRequestsPerWindow = Number(process.env.HTTP_RATE_LIMIT ?? 120);
+export const httpRateWindowMs = 60_000;

@@ -19,10 +19,19 @@ export function createRequestHandler({
   playerStore,
   logger,
   allowedOrigins,
+  allowRequest,
   onMapConfigChanged,
 }) {
   return async function handleRequest(request, response) {
     setCorsHeaders(request, response, allowedOrigins);
+
+    if (typeof allowRequest === 'function' && !allowRequest(request)) {
+      sendJson(response, 429, { error: 'Muitas requisicoes. Tente novamente em instantes.' }, {
+        'retry-after': '60',
+        connection: 'close',
+      });
+      return;
+    }
 
     if (request.method === 'OPTIONS') {
       response.writeHead(204);
