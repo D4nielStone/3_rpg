@@ -10,19 +10,7 @@ import {
 } from './components.js';
 
 export function addRemoteEnemy(world, enemyAssets, enemy) {
-  console.log('=== ADD REMOTE ENEMY ===');
-  console.log('enemy:', enemy);
-  console.log('enemy.model:', enemy?.model);
-  console.log('enemyAssets:', enemyAssets);
-  console.log('enemyAssets instanceof Map:', enemyAssets instanceof Map);
-
-  if (enemyAssets instanceof Map) {
-    console.log('Chaves disponíveis:', [...enemyAssets.keys()]);
-  }
-
   const asset = enemyAssets?.get(enemy?.model);
-
-  console.log('asset encontrado:', asset);
 
   if (!asset) {
     console.error(

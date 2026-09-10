@@ -1,6 +1,6 @@
 import { Material, MeshRenderer, Texture } from './components.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { AnimationMixer, Color, SkinnedMesh, Vector3 } from 'three';
+import { AnimationMixer, Color, Matrix3, SkinnedMesh, Vector3 } from 'three';
 
 function parseIndex(value, length) {
   const index = Number.parseInt(value, 10);
@@ -118,6 +118,7 @@ export async function loadGLTF(url, textureManager = null) {
   }
 
   const meshData = [];
+  const animatedMeshes = [];
   gltf.scene.updateMatrixWorld(true);
 
   for (const mesh of meshes) {
@@ -213,6 +214,13 @@ export async function loadGLTF(url, textureManager = null) {
       }),
     };
     meshData.push(submesh);
+    animatedMeshes.push({
+      mesh,
+      skinnedMesh,
+      positionAttribute,
+      baseNormals: new Float32Array(submesh.normals),
+      submesh,
+    });
   }
 
   if (!meshData.length || meshData.every((mesh) => mesh.vertices.length === 0 || mesh.indices.length === 0)) {
@@ -220,7 +228,35 @@ export async function loadGLTF(url, textureManager = null) {
   }
 
   const renderMesh = new MeshRenderer({ meshes: meshData });
-  const animationUpdate = () => { gltf.scene.updateMatrixWorld(true); };
+  const animationUpdate = () => {
+    gltf.scene.updateMatrixWorld(true);
+    const position = new Vector3();
+    const normalMatrix = new Matrix3();
+
+    for (const animatedMesh of animatedMeshes) {
+      const { mesh, skinnedMesh, positionAttribute, baseNormals, submesh } = animatedMesh;
+      normalMatrix.getNormalMatrix(mesh.matrixWorld);
+
+      for (let index = 0; index < positionAttribute.count; index += 1) {
+        position.fromBufferAttribute(positionAttribute, index);
+        if (skinnedMesh) skinnedMesh.getVertexPosition(index, position);
+        position.applyMatrix4(mesh.matrixWorld);
+        submesh.vertices[index * 3] = position.x;
+        submesh.vertices[index * 3 + 1] = position.y;
+        submesh.vertices[index * 3 + 2] = position.z;
+
+        const normal = new Vector3(
+          baseNormals[index * 3],
+          baseNormals[index * 3 + 1],
+          baseNormals[index * 3 + 2],
+        ).applyMatrix3(normalMatrix).normalize();
+        submesh.normals[index * 3] = normal.x;
+        submesh.normals[index * 3 + 1] = normal.y;
+        submesh.normals[index * 3 + 2] = normal.z;
+      }
+      submesh.dirty = true;
+    }
+  };
 
   return {
     mesh: renderMesh,

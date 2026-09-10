@@ -60,8 +60,11 @@ function createTerrain(world, terrain) {
   }));
 }
 
+/** Esta função cria as entidades do mundo com base na configuração fornecida. */
 async function createWorldEntities(world, config, textureManager) {
+  // Cria um mapa de assets para facilitar a busca por ID
   const assets = new Map((config.assets ?? []).map((asset) => [asset.id, asset]));
+  // Cria as entidades do mundo com base na configuração fornecida
   for (const definition of config.entities ?? []) {
     const asset = assets.get(definition.assetId);
     if (!asset?.url || asset.url.startsWith('blob:') || asset.url.startsWith('local:')) continue;
@@ -79,12 +82,20 @@ async function createWorldEntities(world, config, textureManager) {
       });
       world.addComponent(entity, loaded.mesh);
       if (loaded.texture) world.addComponent(entity, loaded.texture);
-      if (loaded.animations) {
-        world.addComponent(entity, new AnimationPlayer({
+      if (loaded.animations?.length) {
+        console.log(`Adicionando animações para a entidade ${entity}:`, loaded.animations.map(a => a.name));
+        let ap = world.addComponent(entity, new AnimationPlayer({
           animations: loaded.animations,
           mixer: loaded.animationMixer,
           onUpdate: loaded.animationUpdate,
         }));
+        for (const animation of loaded.animations) {
+          console.log(`Animação disponível: ${animation.name}`);
+          console.log(`Duração: ${animation.duration} segundos`);
+          console.log(`Número de quadros: ${animation.tracks.length}`);
+        }
+        // Se houver uma animação padrão definida, reproduza-a
+        ap.play(loaded.animations[0].name, {loop: true});
       }
     } catch {
       // Um asset ausente não deve impedir o carregamento do restante do mundo.

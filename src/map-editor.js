@@ -125,11 +125,16 @@ function renderEnemyAreaVisuals() {
     enemyAreaVisuals.add(outline);
   });
 }
+// Adiciona uma entidade à cena, normalizando seus dados e aplicando transformações e materiais.
 function addEntity(entity, object = null) {
   normalizeEntityTransform(entity);
   entity.object = object ?? new THREE.Group();
   normalizeEntityMaterials(entity);
-  entity.object.name = entity.name; markSelectable(entity.object, entity.id); applyEntityTransform(entity); applyEntityMaterials(entity); entityGroup.add(entity.object);
+  entity.object.name = entity.name;
+  markSelectable(entity.object, entity.id);
+  applyEntityTransform(entity);
+  applyEntityMaterials(entity);
+  entityGroup.add(entity.object);
   entities.push(entity); selectEntity(entity.id); renderEntities(); updateSummary();
 }
 function removeEntity(id) {
@@ -143,8 +148,18 @@ function selectEntity(id) {
   else { gizmos.detach(); selectedEntityLabel.textContent = 'Nenhuma'; }
   updateInspector(); renderEntities();
 }
-function syncSelectedFromObject() { const entity = selectedEntity(); if (!entity?.object) return; entity.position = normalizeVector(entity.object.position.toArray(), [0, 0, 0]); entity.rotation = normalizeVector([entity.object.rotation.x, entity.object.rotation.y, entity.object.rotation.z], [0, 0, 0]); entity.scale = normalizeVector(entity.object.scale.toArray(), [1, 1, 1]); }
-function createEntity(name = 'Entidade vazia', assetId = null) { return { id: newId('entity'), name, assetId, position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1], materials: [], object: null }; }
+function syncSelectedFromObject() {
+  const entity = selectedEntity();
+  if (!entity?.object) return;
+  entity.position = normalizeVector(entity.object.position.toArray(), [0, 0, 0]);
+  entity.rotation = normalizeVector([entity.object.rotation.x, entity.object.rotation.y, entity.object.rotation.z], [0, 0, 0]); entity.scale = normalizeVector(entity.object.scale.toArray(), [1, 1, 1]);
+}
+function createEntity(name = 'Entidade vazia', assetId = null) {
+  return {
+    id: newId('entity'), name, assetId, position: [0, 0, 0],
+    rotation: [0, 0, 0], scale: [1, 1, 1], materials: [], object: null
+  };
+}
 function renderEntities() {
   entityList.replaceChildren(...entities.map((entity) => { const button = document.createElement('button'); button.className = `entity-item${entity.id === selectedEntityId ? ' entity-item-selected' : ''}`; button.type = 'button'; button.innerHTML = `<span class="asset-icon">${entity.assetId ? '◆' : '○'}</span><span>${entity.name}</span>`; button.addEventListener('click', () => selectEntity(entity.id)); return button; }));
   document.querySelector('#entity-count').textContent = String(entities.length);
@@ -244,15 +259,32 @@ async function instantiateAsset(asset) { try { setStatus(`Carregando ${asset.nam
 async function registerAsset(url, name, source = url, format = assetFormat(name), dependencies = null) { const asset = { id: newId('asset'), name, url, source, format, dependencies }; assets.push(asset); renderAssets(); updateSummary(); await instantiateAsset(asset); }
 function download() { const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(exportConfig(), null, 2)], { type: 'application/json' })); link.download = 'main-world.world'; link.click(); URL.revokeObjectURL(link.href); setStatus('Cena .world exportada'); }
 async function applyToGame() { const config = exportConfig(); const response = await fetch(`${httpUrl}/api/map-config`, { method: 'PUT', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify(config) }).catch(() => null); if (!response?.ok) { const result = await response?.json().catch(() => null); setStatus(result?.error ?? 'Não foi possível aplicar o mundo no servidor'); return; } saveMapConfig(config); setStatus('Mundo aplicado no jogo'); }
+// Carrega o mundo a partir de uma configuração JSON, normalizando os dados e atualizando a cena.
 async function loadWorld(config) {
-  normalizeSkyColor(config?.scene?.skyColor); updateSkyColor(); normalizeLighting(config?.lighting); updateLightingInspector(); assets = []; entities = []; enemyAreas = (Array.isArray(config?.enemyAreas) ? config.enemyAreas : []).map((area) => normalizeEnemyArea({ ...area })); entityGroup.clear(); selectedEntityId = null; selectedEnemyAreaId = null;
+  normalizeSkyColor(config?.scene?.skyColor);
+  updateSkyColor();
+  normalizeLighting(config?.lighting); 
+  updateLightingInspector(); assets = []; entities = []; enemyAreas = (Array.isArray(config?.enemyAreas) ? config.enemyAreas : []).map((area) => normalizeEnemyArea({ ...area })); entityGroup.clear(); selectedEntityId = null; selectedEnemyAreaId = null;
   for (const asset of config?.assets ?? []) { if (asset.url && !asset.url.startsWith('blob:')) assets.push({ ...asset, format: asset.format ?? assetFormat(asset.name ?? asset.url) }); }
   renderAssets();
   renderEnemyAreas();
-  for (const definition of config?.entities ?? []) { const asset = assets.find((item) => item.id === definition.assetId); if (asset) await instantiateAsset({ ...asset, _definition: definition }); else { const entity = { ...definition, object: null }; addEntity(entity); } }
-  selectEntity(null); updateSummary();
+  for (const definition of config?.entities ?? []) { 
+    const asset = assets.find((item) => item.id === definition.assetId); 
+    if (asset) await instantiateAsset({ ...asset, _definition: definition }); 
+    else { const entity = { ...definition, object: null }; 
+    addEntity(entity); } 
+  }
+  selectEntity(null); 
+  updateSummary();
 }
-async function loadSavedWorld() { const response = await fetch(`${httpUrl}/api/map-config`, { credentials: 'include' }).catch(() => null); const remoteConfig = response?.ok ? await response.json() : null; await loadWorld(remoteConfig?.entities ? remoteConfig : readSavedMapConfig()); }
+// Carrega o mundo salvo do servidor ou do armazenamento local.
+async function loadSavedWorld() { 
+  const response = await fetch(`${httpUrl}/api/map-config`, { 
+    credentials: 'include' 
+  }).catch(() => null); 
+  const remoteConfig = response?.ok ? await response.json() : null; 
+  await loadWorld(remoteConfig?.entities ? remoteConfig : readSavedMapConfig()); 
+}
 
 document.querySelectorAll('.mode-button').forEach((button) => button.addEventListener('click', () => setMode(button.dataset.mode)));
 document.querySelector('#model-file').addEventListener('change', async (event) => { const files = [...event.target.files]; const model = files.find((file) => /\.(glb|gltf|obj)$/i.test(file.name)); if (!model) return; try { const dependencies = Object.fromEntries(await Promise.all(files.filter((file) => file !== model).map(async (file) => [file.name, await readFileAsDataUrl(file)]))); const url = await readFileAsDataUrl(model); await registerAsset(url, model.name, `local:${model.name}`, assetFormat(model.name), dependencies); } catch (error) { setStatus(`Falha ao ler ${model.name}: ${error.message}`); } event.target.value = ''; });

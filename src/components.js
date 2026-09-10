@@ -24,6 +24,7 @@ export class AnimationPlayer {
     if (firstAnimation !== undefined) this.play(firstAnimation);
   }
 
+  /** @brief Plays an animation by name. */
   play(name, { loop = true, reset = true } = {}) {
     const animation = this.animations[name];
     if (!animation) return false;

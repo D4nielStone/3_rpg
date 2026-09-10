@@ -2,7 +2,7 @@ import { Camera } from './camera.js';
 import { World } from './ecs.js';
 
 import { 
-  LineSystem,
+  PlayerPathSystem,
   AnimationSystem,
   MovementSystem,
   NetworkInterpolationSystem,
@@ -358,8 +358,8 @@ export function createGame(canvas, status, mapConfig = null) {
     networkInterpolationSystem:
       new NetworkInterpolationSystem(),
 
-    lineSystem:
-      new LineSystem(
+    PlayerPathSystem:
+      new PlayerPathSystem(
         canvas,
         camera
       ),

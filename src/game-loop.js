@@ -5,7 +5,7 @@ export function startGameLoop({
   animationSystem,
   networkInterpolationSystem,
   multiplayerSystem,
-  lineSystem,
+  PlayerPathSystem,
   nameTagSystem,
   enemyHoverSystem,
   renderSystem,
@@ -24,7 +24,7 @@ export function startGameLoop({
     movementSystem.update(world, deltaSeconds);
     multiplayerSystem.update(world, time);
     networkInterpolationSystem.update(world, deltaSeconds);
-    lineSystem.update(world, time);
+    PlayerPathSystem.update(world, time);
     nameTagSystem.update(world);
     enemyHoverSystem.update(world);
     renderSystem.render(world, time);

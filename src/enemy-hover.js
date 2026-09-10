@@ -1,5 +1,6 @@
 import { OutlineRenderer, Transform } from './components.js';
 
+// Sistema de detecção de mouse-hover no inimigo.
 export class EnemyHoverSystem {
   constructor(canvas, camera, onSelect = () => {}) {
     this.canvas = canvas;
@@ -27,6 +28,7 @@ export class EnemyHoverSystem {
 
     const closestEntity = this.findClosestEntity(world, pointerPosition);
 
+    // Verifica se o click pegou no inimigo
     if (this.pendingClick) {
       const [x, y] = this.pendingClick;
       const clickPosition = this.camera.screenToGround(x, y, this.canvas);

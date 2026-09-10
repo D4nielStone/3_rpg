@@ -1,3 +1,5 @@
+/** @brief Os sistemas são executados no gameloop. */
+
 import {
   multiplyMatrices,
   rotationX,
@@ -71,7 +73,7 @@ export class MovementSystem {
       const controller = world.getComponent(entity, PlayerController);
       const moveTarget = world.getComponent(entity, MoveTarget);
       if (this.input.consumePressed(' ')) {
-        // Space cancela o destino; o LineSystem remove o marcador no mesmo frame.
+        // Space cancela o destino; o PlayerPathSystem remove o marcador no mesmo frame.
         moveTarget.position = null;
         continue;
       }
@@ -98,7 +100,8 @@ export class MovementSystem {
   }
 }
 
-export class LineSystem {
+// Desenha o caminho que o player irá seguir
+export class PlayerPathSystem {
   constructor(canvas, camera) {
     this.canvas = canvas;
     this.camera = camera;
