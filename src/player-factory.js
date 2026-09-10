@@ -90,13 +90,24 @@ export async function loadPlayer(world, textureManager, definition = {}, assetDe
   }));
   const animationPlayer = world.getComponent(entity, AnimationPlayer);
   if (definition.animation?.name) animationPlayer.play(definition.animation.name, { loop: definition.animation.loop !== false });
-  const hasMaterialTexture = asset.mesh?.meshes?.some((mesh) => mesh.material?.texture);
-  if (asset.texture || !hasMaterialTexture) {
-    world.addComponent(entity, asset.texture ?? new Texture({
-      image: createPatternTexture(),
-      name: 'fallback-texture',
-    }));
+  for (const [index, materialDefinition] of (definition.materials ?? []).entries()) {
+    const material = asset.mesh?.meshes?.[index]?.material;
+    if (!material || !materialDefinition) continue;
+    if (Array.isArray(materialDefinition.diffuseColor)) material.diffuseColor = [...materialDefinition.diffuseColor];
+    if (materialDefinition.texture) {
+      material.texture = new Texture({
+        image: await new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = reject;
+          image.src = materialDefinition.texture;
+        }),
+        name: `player-material-${index}`,
+      });
+      material.texture.glTexture = textureManager.ensure(material.texture.image, material.texture.name);
+    }
   }
+  if (asset.texture) world.addComponent(entity, asset.texture);
   return entity;
 }
 

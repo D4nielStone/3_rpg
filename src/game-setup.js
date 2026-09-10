@@ -29,6 +29,7 @@ const vertexShaderSource = `
 
   varying vec3 color;
   varying vec3 vWorldNormal;
+  varying vec3 vWorldPosition;
   varying vec2 vUv;
 
   uniform float isWater;
@@ -49,6 +50,7 @@ const vertexShaderSource = `
     vWorldNormal = normalize(
       (modelMatrix * vec4(normal, 0.0)).xyz
     );
+    vWorldPosition = (modelMatrix * vec4(animatedPosition, 1.0)).xyz;
 
     vUv = uv;
   }
@@ -59,6 +61,7 @@ const fragmentShaderSource = `
 
   varying vec3 color;
   varying vec3 vWorldNormal;
+  varying vec3 vWorldPosition;
   varying vec2 vUv;
 
   uniform sampler2D uTexture;
@@ -69,6 +72,15 @@ const fragmentShaderSource = `
   uniform vec3 ambientColor;
   uniform float ambientIntensity;
   uniform vec3 diffuseColor;
+  uniform vec3 directionalLightDirection;
+  uniform vec3 directionalLightColor;
+  uniform float directionalLightIntensity;
+  const int MAX_POINT_LIGHTS = 8;
+  uniform vec3 pointLightPositions[MAX_POINT_LIGHTS];
+  uniform vec3 pointLightColors[MAX_POINT_LIGHTS];
+  uniform float pointLightIntensities[MAX_POINT_LIGHTS];
+  uniform float pointLightDistances[MAX_POINT_LIGHTS];
+  uniform int pointLightCount;
   uniform float isShadow;
   uniform float isEnemyArea;
 
@@ -83,6 +95,7 @@ const fragmentShaderSource = `
       finalColor = vec3(0.015, 0.06, 0.16);
       alpha = 0.24;
     } else {
+      vec3 baseColor;
       if (isWater > 0.5) {
         vec2 movingUv = vUv +
           vec2(
@@ -100,21 +113,31 @@ const fragmentShaderSource = `
           bands
         );
 
-        finalColor = mix(
+        baseColor = mix(
           vec3(0.035, 0.28, 0.55),
           vec3(0.12, 0.68, 0.82),
           highlights
         );
-
-        finalColor *= ambientColor * ambientIntensity;
       } else {
-        vec3 baseColor =
+        baseColor =
           useTexture > 0.5
             ? texture2D(uTexture, vUv).rgb
             : color;
-
-        finalColor = baseColor * diffuseColor * ambientColor * ambientIntensity;
       }
+
+      vec3 normal = normalize(vWorldNormal);
+      float directionalDiffuse = max(dot(normal, normalize(directionalLightDirection)), 0.0);
+      vec3 light = ambientColor * ambientIntensity;
+      light += directionalLightColor * directionalDiffuse * directionalLightIntensity;
+      for (int index = 0; index < MAX_POINT_LIGHTS; index++) {
+        if (index >= pointLightCount) break;
+        vec3 pointVector = pointLightPositions[index] - vWorldPosition;
+        float pointDistance = length(pointVector);
+        float pointDiffuse = max(dot(normal, normalize(pointVector)), 0.0);
+        float attenuation = 1.0 / (1.0 + pointDistance / max(pointLightDistances[index], 0.001));
+        light += pointLightColors[index] * pointDiffuse * pointLightIntensities[index] * attenuation;
+      }
+      finalColor = baseColor * diffuseColor * light;
     }
 
     gl_FragColor = vec4(finalColor, alpha);
@@ -183,6 +206,18 @@ export function createGame(canvas, status, mapConfig = null) {
   const world = new World();
   const textureManager = new TextureManager(gl);
   customizeMap(world, mapConfig, textureManager);
+  const pointLights = (mapConfig?.entities ?? [])
+    .filter((entity) => entity.type === 'pointLight')
+    .map((entity) => ({
+      position: entity.position,
+      color: entity.light?.color,
+      intensity: entity.light?.intensity,
+      distance: entity.light?.distance,
+    }));
+  const lighting = {
+    ...(mapConfig?.lighting ?? {}),
+    pointLights: pointLights.length ? pointLights : undefined,
+  };
   const input = new InputState();
 
   // Event listener
@@ -288,6 +323,46 @@ export function createGame(canvas, status, mapConfig = null) {
       'ambientIntensity'
     ),
 
+    directionalLightDirection: gl.getUniformLocation(
+      program,
+      'directionalLightDirection'
+    ),
+
+    directionalLightColor: gl.getUniformLocation(
+      program,
+      'directionalLightColor'
+    ),
+
+    directionalLightIntensity: gl.getUniformLocation(
+      program,
+      'directionalLightIntensity'
+    ),
+
+    pointLightPositions: gl.getUniformLocation(
+      program,
+      'pointLightPositions[0]'
+    ),
+
+    pointLightColors: gl.getUniformLocation(
+      program,
+      'pointLightColors[0]'
+    ),
+
+    pointLightIntensities: gl.getUniformLocation(
+      program,
+      'pointLightIntensities[0]'
+    ),
+
+    pointLightDistances: gl.getUniformLocation(
+      program,
+      'pointLightDistances[0]'
+    ),
+
+    pointLightCount: gl.getUniformLocation(
+      program,
+      'pointLightCount'
+    ),
+
     diffuseColor: gl.getUniformLocation(
       program,
       'diffuseColor'
@@ -382,7 +457,7 @@ export function createGame(canvas, status, mapConfig = null) {
         program,
         locations,
         camera,
-        mapConfig?.lighting
+        lighting
       ),
   };
 }

@@ -20,6 +20,77 @@ const TERRAIN_COLORS = {
   enemy: [0.435, 0.357, 0.192],
 };
 
+function createPrimitiveMesh(type) {
+  const positions = [];
+  const normals = [];
+  const uvs = [];
+  const indices = [];
+  const segments = 24;
+  const addVertex = (position, normal, uv) => {
+    positions.push(...position);
+    normals.push(...normal);
+    uvs.push(...uv);
+    return positions.length / 3 - 1;
+  };
+  const addQuad = (a, b, c, d) => indices.push(a, b, c, a, c, d);
+  const addBox = () => {
+    const faces = [
+      [[0, 0, 1], [[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]]],
+      [[0, 0, -1], [[0.5, -0.5, -0.5], [-0.5, -0.5, -0.5], [-0.5, 0.5, -0.5], [0.5, 0.5, -0.5]]],
+      [[1, 0, 0], [[0.5, -0.5, 0.5], [0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5]]],
+      [[-1, 0, 0], [[-0.5, -0.5, -0.5], [-0.5, -0.5, 0.5], [-0.5, 0.5, 0.5], [-0.5, 0.5, -0.5]]],
+      [[0, 1, 0], [[-0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [0.5, 0.5, -0.5], [-0.5, 0.5, -0.5]]],
+      [[0, -1, 0], [[-0.5, -0.5, -0.5], [0.5, -0.5, -0.5], [0.5, -0.5, 0.5], [-0.5, -0.5, 0.5]]],
+    ];
+    faces.forEach(([normal, corners]) => {
+      const first = corners.map((corner, index) => addVertex(corner, normal, [index === 1 || index === 2 ? 1 : 0, index >= 2 ? 1 : 0]));
+      addQuad(...first);
+    });
+  };
+  if (type === 'box') addBox();
+  else if (type === 'plane') {
+    const first = [[-0.5, 0, -0.5], [0.5, 0, -0.5], [0.5, 0, 0.5], [-0.5, 0, 0.5]].map((corner, index) => addVertex(corner, [0, 1, 0], [index === 1 || index === 2 ? 1 : 0, index >= 2 ? 1 : 0]));
+    addQuad(...first);
+  } else {
+    const isCone = type === 'cone';
+    const isCapsule = type === 'capsule';
+    const rings = isCapsule ? 10 : 1;
+    const ringIndices = [];
+    for (let ring = 0; ring <= rings; ring += 1) {
+      const t = ring / rings;
+      const y = isCapsule ? -0.5 + t : -0.5 + t;
+      const radius = isCone ? 0.5 * (1 - t) : 0.5;
+      ringIndices.push(Array.from({ length: segments }, (_, index) => {
+        const angle = index / segments * Math.PI * 2;
+        return addVertex([Math.cos(angle) * radius, y, Math.sin(angle) * radius], [Math.cos(angle), isCone ? 0.5 : 0, Math.sin(angle)], [index / segments, t]);
+      }));
+    }
+    for (let ring = 0; ring < rings; ring += 1) for (let index = 0; index < segments; index += 1) {
+      const next = (index + 1) % segments;
+      addQuad(ringIndices[ring][index], ringIndices[ring][next], ringIndices[ring + 1][next], ringIndices[ring + 1][index]);
+    }
+    if (!isCapsule) {
+      const bottom = addVertex([0, -0.5, 0], [0, -1, 0], [0.5, 0.5]);
+      const top = addVertex([0, 0.5, 0], [0, 1, 0], [0.5, 0.5]);
+      for (let index = 0; index < segments; index += 1) {
+        const next = (index + 1) % segments;
+        indices.push(bottom, ringIndices[0][next], ringIndices[0][index], top, ringIndices[rings][index], ringIndices[rings][next]);
+      }
+    }
+  }
+  if (!positions.length) return null;
+  return new MeshRenderer({
+    meshes: [{
+      vertices: new Float32Array(positions),
+      colors: new Float32Array(Array.from({ length: positions.length }, () => 1)),
+      normals: new Float32Array(normals),
+      uvs: new Float32Array(uvs),
+      indices: new Uint16Array(indices),
+      material: { diffuseColor: [0.49, 0.71, 1], texture: null },
+    }],
+  });
+}
+
 function createTerrain(world, terrain) {
   const columns = Number(terrain?.columns);
   const rows = Number(terrain?.rows);
@@ -66,6 +137,21 @@ async function createWorldEntities(world, config, textureManager) {
   const assets = new Map((config.assets ?? []).map((asset) => [asset.id, asset]));
   // Cria as entidades do mundo com base na configuração fornecida
   for (const definition of config.entities ?? []) {
+    if (definition.primitive) {
+      const mesh = createPrimitiveMesh(definition.primitive);
+      if (!mesh) continue;
+      const entity = world.createEntity();
+      world.addComponent(entity, new Transform({
+        position: definition.position,
+        rotation: definition.rotation,
+        scale: definition.scale,
+      }));
+      const material = mesh.meshes[0]?.material;
+      const configuredMaterial = definition.materials?.[0]?.diffuseColor;
+      if (Array.isArray(configuredMaterial)) material.diffuseColor = [...configuredMaterial];
+      world.addComponent(entity, mesh);
+      continue;
+    }
     const asset = assets.get(definition.assetId);
     if (!asset?.url || asset.url.startsWith('blob:') || asset.url.startsWith('local:')) continue;
     try {

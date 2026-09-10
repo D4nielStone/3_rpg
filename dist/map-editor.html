@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>World Editor | WebRPG</title>
-  <script type="module" crossorigin src="/assets/mapEditor-IqEtlIU-.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/map-config-BzYgIqWE.js">
-  <link rel="stylesheet" crossorigin href="/assets/mapEditor-DDGiKrxC.css">
+  <script type="module" crossorigin src="/assets/mapEditor-BgXHlkuv.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/map-config-CbNgp5L2.js">
+  <link rel="stylesheet" crossorigin href="/assets/mapEditor-w_X3FXCb.css">
 </head>
 <body>
   <main class="editor-shell">
@@ -61,7 +61,6 @@
           <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="areas">Áreas</button>
           <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="entity-inspector">Inspector</button>
           <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="scene-settings">Config</button>
-          <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="player-settings">Player</button>
           <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="world-json">JSON</button>
         </nav>
         <div class="panel-section inspector-tab-panel panel-section-active" data-inspector-panel="scene-tree">
@@ -71,6 +70,16 @@
         <div class="panel-section inspector-tab-panel" data-inspector-panel="entities">
           <div class="section-heading"><h2>Entidades</h2><span id="entity-count">0</span></div>
           <button id="create-empty-button" class="secondary-button full-button" type="button">+ Entidade vazia</button>
+          <div class="transform-heading"><strong>Primitivas</strong><span>3D</span></div>
+          <div class="primitive-grid" role="group" aria-label="Adicionar primitiva">
+            <button class="secondary-button" data-primitive="box" type="button">Cubo</button>
+            <button class="secondary-button" data-primitive="sphere" type="button">Esfera</button>
+            <button class="secondary-button" data-primitive="cylinder" type="button">Cilindro</button>
+            <button class="secondary-button" data-primitive="cone" type="button">Cone</button>
+            <button class="secondary-button" data-primitive="capsule" type="button">Cápsula</button>
+            <button class="secondary-button" data-primitive="plane" type="button">Plano</button>
+            <button class="secondary-button" id="create-point-light-button" type="button">Luz pontual</button>
+          </div>
           <div id="entity-list" class="entity-list" aria-label="Entidades da cena"></div>
         </div>
         <div class="panel-section inspector-tab-panel" data-inspector-panel="areas">
@@ -116,6 +125,22 @@
           <div id="empty-inspector" class="empty-inspector">Selecione uma entidade na cena ou na hierarquia.</div>
           <div id="entity-inspector" hidden>
             <label for="entity-name">Nome</label><input id="entity-name" type="text" />
+            <div id="player-preview-inspector" hidden>
+              <div class="transform-heading"><strong>Player</strong><span>componentes</span></div>
+              <label for="player-asset">Asset do modelo</label><select id="player-asset"><option value="">Modelo padrão</option></select>
+              <label for="player-model-format">Formato</label><select id="player-model-format"><option value="glb">GLB</option><option value="gltf">glTF</option><option value="obj">OBJ</option></select>
+              <label for="player-speed">Velocidade inicial</label><input id="player-speed" type="number" min="0" step="0.1" />
+              <label for="player-animation">Animação</label><input id="player-animation" type="text" placeholder="nome do clip" />
+              <label for="player-status">Status iniciais (JSON)</label><textarea id="player-status" rows="3"></textarea>
+              <label for="player-inventory">Itens iniciais (JSON)</label><textarea id="player-inventory" rows="3"></textarea>
+            </div>
+            <div id="point-light-inspector" hidden>
+              <label for="entity-light-color">Cor da luz</label><input id="entity-light-color" type="color" value="#ffb873" />
+              <label for="entity-light-intensity">Intensidade <output id="entity-light-intensity-value">2.00</output></label>
+              <input id="entity-light-intensity" type="range" min="0" max="10" value="2" step="0.01" />
+              <label for="entity-light-distance">Alcance <output id="entity-light-distance-value">18.00</output></label>
+              <input id="entity-light-distance" type="range" min="0.1" max="200" value="18" step="0.1" />
+            </div>
             <nav class="component-tabs" role="tablist" aria-label="Componentes da entidade">
               <button class="component-tab component-tab-active" type="button" role="tab" aria-selected="true" data-component-tab="transform">Transform</button>
               <button class="component-tab" type="button" role="tab" aria-selected="false" data-component-tab="mesh">MeshRenderer</button>
@@ -145,6 +170,7 @@
               <div class="transform-heading"><strong>Meshes</strong><span id="mesh-count">0</span></div>
               <div id="mesh-list" class="mesh-list" aria-label="Meshes do objeto"></div>
               <label for="entity-diffuse-color">Cor difusa</label><input id="entity-diffuse-color" type="color" value="#ffffff" />
+              <label for="entity-texture-file">Textura</label><input id="entity-texture-file" type="file" accept="image/*" />
             </div>
             <div id="animation-controls" class="component-panel" data-component-panel="animation" hidden>
               <div class="transform-heading"><strong>Animação</strong><span>AnimationPlayer</span></div>
@@ -158,6 +184,7 @@
               <label for="animation-speed">Velocidade <output id="animation-speed-value">1.00x</output></label>
               <input id="animation-speed" type="range" min="0" max="3" value="1" step="0.05" />
             </div>
+            <button id="duplicate-entity-button" class="secondary-button full-button" type="button">Duplicar entidade</button>
             <button id="delete-entity-button" class="danger-button full-button" type="button">Excluir entidade</button>
           </div>
         </div>
@@ -169,21 +196,10 @@
           <label for="ambient-color">Cor</label><input id="ambient-color" type="color" value="#ffffff" />
           <label for="ambient-intensity">Intensidade <output id="ambient-intensity-value">1.00</output></label>
           <input id="ambient-intensity" type="range" min="0" max="2" value="1" step="0.01" />
+          <div class="transform-heading"><strong>Luz direcional</strong><span>principal</span></div>
+          <label for="directional-intensity">Intensidade <output id="directional-intensity-value">0.80</output></label>
+          <input id="directional-intensity" type="range" min="0" max="4" value="0.8" step="0.01" />
           <dl class="map-summary"><div><dt>Entidades</dt><dd id="entity-summary-count">0</dd></div></dl>
-        </div>
-        <div class="panel-section inspector-tab-panel scene-section" data-inspector-panel="player-settings">
-          <h2>Player (entidade)</h2>
-          <label for="player-asset">Asset do modelo</label><select id="player-asset"><option value="">Modelo padrão</option></select>
-          <label for="player-model-format">Formato</label><select id="player-model-format"><option value="glb">GLB</option><option value="gltf">glTF</option><option value="obj">OBJ</option></select>
-          <label for="player-position">Posição [x,y,z]</label><input id="player-position" type="text" />
-          <label for="player-rotation">Rotação [x,y,z]</label><input id="player-rotation" type="text" />
-          <label for="player-scale">Escala [x,y,z]</label><input id="player-scale" type="text" />
-          <label for="player-speed">Velocidade inicial</label><input id="player-speed" type="number" min="0" step="0.1" />
-          <label for="player-animation">Animação</label><input id="player-animation" type="text" placeholder="nome do clip" />
-          <label for="player-status">Status iniciais (JSON)</label><textarea id="player-status" rows="3"></textarea>
-          <label for="player-inventory">Itens iniciais (JSON)</label><textarea id="player-inventory" rows="3"></textarea>
-          <label class="check-row"><input id="player-collision-enabled" type="checkbox" /> Ativar colisão</label>
-          <label for="player-collision-shape">Colisão</label><select id="player-collision-shape"><option value="model">Modelo</option><option value="box">Caixa</option><option value="convex">Convexa</option><option value="capsule">Cápsula</option></select>
         </div>
         <div class="panel-section inspector-tab-panel export-preview" data-inspector-panel="world-json"><h2>World JSON</h2><pre id="json-preview">{}</pre></div>
       </aside>

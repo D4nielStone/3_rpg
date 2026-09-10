@@ -22,7 +22,14 @@ h1, h2, p { margin-top: 0; } h1 { margin-bottom: 0; font-size: 1.65rem; letter-s
 .inspector-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: .25rem; margin: 0 0 .75rem; padding-right: 2.5rem; } .inspector-tab { min-height: 1.9rem; padding: 0 .35rem; color: var(--muted); background: transparent; font-size: .62rem; } .inspector-tab-active { border-color: var(--accent); color: var(--accent); background: var(--panel-soft); } .inspector-tab-panel { display: none; } .inspector-tab-panel.panel-section-active { display: block; }
 .panel-section { padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); } .panel-section:last-child { border-bottom: 0; }
 .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: .4rem; } .section-heading span { color: var(--accent); font: .65rem 'DM Mono', monospace; }
-.asset-url-row { display: grid; grid-template-columns: 1fr 2rem; gap: .35rem; margin-top: .45rem; } input { min-width: 0; border: 1px solid var(--line); color: var(--text); background: #0d100f; } input[type='text'], input[type='url'], input[type='number'] { width: 100%; min-height: 2rem; padding: .35rem .45rem; font-size: .7rem; }
+.asset-url-row { display: grid; grid-template-columns: 1fr 2rem; gap: .35rem; margin-top: .45rem; } input { min-width: 0; border: 1px solid var(--line); color: var(--text); background: #0d100f; } input[type='text'], input[type='url'], input[type='number'] { width: 100%;
+}
+
+.primitive-grid {
+display: grid;
+grid-template-columns: repeat(2, minmax(0, 1fr));
+gap: 0.45rem;
+margin-bottom: 0.8rem; min-height: 2rem; padding: .35rem .45rem; font-size: .7rem; }
 .panel-note, .stage-hint, .empty-inspector { color: var(--muted); font-size: .66rem; line-height: 1.45; }
 .asset-list, .entity-list { display: grid; gap: .35rem; margin-top: .65rem; } .asset-item, .entity-item { display: flex; align-items: center; gap: .4rem; padding: .35rem; border: 1px solid transparent; color: var(--muted); font-size: .68rem; text-align: left; }
 .asset-add { display: flex; align-items: center; gap: .4rem; min-width: 0; flex: 1; padding: .1rem; border: 0; color: inherit; background: transparent; text-align: left; } .asset-add:hover { border: 0; background: transparent; } .asset-remove { width: 1.7rem; height: 1.7rem; flex: 0 0 auto; color: var(--danger); background: transparent; }

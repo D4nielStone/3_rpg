@@ -35,6 +35,8 @@ const entityInspector = document.querySelector('#entity-inspector');
 const emptyInspector = document.querySelector('#empty-inspector');
 const selectedEntityLabel = document.querySelector('#selected-entity-label');
 const entityDiffuseColorInput = document.querySelector('#entity-diffuse-color');
+const entityTextureFileInput = document.querySelector('#entity-texture-file');
+const playerPreviewInspector = document.querySelector('#player-preview-inspector');
 const meshList = document.querySelector('#mesh-list');
 const meshCount = document.querySelector('#mesh-count');
 const animationControls = document.querySelector('#animation-controls');
@@ -51,6 +53,14 @@ const sceneTree = document.querySelector('#scene-tree');
 const ambientColorInput = document.querySelector('#ambient-color');
 const ambientIntensityInput = document.querySelector('#ambient-intensity');
 const ambientIntensityValue = document.querySelector('#ambient-intensity-value');
+const directionalIntensityInput = document.querySelector('#directional-intensity');
+const directionalIntensityValue = document.querySelector('#directional-intensity-value');
+const pointLightInspector = document.querySelector('#point-light-inspector');
+const entityLightColorInput = document.querySelector('#entity-light-color');
+const entityLightIntensityInput = document.querySelector('#entity-light-intensity');
+const entityLightIntensityValue = document.querySelector('#entity-light-intensity-value');
+const entityLightDistanceInput = document.querySelector('#entity-light-distance');
+const entityLightDistanceValue = document.querySelector('#entity-light-distance-value');
 const skyColorInput = document.querySelector('#sky-color');
 const panelToggles = [
   ['assets-toggle', 'assets-panel'],
@@ -63,17 +73,24 @@ let entities = [];
 let assets = [];
 let enemyAreas = [];
 let enemyTypes = [];
-let lighting = { ambientColor: [1, 1, 1], ambientIntensity: 1 };
+let lighting = {
+  ambientColor: [1, 1, 1],
+  ambientIntensity: 1,
+  directional: { direction: [-0.45, 0.85, 0.35], color: [1, 0.95, 0.85], intensity: 0.8 },
+  point: { position: [0, 8, 0], color: [1, 0.72, 0.45], intensity: 2, distance: 18 },
+};
 let skyColor = [0.039, 0.051, 0.047];
 let player = {
   model: '', modelFormat: 'glb',
   position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1], speed: 3,
+  materials: [],
   status: { level: 1, hp: 20, mana: 20, xp: 0, strength: 1, accuracy: 1, magic: 1, money: 0 },
   inventory: [], collision: { enabled: false, shape: 'model' }, animation: { name: '', loop: true, speed: 1 },
 };
 let selectedEntityId = null;
 let selectedEnemyAreaId = null;
 let selectedMaterialIndex = 0;
+let playerPreview = null;
 let nextId = 1;
 const history = [];
 const future = [];
@@ -90,6 +107,14 @@ function normalizeEntityAnimation(entity) {
     speed: Math.max(0, Number(entity.animation?.speed ?? 1) || 0),
     loop: entity.animation?.loop !== false,
     playing: entity.animation?.playing !== false,
+  };
+  return entity;
+}
+function normalizePointLight(entity) {
+  entity.light = {
+    color: normalizeColor(entity.light?.color, [1, 0.72, 0.45]),
+    intensity: Math.min(10, Math.max(0, Number(entity.light?.intensity ?? 2) || 0)),
+    distance: Math.min(200, Math.max(0.1, Number(entity.light?.distance ?? 18) || 18)),
   };
   return entity;
 }
@@ -112,12 +137,45 @@ function normalizeEnemyType(type, index = 0) {
   type.itemDrops = Array.isArray(type.itemDrops) ? type.itemDrops : [];
   return type;
 }
-function normalizeLighting(value = {}) { lighting = { ambientColor: normalizeVector(value.ambientColor, [1, 1, 1]).map((channel) => Math.min(1, Math.max(0, channel))), ambientIntensity: Math.min(2, Math.max(0, Number(value.ambientIntensity ?? 1) || 0)) }; return lighting; }
+function normalizeLighting(value = {}) {
+  const normalizeLight = (light, defaults, maxIntensity) => {
+    const normalized = {
+      ...defaults,
+      ...light,
+      color: normalizeColor(light?.color, defaults.color),
+      intensity: Math.min(maxIntensity, Math.max(0, Number(light?.intensity ?? defaults.intensity) || 0)),
+    };
+    if (defaults.direction) normalized.direction = normalizeVector(light?.direction, defaults.direction);
+    if (defaults.position) normalized.position = normalizeVector(light?.position, defaults.position);
+    if (defaults.distance) normalized.distance = Math.min(200, Math.max(0.1, Number(light?.distance ?? defaults.distance) || defaults.distance));
+    return normalized;
+  };
+  lighting = {
+    ambientColor: normalizeVector(value.ambientColor, [1, 1, 1]).map((channel) => Math.min(1, Math.max(0, channel))),
+    ambientIntensity: Math.min(2, Math.max(0, Number(value.ambientIntensity ?? 1) || 0)),
+    directional: normalizeLight(value.directional, { direction: [-0.45, 0.85, 0.35], color: [1, 0.95, 0.85], intensity: 0.8 }, 4),
+    point: normalizeLight(value.point, { position: [0, 8, 0], color: [1, 0.72, 0.45], intensity: 2, distance: 18 }, 10),
+  };
+  return lighting;
+}
 function normalizeSkyColor(value) { skyColor = normalizeVector(value, [0.039, 0.051, 0.047]).map((channel) => Math.min(1, Math.max(0, channel))); return skyColor; }
 function updateSkyColor() { renderer.setClearColor(new THREE.Color(...skyColor)); scene.fog.color.setRGB(...skyColor); skyColorInput.value = colorToHex(skyColor); }
-function updateSceneAmbientLight() { ambientLight.color.setRGB(...lighting.ambientColor); ambientLight.intensity = lighting.ambientIntensity; }
-function updateLightingInspector() { ambientColorInput.value = `#${lighting.ambientColor.map((channel) => Math.round(channel * 255).toString(16).padStart(2, '0')).join('')}`; ambientIntensityInput.value = lighting.ambientIntensity; ambientIntensityValue.textContent = lighting.ambientIntensity.toFixed(2); updateSceneAmbientLight(); }
-function entitySnapshot(entity) { normalizeEntityTransform(entity); normalizeEntityMaterials(entity); normalizeEntityAnimation(entity); normalizeCollision(entity); return { id: entity.id, name: entity.name, assetId: entity.assetId, position: [...entity.position], rotation: [...entity.rotation], scale: [...entity.scale], materials: entity.materials.map((material) => ({ ...material, diffuseColor: [...material.diffuseColor] })), animation: { ...entity.animation }, collision: { ...entity.collision } }; }
+function updateSceneAmbientLight() {
+  ambientLight.color.setRGB(...lighting.ambientColor);
+  ambientLight.intensity = lighting.ambientIntensity;
+  directionalLight.position.set(...lighting.directional.direction).multiplyScalar(-20);
+  directionalLight.color.setRGB(...lighting.directional.color);
+  directionalLight.intensity = lighting.directional.intensity;
+}
+function updateLightingInspector() {
+  ambientColorInput.value = `#${lighting.ambientColor.map((channel) => Math.round(channel * 255).toString(16).padStart(2, '0')).join('')}`;
+  ambientIntensityInput.value = lighting.ambientIntensity;
+  ambientIntensityValue.textContent = lighting.ambientIntensity.toFixed(2);
+  directionalIntensityInput.value = lighting.directional.intensity;
+  directionalIntensityValue.textContent = lighting.directional.intensity.toFixed(2);
+  updateSceneAmbientLight();
+}
+function entitySnapshot(entity) { normalizeEntityTransform(entity); normalizeEntityMaterials(entity); normalizeEntityAnimation(entity); normalizeCollision(entity); return { id: entity.id, name: entity.name, assetId: entity.assetId, primitive: entity.primitive ?? null, type: entity.type ?? null, light: entity.type === 'pointLight' ? { ...normalizePointLight(entity).light, color: [...entity.light.color] } : null, position: [...entity.position], rotation: [...entity.rotation], scale: [...entity.scale], materials: entity.materials.map((material) => ({ ...material, diffuseColor: [...material.diffuseColor], texture: material.texture ?? null })), animation: { ...entity.animation }, collision: { ...entity.collision } }; }
 function captureState() { return exportConfig(); }
 function pushHistory() { history.push(captureState()); if (history.length > 20) history.shift(); future.length = 0; }
 async function undo() { const state = history.pop(); if (!state) return; future.push(captureState()); await loadWorld(state); setStatus('Alteração desfeita'); }
@@ -136,7 +194,9 @@ const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1600);
 camera.position.set(42, 64, 58);
 const orbit = new OrbitControls(camera, canvas);
 orbit.target.set(0, 0, 0); orbit.enableDamping = true; orbit.maxPolarAngle = Math.PI / 2.05; orbit.minDistance = 4; orbit.maxDistance = 900;
-const ambientLight = new THREE.AmbientLight(0xffffff, lighting.ambientIntensity); scene.add(ambientLight);
+const ambientLight = new THREE.AmbientLight(0xffffff, lighting.ambientIntensity);
+const directionalLight = new THREE.DirectionalLight(0xffffff, lighting.directional.intensity);
+scene.add(ambientLight, directionalLight);
 const worldGroup = new THREE.Group(); scene.add(worldGroup);
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(1024, 1024), new THREE.MeshStandardMaterial({ color: 0x202522, roughness: 1 }));
 ground.rotation.x = -Math.PI / 2; ground.position.set(-0.5, -0.16, -0.5); worldGroup.add(ground);
@@ -147,11 +207,12 @@ const collisionGroup = new THREE.Group(); worldGroup.add(collisionGroup);
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 const hover = new THREE.Mesh(new THREE.BoxGeometry(1, 0.035, 1), new THREE.MeshBasicMaterial({ color: 0xb9ec69, wireframe: true })); hover.visible = false; scene.add(hover);
+let gizmoDragging = false;
 const gizmos = createEditorGizmos({
   camera,
   canvas,
   scene,
-  onDraggingChanged: (event) => { orbit.enabled = !event.value; if (event.value) pushHistory(); },
+  onDraggingChanged: (event) => { gizmoDragging = event.value; orbit.enabled = !event.value; if (event.value) pushHistory(); },
   onObjectChange: () => { syncSelectedFromObject(); const entity = selectedEntity(); if (entity) updateCollisionVisual(entity); updateInspector(); updateSummary(); },
 });
 
@@ -233,10 +294,23 @@ function renderEnemyAreaVisuals() {
   });
 }
 // Adiciona uma entidade à cena, normalizando seus dados e aplicando transformações e materiais.
+function uniqueEntityName(name, ignoredId = null) {
+  const baseName = String(name).trim() || 'Entidade vazia';
+  const normalizedNames = new Set(entities.filter((item) => item.id !== ignoredId).map((item) => String(item.name).trim().toLowerCase()));
+  let uniqueName = baseName;
+  let suffix = 2;
+  while (normalizedNames.has(uniqueName.toLowerCase())) {
+    uniqueName = `${baseName} ${suffix}`;
+    suffix += 1;
+  }
+  return uniqueName;
+}
 function addEntity(entity, object = null, animations = []) {
+  entity.name = uniqueEntityName(entity.name, entity.id);
   normalizeEntityTransform(entity);
   normalizeEntityAnimation(entity);
   normalizeCollision(entity);
+  if (entity.type === 'pointLight') normalizePointLight(entity);
   entity.object = object ?? new THREE.Group();
   entity.animations = animations;
   entity.animationMixer = animations.length ? new AnimationMixer(entity.object) : null;
@@ -251,13 +325,163 @@ function addEntity(entity, object = null, animations = []) {
   updateCollisionVisual(entity);
   entities.push(entity); selectEntity(entity.id); renderEntities(); updateSummary();
 }
+function syncPlayerFromPreview(entity) {
+  if (!entity?.isPlayerPreview) return;
+  player.position = [...entity.position];
+  player.rotation = [...entity.rotation];
+  player.scale = [...entity.scale];
+  player.materials = entity.materials.map((material) => ({ ...material, diffuseColor: [...material.diffuseColor], texture: material.texture ?? null }));
+  updatePlayerInspector();
+}
+async function applyStoredTextures(entity) {
+  for (const [index, definition] of (entity.materials ?? []).entries()) {
+    if (!definition.texture) continue;
+    const texture = await new THREE.TextureLoader().loadAsync(definition.texture);
+    let materialIndex = 0;
+    entity.object.traverse((child) => {
+      if (!child.isMesh) return;
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      materials.forEach((material) => {
+        if (materialIndex === index) {
+          material.map = texture;
+          material.needsUpdate = true;
+        }
+        materialIndex += 1;
+      });
+    });
+  }
+}
+function removePlayerPreview() {
+  if (!playerPreview) return;
+  clearCollisionVisual(playerPreview);
+  if (playerPreview.object) {
+    entityGroup.remove(playerPreview.object);
+    disposeObject(playerPreview.object);
+  }
+  entities = entities.filter((entity) => entity !== playerPreview);
+  playerPreview = null;
+}
+async function refreshPlayerPreview() {
+  removePlayerPreview();
+  const asset = assets.find((item) => item.id === player.assetId);
+  let object;
+  let animations = [];
+  if (asset?.url) {
+    const loaded = await loadModel(asset.url, asset.format, asset.dependencies);
+    object = loaded.object;
+    animations = loaded.animations;
+  } else {
+    object = createPrimitiveObject('box');
+  }
+  object.traverse((child) => {
+    if (child.isMesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  playerPreview = {
+    id: 'player-preview',
+    name: 'Player (Preview)',
+    isPlayerPreview: true,
+    assetId: player.assetId ?? null,
+    type: 'player',
+    position: [...player.position],
+    rotation: [...player.rotation],
+    scale: [...player.scale],
+    materials: player.materials?.length ? player.materials.map((material) => ({ ...material, diffuseColor: [...material.diffuseColor] })) : readObjectMaterials(object),
+    animation: { ...player.animation },
+    collision: { ...player.collision },
+    object,
+  };
+  addEntity(playerPreview, object, animations);
+  await applyStoredTextures(playerPreview);
+  selectEntity(null);
+  renderEntities();
+}
+function createPrimitiveObject(type) {
+  const geometries = {
+    box: () => new THREE.BoxGeometry(1, 1, 1),
+    sphere: () => new THREE.SphereGeometry(0.5, 32, 16),
+    cylinder: () => new THREE.CylinderGeometry(0.5, 0.5, 1, 32),
+    cone: () => new THREE.ConeGeometry(0.5, 1, 32),
+    capsule: () => new THREE.CapsuleGeometry(0.35, 0.3, 8, 16),
+    plane: () => new THREE.PlaneGeometry(1, 1),
+  };
+  const geometry = geometries[type]?.();
+  if (!geometry) return null;
+  if (type === 'plane') geometry.rotateX(-Math.PI / 2);
+  const material = new THREE.MeshStandardMaterial({ color: 0x7eb6ff, roughness: 0.72, metalness: 0.05 });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+function createPrimitive(type) {
+  const labels = { box: 'Cubo', sphere: 'Esfera', cylinder: 'Cilindro', cone: 'Cone', capsule: 'Cápsula', plane: 'Plano' };
+  const object = createPrimitiveObject(type);
+  if (!object) return;
+  pushHistory();
+  const entity = { ...createEntity(labels[type] ?? 'Primitiva'), primitive: type, materials: readObjectMaterials(object), object };
+  addEntity(entity, object);
+  setMode('translate');
+  setStatus(`${labels[type] ?? 'Primitiva'} adicionada à cena`);
+}
+function createPointLight() {
+  pushHistory();
+  const entity = {
+    ...createEntity('Luz pontual'),
+    type: 'pointLight',
+    light: { color: [1, 0.72, 0.45], intensity: 2, distance: 18 },
+    position: [0, 8, 0],
+  };
+  const object = new THREE.PointLight(0xffb873, entity.light.intensity, entity.light.distance);
+  object.add(new THREE.Mesh(
+    new THREE.SphereGeometry(0.16, 12, 8),
+    new THREE.MeshBasicMaterial({ color: 0xffb873 }),
+  ));
+  addEntity(entity, object);
+  setMode('translate');
+  setStatus('Luz pontual adicionada à cena');
+}
 function removeEntity(id) {
   const entity = entities.find((item) => item.id === id); if (!entity) return;
   clearCollisionVisual(entity);
   if (entity.object) { entityGroup.remove(entity.object); disposeObject(entity.object); }
   entities = entities.filter((item) => item.id !== id); if (selectedEntityId === id) selectEntity(null); renderEntities(); updateSummary();
 }
+function cloneEntityObject(object) {
+  const clone = object.clone(true);
+  clone.traverse((child) => {
+    if (!child.isMesh) return;
+    child.geometry = child.geometry?.clone();
+    if (Array.isArray(child.material)) child.material = child.material.map((material) => material.clone());
+    else if (child.material) child.material = child.material.clone();
+  });
+  return clone;
+}
+function duplicateSelectedEntity() {
+  const source = selectedEntity();
+  if (!source) return;
+  pushHistory();
+  const duplicate = {
+    ...source,
+    id: newId('entity'),
+    name: uniqueEntityName(`${source.name} cópia`),
+    position: [...source.position],
+    rotation: [...source.rotation],
+    scale: [...source.scale],
+    materials: source.materials.map((material) => ({ ...material, diffuseColor: [...material.diffuseColor] })),
+    animation: { ...source.animation },
+    collision: { ...source.collision },
+    object: cloneEntityObject(source.object),
+  };
+  duplicate.position[0] += 1;
+  addEntity(duplicate, duplicate.object, source.animations ?? []);
+  setMode('translate');
+  setStatus(`Entidade ${duplicate.name} criada`);
+}
 function selectEntity(id) {
+  if (gizmoDragging && id !== selectedEntityId) return;
   selectedEntityId = id; selectedMaterialIndex = 0; const entity = selectedEntity();
   if (entity?.object) { gizmos.attach(entity.object); selectedEntityLabel.textContent = entity.name; }
   else { gizmos.detach(); selectedEntityLabel.textContent = 'Nenhuma'; }
@@ -327,12 +551,12 @@ function syncSelectedFromObject() {
 }
 function createEntity(name = 'Entidade vazia', assetId = null) {
   return {
-    id: newId('entity'), name, assetId, position: [0, 0, 0],
+    id: newId('entity'), name: uniqueEntityName(name), assetId, position: [0, 0, 0],
     rotation: [0, 0, 0], scale: [1, 1, 1], materials: [], object: null
   };
 }
 function renderEntities() {
-  entityList.replaceChildren(...entities.map((entity) => { const button = document.createElement('button'); button.className = `entity-item${entity.id === selectedEntityId ? ' entity-item-selected' : ''}`; button.type = 'button'; button.innerHTML = `<span class="asset-icon">${entity.assetId ? '◆' : '○'}</span><span>${entity.name}</span>`; button.addEventListener('click', () => selectEntity(entity.id)); return button; }));
+  entityList.replaceChildren(...entities.map((entity) => { const button = document.createElement('button'); button.className = `entity-item${entity.id === selectedEntityId ? ' entity-item-selected' : ''}`; button.type = 'button'; button.innerHTML = `<span class="asset-icon">${entity.isPlayerPreview ? 'P' : entity.assetId ? '◆' : '○'}</span><span>${entity.name}</span>`; button.addEventListener('click', () => selectEntity(entity.id)); return button; }));
   document.querySelector('#entity-count').textContent = String(entities.length);
   renderSceneTree();
 }
@@ -366,7 +590,7 @@ function createSceneTreeNode(icon, label, onClick, selected = false) {
 }
 function renderSceneTree() {
   if (!sceneTree) return;
-  const entityNodes = entities.map((entity) => createSceneTreeNode(entity.assetId ? 'M' : 'E', entity.name, () => selectEntity(entity.id), entity.id === selectedEntityId));
+  const entityNodes = entities.map((entity) => createSceneTreeNode(entity.isPlayerPreview ? 'P' : entity.assetId ? 'M' : 'E', entity.name, () => selectEntity(entity.id), entity.id === selectedEntityId));
   const areaNodes = enemyAreas.map((area) => createSceneTreeNode('A', area.id, () => selectEnemyArea(area.id), area.id === selectedEnemyAreaId));
   const assetNodes = assets.map((asset) => createSceneTreeNode('3D', asset.name, () => instantiateAsset(asset)));
   const settingsNode = createSceneTreeNode('S', 'Luz e cor do céu', () => setPanelOpen('inspector-panel', true, document.querySelector('#inspector-toggle')));
@@ -473,8 +697,19 @@ function renderMeshList(entity) {
   }));
 }
 function updateInspector() {
-  const entity = selectedEntity(); const active = Boolean(entity); entityInspector.hidden = !active; emptyInspector.hidden = active; if (!entity) { updateAnimationInspector(); return; }
+  const entity = selectedEntity(); const active = Boolean(entity); entityInspector.hidden = !active; emptyInspector.hidden = active; playerPreviewInspector.hidden = !entity?.isPlayerPreview; if (!entity) { updateAnimationInspector(); return; }
   document.querySelector('#entity-name').value = entity.name;
+  const isPointLight = entity.type === 'pointLight';
+  pointLightInspector.hidden = !isPointLight;
+  if (isPointLight) {
+    normalizePointLight(entity);
+    entityLightColorInput.value = colorToHex(entity.light.color);
+    entityLightIntensityInput.value = entity.light.intensity;
+    entityLightIntensityValue.textContent = entity.light.intensity.toFixed(2);
+    entityLightDistanceInput.value = entity.light.distance;
+    entityLightDistanceValue.textContent = entity.light.distance.toFixed(2);
+  }
+  if (entity.isPlayerPreview) updatePlayerInspector();
   if (selectedMaterialIndex >= (entity.materials?.length ?? 0)) selectedMaterialIndex = 0;
   renderMeshList(entity);
   entityDiffuseColorInput.value = colorToHex(entity.materials?.[selectedMaterialIndex]?.diffuseColor ?? [1, 1, 1]);
@@ -485,10 +720,10 @@ function updateInspector() {
   updateAnimationInspector();
 }
 function updateVector(input) {
-  const entity = selectedEntity(); if (!entity) return; normalizeEntityTransform(entity); const vector = input.dataset.vector; const index = Number(input.dataset.index); const value = Number(input.value); const safeValue = Number.isFinite(value) ? value : 0; entity[vector][index] = vector === 'rotation' ? THREE.MathUtils.degToRad(safeValue) : safeValue; applyEntityTransform(entity); updateCollisionVisual(entity); gizmos.update(entity.object); updateInspector(); updateSummary();
+  const entity = selectedEntity(); if (!entity) return; normalizeEntityTransform(entity); const vector = input.dataset.vector; const index = Number(input.dataset.index); const value = Number(input.value); const safeValue = Number.isFinite(value) ? value : 0; entity[vector][index] = vector === 'rotation' ? THREE.MathUtils.degToRad(safeValue) : safeValue; applyEntityTransform(entity); updateCollisionVisual(entity); gizmos.update(entity.object); if (entity.isPlayerPreview) syncPlayerFromPreview(entity); updateInspector(); updateSummary();
 }
 function setMode(next) { mode = next; document.querySelectorAll('.mode-button').forEach((button) => button.classList.toggle('mode-button-active', button.dataset.mode === mode)); orbit.enabled = true; gizmos.setMode(mode); canvas.style.cursor = 'default'; }
-function exportConfig() { return { format: 'webrpg.world', version: 2, scene: { name: 'main-world', units: 'world', skyColor: [...skyColor] }, lighting: { ambientColor: [...lighting.ambientColor], ambientIntensity: lighting.ambientIntensity }, player: { ...player, position: [...player.position], rotation: [...player.rotation], scale: [...player.scale], status: { ...player.status }, inventory: [...player.inventory], collision: { ...player.collision }, animation: { ...player.animation } }, assets: assets.map(({ id, name, url, source, format, dependencies }) => ({ id, name, url, source, format, dependencies })), entities: entities.map(({ object, ...entity }) => entitySnapshot(entity)), enemyTypes: enemyTypes.map((type, index) => normalizeEnemyType({ ...type, gold: { ...type.gold }, itemDrops: [...type.itemDrops] }, index)), enemyAreas: enemyAreas.map((area) => ({ ...normalizeEnemyArea(area), center: [...area.center] })) }; }
+function exportConfig() { return { format: 'webrpg.world', version: 2, scene: { name: 'main-world', units: 'world', skyColor: [...skyColor] }, lighting: { ambientColor: [...lighting.ambientColor], ambientIntensity: lighting.ambientIntensity, directional: { ...lighting.directional, direction: [...lighting.directional.direction], color: [...lighting.directional.color] }, point: { ...lighting.point, position: [...lighting.point.position], color: [...lighting.point.color] } }, player: { ...player, position: [...player.position], rotation: [...player.rotation], scale: [...player.scale], materials: player.materials?.map((material) => ({ ...material, diffuseColor: [...material.diffuseColor], texture: material.texture ?? null })) ?? [], status: { ...player.status }, inventory: [...player.inventory], collision: { ...player.collision }, animation: { ...player.animation } }, assets: assets.map(({ id, name, url, source, format, dependencies }) => ({ id, name, url, source, format, dependencies })), entities: entities.filter((entity) => !entity.isPlayerPreview).map(({ object, ...entity }) => entitySnapshot(entity)), enemyTypes: enemyTypes.map((type, index) => normalizeEnemyType({ ...type, gold: { ...type.gold }, itemDrops: [...type.itemDrops] }, index)), enemyAreas: enemyAreas.map((area) => ({ ...normalizeEnemyArea(area), center: [...area.center] })) }; }
 function updateSummary() {
   const config = exportConfig();
   document.querySelector('#entity-summary-count').textContent = String(config.entities.length);
@@ -505,13 +740,9 @@ function updatePlayerInspector() {
   }
   const selectedAsset = assets.find((asset) => asset.id === player.assetId);
   set('player-model-format', selectedAsset?.format ?? player.modelFormat);
-  set('player-position', JSON.stringify(player.position)); set('player-rotation', JSON.stringify(player.rotation)); set('player-scale', JSON.stringify(player.scale));
   set('player-speed', player.speed); set('player-animation', player.animation.name); set('player-status', JSON.stringify(player.status)); set('player-inventory', JSON.stringify(player.inventory));
-  document.querySelector('#player-collision-enabled').checked = player.collision.enabled;
-  document.querySelector('#player-collision-shape').value = player.collision.shape;
 }
 function readPlayerInspector() {
-  const vector = (id, fallback) => { try { const value = JSON.parse(document.querySelector(`#${id}`).value); return normalizeVector(value, fallback); } catch { return fallback; } };
   const json = (id, fallback) => { try { const value = JSON.parse(document.querySelector(`#${id}`).value); return value && typeof value === 'object' ? value : fallback; } catch { return fallback; } };
   const selectedAsset = assets.find((asset) => asset.id === document.querySelector('#player-asset').value);
   player.assetId = selectedAsset?.id ?? null;
@@ -522,11 +753,19 @@ function readPlayerInspector() {
     player.model = player.model || '';
     player.modelFormat = document.querySelector('#player-model-format').value;
   }
-  player.position = vector('player-position', [0, 0, 0]); player.rotation = vector('player-rotation', [0, 0, 0]); player.scale = vector('player-scale', [1, 1, 1]);
   player.speed = Math.max(0, Number(document.querySelector('#player-speed').value) || 0);
   player.animation.name = document.querySelector('#player-animation').value.trim();
   player.status = json('player-status', player.status); player.inventory = Array.isArray(json('player-inventory', [])) ? json('player-inventory', []) : [];
-  player.collision = { enabled: document.querySelector('#player-collision-enabled').checked, shape: document.querySelector('#player-collision-shape').value };
+  const previewEntity = playerPreview;
+  if (previewEntity) {
+    player.position = [...previewEntity.position];
+    player.rotation = [...previewEntity.rotation];
+    player.scale = [...previewEntity.scale];
+    player.collision = { ...previewEntity.collision };
+    previewEntity.assetId = player.assetId;
+    previewEntity.animation = { ...player.animation };
+    previewEntity.collision = { ...player.collision };
+  }
   updateSummary();
 }
 async function loadModel(url, format = null, dependencies = null) { const extension = format ?? url.split('?')[0].split('.').pop().toLowerCase(); if (extension === 'obj') { const loader = new OBJLoader(); const mtlName = Object.keys(dependencies ?? {}).find((name) => name.toLowerCase().endsWith('.mtl')); const mtlData = mtlName ? dependencies[mtlName] : null; try { if (mtlData) { let text = await (await fetch(mtlData)).text(); text = text.replace(/^\s*map_Kd\s+(.+)$/gim, (line, path) => { const key = path.trim().replaceAll('\\', '/').split('/').pop(); return dependencies[key] ? `map_Kd ${dependencies[key]}` : line; }); const materials = new MTLLoader().parse(text, '/'); materials.preload(); loader.setMaterials(materials); } } catch { /* OBJ sem MTL continua usando material padrão. */ } return { object: await loader.loadAsync(url), animations: [] }; } const manager = new THREE.LoadingManager();
@@ -548,18 +787,30 @@ async function loadWorld(config) {
   updateSkyColor();
   normalizeLighting(config?.lighting); 
   updateLightingInspector();   player = { ...player, ...(config?.player ?? {}), position: normalizeVector(config?.player?.position, [0, 0, 0]), rotation: normalizeVector(config?.player?.rotation, [0, 0, 0]), scale: normalizeVector(config?.player?.scale, [1, 1, 1]), status: { ...player.status, ...(config?.player?.status ?? {}) }, inventory: Array.isArray(config?.player?.inventory) ? config.player.inventory : [], collision: { ...player.collision, ...(config?.player?.collision ?? {}) }, animation: { ...player.animation, ...(config?.player?.animation ?? {}) } };
-  assets = []; entities = []; enemyTypes = (Array.isArray(config?.enemyTypes) ? config.enemyTypes : [{ id: 'rat', name: 'Rato', model: '', level: 1, maxHp: 3, speed: 1.2, defense: 1, damage: 1, experience: 2, scale: 0.35, gold: { min: 3, max: 5 }, itemDrops: [] }]).map((type, index) => normalizeEnemyType({ ...type, gold: { ...type.gold }, itemDrops: [...(type.itemDrops ?? [])] }, index)); selectedEnemyTypeId = null; enemyAreas = (Array.isArray(config?.enemyAreas) ? config.enemyAreas : []).map((area) => normalizeEnemyArea({ ...area })); entityGroup.clear(); selectedEntityId = null; selectedEnemyAreaId = null;
+  removePlayerPreview(); assets = []; entities = []; enemyTypes = (Array.isArray(config?.enemyTypes) ? config.enemyTypes : [{ id: 'rat', name: 'Rato', model: '', level: 1, maxHp: 3, speed: 1.2, defense: 1, damage: 1, experience: 2, scale: 0.35, gold: { min: 3, max: 5 }, itemDrops: [] }]).map((type, index) => normalizeEnemyType({ ...type, gold: { ...type.gold }, itemDrops: [...(type.itemDrops ?? [])] }, index)); selectedEnemyTypeId = null; enemyAreas = (Array.isArray(config?.enemyAreas) ? config.enemyAreas : []).map((area) => normalizeEnemyArea({ ...area })); entityGroup.clear(); selectedEntityId = null; selectedEnemyAreaId = null;
   for (const asset of config?.assets ?? []) { if (asset.url && !asset.url.startsWith('blob:')) assets.push({ ...asset, format: asset.format ?? assetFormat(asset.name ?? asset.url) }); }
   renderAssets();
   updatePlayerInspector();
   renderEnemyTypes();
   renderEnemyAreas();
-  for (const definition of config?.entities ?? []) { 
-    const asset = assets.find((item) => item.id === definition.assetId); 
-    if (asset) await instantiateAsset({ ...asset, _definition: definition }); 
-    else { const entity = { ...definition, object: null }; 
-    addEntity(entity); } 
+  for (const definition of config?.entities ?? []) {
+    if (definition.type === 'pointLight') {
+      const light = normalizePointLight({ ...definition });
+      const object = new THREE.PointLight(colorToHex(light.light.color), light.light.intensity, light.light.distance);
+      object.add(new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), new THREE.MeshBasicMaterial({ color: colorToHex(light.light.color) })));
+      addEntity(light, object);
+    } else {
+      const asset = assets.find((item) => item.id === definition.assetId);
+      if (asset) await instantiateAsset({ ...asset, _definition: definition });
+      else if (definition.primitive) {
+        const object = createPrimitiveObject(definition.primitive);
+        if (object) addEntity({ ...definition, name: createEntity(definition.name).name, object }, object);
+      } else { const entity = { ...definition, object: null };
+        entity.name = createEntity(entity.name).name;
+        addEntity(entity); }
+    }
   }
+  await refreshPlayerPreview();
   selectEntity(null); 
   updateSummary();
 }
@@ -576,6 +827,9 @@ document.querySelectorAll('.mode-button').forEach((button) => button.addEventLis
 document.querySelector('#model-file').addEventListener('change', async (event) => { const files = [...event.target.files]; const model = files.find((file) => /\.(glb|gltf|obj)$/i.test(file.name)); if (!model) return; try { const dependencies = Object.fromEntries(await Promise.all(files.filter((file) => file !== model).map(async (file) => [file.name, await readFileAsDataUrl(file)]))); const url = await readFileAsDataUrl(model); await registerAsset(url, model.name, `local:${model.name}`, assetFormat(model.name), dependencies); } catch (error) { setStatus(`Falha ao ler ${model.name}: ${error.message}`); } event.target.value = ''; });
 document.querySelector('#add-url-button').addEventListener('click', async () => { const input = document.querySelector('#model-url'); const url = input.value.trim(); if (!url) return; await registerAsset(url, url.split('/').pop() || 'Modelo 3D'); input.value = ''; });
 document.querySelector('#create-empty-button').addEventListener('click', () => { pushHistory(); addEntity(createEntity()); setMode('translate'); setStatus('Entidade vazia criada'); });
+document.querySelector('#duplicate-entity-button').addEventListener('click', duplicateSelectedEntity);
+document.querySelector('#create-point-light-button').addEventListener('click', createPointLight);
+document.querySelectorAll('[data-primitive]').forEach((button) => button.addEventListener('click', () => createPrimitive(button.dataset.primitive)));
 document.querySelector('#create-enemy-area-button').addEventListener('click', () => { pushHistory(); const area = createEnemyArea(); enemyAreas.push(area); selectEnemyArea(area.id); updateSummary(); setStatus('Área inimiga criada'); });
 document.querySelector('#create-enemy-type-button').addEventListener('click', () => { pushHistory(); createEnemyType(); setStatus('Tipo de inimigo criado'); });
 document.querySelectorAll('[data-enemy-type-field]').forEach((input) => input.addEventListener('change', () => updateEnemyTypeField(input)));
@@ -587,16 +841,65 @@ componentTabs.forEach((tab) => tab.addEventListener('click', () => setComponentT
 animationPlayButton.addEventListener('click', () => setAnimationPlaying(true));
 animationPauseButton.addEventListener('click', () => setAnimationPlaying(false));
 animationStopButton.addEventListener('click', stopAnimation);
-animationSelect.addEventListener('change', () => { const entity = selectedEntity(); if (!entity) return; pushHistory(); entity.animation.name = animationSelect.value; entity.animation.playing = true; applyEntityAnimation(entity); updateAnimationInspector(); updateSummary(); });
-animationLoopInput.addEventListener('change', () => { const entity = selectedEntity(); if (!entity) return; pushHistory(); entity.animation.loop = animationLoopInput.checked; applyEntityAnimation(entity); updateAnimationInspector(); updateSummary(); });
-animationSpeedInput.addEventListener('input', () => { const entity = selectedEntity(); if (!entity) return; entity.animation.speed = Math.max(0, Number(animationSpeedInput.value) || 0); if (entity.animationAction) entity.animationAction.timeScale = entity.animation.speed; animationSpeedValue.textContent = `${entity.animation.speed.toFixed(2)}x`; updateSummary(); });
-document.querySelector('#entity-name').addEventListener('input', (event) => { const entity = selectedEntity(); if (!entity) return; entity.name = event.target.value || 'Entidade'; entity.object.name = entity.name; selectedEntityLabel.textContent = entity.name; renderEntities(); updateSummary(); });
-document.querySelector('#collision-enabled').addEventListener('change', (event) => { const entity = selectedEntity(); if (!entity) return; pushHistory(); entity.collision.enabled = event.target.checked; updateCollisionVisual(entity); updateSummary(); });
-document.querySelector('#collision-shape').addEventListener('change', (event) => { const entity = selectedEntity(); if (!entity) return; pushHistory(); entity.collision.shape = event.target.value; updateCollisionVisual(entity); updateSummary(); });
-entityDiffuseColorInput.addEventListener('input', () => { const entity = selectedEntity(); if (!entity) return; const hex = entityDiffuseColorInput.value.slice(1); const color = [0, 2, 4].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255); normalizeEntityMaterials(entity); const material = entity.materials[selectedMaterialIndex]; if (!material) return; material.diffuseColor = [...color]; applyEntityMaterials(entity); renderMeshList(entity); updateSummary(); });
+animationSelect.addEventListener('change', () => { const entity = selectedEntity(); if (!entity) return; pushHistory(); entity.animation.name = animationSelect.value; entity.animation.playing = true; if (entity.isPlayerPreview) player.animation = { ...entity.animation }; applyEntityAnimation(entity); updateAnimationInspector(); updateSummary(); });
+animationLoopInput.addEventListener('change', () => { const entity = selectedEntity(); if (!entity) return; pushHistory(); entity.animation.loop = animationLoopInput.checked; applyEntityAnimation(entity); if (entity.isPlayerPreview) player.animation = { ...entity.animation }; updateAnimationInspector(); updateSummary(); });
+animationSpeedInput.addEventListener('input', () => { const entity = selectedEntity(); if (!entity) return; entity.animation.speed = Math.max(0, Number(animationSpeedInput.value) || 0); if (entity.animationAction) entity.animationAction.timeScale = entity.animation.speed; if (entity.isPlayerPreview) player.animation = { ...entity.animation }; animationSpeedValue.textContent = `${entity.animation.speed.toFixed(2)}x`; updateSummary(); });
+document.querySelector('#entity-name').addEventListener('change', (event) => {
+  const entity = selectedEntity();
+  if (!entity) return;
+  const requestedName = String(event.target.value).trim();
+  const duplicate = entities.some((item) => item.id !== entity.id && item.name.trim().toLowerCase() === requestedName.toLowerCase());
+  if (!requestedName || duplicate) {
+    event.target.value = entity.name;
+    setStatus(duplicate ? 'Já existe uma entidade com esse nome' : 'O nome da entidade não pode ficar vazio');
+    return;
+  }
+  pushHistory();
+  entity.name = requestedName;
+  entity.object.name = entity.name;
+  selectedEntityLabel.textContent = entity.name;
+  renderEntities();
+  updateSummary();
+});
+document.querySelector('#collision-enabled').addEventListener('change', (event) => { const entity = selectedEntity(); if (!entity) return; pushHistory(); entity.collision.enabled = event.target.checked; if (entity.isPlayerPreview) player.collision = { ...entity.collision }; updateCollisionVisual(entity); updateSummary(); });
+document.querySelector('#collision-shape').addEventListener('change', (event) => { const entity = selectedEntity(); if (!entity) return; pushHistory(); entity.collision.shape = event.target.value; if (entity.isPlayerPreview) player.collision = { ...entity.collision }; updateCollisionVisual(entity); updateSummary(); });
+entityDiffuseColorInput.addEventListener('input', () => { const entity = selectedEntity(); if (!entity) return; const hex = entityDiffuseColorInput.value.slice(1); const color = [0, 2, 4].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255); normalizeEntityMaterials(entity); const material = entity.materials[selectedMaterialIndex]; if (!material) return; material.diffuseColor = [...color]; applyEntityMaterials(entity); if (entity.isPlayerPreview) syncPlayerFromPreview(entity); renderMeshList(entity); updateSummary(); });
+entityTextureFileInput.addEventListener('change', async () => {
+  const entity = selectedEntity();
+  const file = entityTextureFileInput.files?.[0];
+  if (!entity || !file) return;
+  const textureUrl = await readFileAsDataUrl(file);
+  const texture = await new THREE.TextureLoader().loadAsync(textureUrl);
+  let materialIndex = 0;
+  entity.object.traverse((child) => {
+    if (!child.isMesh) return;
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    materials.forEach((material) => {
+      if (materialIndex === selectedMaterialIndex) {
+        material.map = texture;
+        material.needsUpdate = true;
+      }
+      materialIndex += 1;
+    });
+  });
+  normalizeEntityMaterials(entity);
+  if (entity.materials[selectedMaterialIndex]) entity.materials[selectedMaterialIndex].texture = textureUrl;
+  if (entity.isPlayerPreview) syncPlayerFromPreview(entity);
+  entityTextureFileInput.value = '';
+  updateSummary();
+});
+entityLightColorInput.addEventListener('input', () => { const entity = selectedEntity(); if (!entity || entity.type !== 'pointLight') return; const hex = entityLightColorInput.value.slice(1); entity.light.color = [0, 2, 4].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255); entity.object.color.setRGB(...entity.light.color); entity.object.children[0]?.material.color.setRGB(...entity.light.color); updateSummary(); });
+entityLightIntensityInput.addEventListener('input', () => { const entity = selectedEntity(); if (!entity || entity.type !== 'pointLight') return; entity.light.intensity = Number(entityLightIntensityInput.value); entity.object.intensity = entity.light.intensity; entityLightIntensityValue.textContent = entity.light.intensity.toFixed(2); updateSummary(); });
+entityLightDistanceInput.addEventListener('input', () => { const entity = selectedEntity(); if (!entity || entity.type !== 'pointLight') return; entity.light.distance = Number(entityLightDistanceInput.value); entity.object.distance = entity.light.distance; entityLightDistanceValue.textContent = entity.light.distance.toFixed(2); updateSummary(); });
 document.querySelector('#clear-button').addEventListener('click', () => { pushHistory(); entities.slice().forEach((entity) => removeEntity(entity.id)); updateSummary(); setStatus('Cena limpa'); });
 document.querySelector('#export-button').addEventListener('click', download);
-document.querySelectorAll('#player-settings input, #player-settings select, #player-settings textarea').forEach((input) => {
+document.querySelector('#player-asset').addEventListener('change', async () => {
+  readPlayerInspector();
+  await refreshPlayerPreview();
+  setStatus('Preview do player atualizado');
+});
+['player-model-format', 'player-speed', 'player-animation', 'player-status', 'player-inventory'].forEach((id) => {
+  const input = document.querySelector(`#${id}`);
   input.addEventListener('input', readPlayerInspector);
   input.addEventListener('change', readPlayerInspector);
 });
@@ -605,6 +908,7 @@ document.querySelector('#undo-button').addEventListener('click', undo);
 document.querySelector('#redo-button').addEventListener('click', redo);
 ambientColorInput.addEventListener('input', () => { const hex = ambientColorInput.value.slice(1); lighting.ambientColor = [0, 2, 4].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255); updateSceneAmbientLight(); updateSummary(); });
 ambientIntensityInput.addEventListener('input', () => { lighting.ambientIntensity = Number(ambientIntensityInput.value); ambientIntensityValue.textContent = lighting.ambientIntensity.toFixed(2); updateSceneAmbientLight(); updateSummary(); });
+directionalIntensityInput.addEventListener('input', () => { lighting.directional.intensity = Number(directionalIntensityInput.value); directionalIntensityValue.textContent = lighting.directional.intensity.toFixed(2); updateSceneAmbientLight(); updateSummary(); });
 skyColorInput.addEventListener('input', () => { const hex = skyColorInput.value.slice(1); skyColor = [0, 2, 4].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255); updateSkyColor(); updateSummary(); });
 panelToggles.forEach(([toggleId, panelId]) => { const toggle = document.querySelector(`#${toggleId}`); toggle.addEventListener('click', () => setPanelOpen(panelId, !document.querySelector(`#${panelId}`).classList.contains('panel-open'), toggle)); });
 inspectorTabs.forEach((tab) => tab.addEventListener('click', () => setInspectorTab(tab.dataset.inspectorTab)));
@@ -617,6 +921,7 @@ window.addEventListener('keydown', (event) => {
   if (nextMode) setMode(nextMode);
 });
 canvas.addEventListener('pointerdown', (event) => {
+  if (gizmoDragging) return;
   const rect = canvas.getBoundingClientRect(); pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1; pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1; raycaster.setFromCamera(pointer, camera); const hit = raycaster.intersectObject(entityGroup, true)[0]; const id = hit?.object?.userData.entityId; if (id) { selectEntity(id); selectedMaterialIndex = materialIndexForObject(selectedEntity(), hit.object) + (hit.face?.materialIndex ?? 0); updateInspector(); }
 });
 canvas.addEventListener('pointermove', (event) => { const rect = canvas.getBoundingClientRect(); pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1; pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1; raycaster.setFromCamera(pointer, camera); const hit = raycaster.intersectObject(ground, false)[0]; if (hit) coordinates.textContent = `x: ${hit.point.x.toFixed(1)}, y: 0, z: ${hit.point.z.toFixed(1)}`; });

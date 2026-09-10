@@ -232,6 +232,35 @@ export class RenderSystem {
     });
     const intensity = Number(lighting?.ambientIntensity);
     this.ambientIntensity = Number.isFinite(intensity) ? Math.min(2, Math.max(0, intensity)) : 1;
+    this.directionalLightDirection = this.normalizeVector(
+      lighting?.directional?.direction,
+      [-0.45, 0.85, 0.35],
+    );
+    this.directionalLightColor = this.normalizeColor(lighting?.directional?.color, [1, 0.95, 0.85]);
+    this.directionalLightIntensity = this.normalizeScalar(lighting?.directional?.intensity, 0.8, 0, 4);
+    const configuredPointLights = lighting?.pointLights ?? [];
+    this.pointLights = configuredPointLights.slice(0, 8).map((point) => ({
+      position: this.normalizeVector(point?.position, [0, 8, 0]),
+      color: this.normalizeColor(point?.color, [1, 0.72, 0.45]),
+      intensity: this.normalizeScalar(point?.intensity, 2, 0, 10),
+      distance: this.normalizeScalar(point?.distance, 18, 0.1, 200),
+    }));
+  }
+
+  normalizeVector(value, fallback) {
+    return fallback.map((defaultValue, index) => {
+      const number = Number(value?.[index]);
+      return Number.isFinite(number) ? number : defaultValue;
+    });
+  }
+
+  normalizeColor(value, fallback) {
+    return this.normalizeVector(value, fallback).map((channel) => Math.min(1, Math.max(0, channel)));
+  }
+
+  normalizeScalar(value, fallback, minimum, maximum) {
+    const number = Number(value);
+    return Number.isFinite(number) ? Math.min(maximum, Math.max(minimum, number)) : fallback;
   }
 
   prepareMesh(mesh) {
@@ -357,6 +386,24 @@ export class RenderSystem {
     const projection = this.camera.getProjectionMatrix();
     gl.uniform3f(locations.ambientColor, ...this.ambientColor);
     gl.uniform1f(locations.ambientIntensity, this.ambientIntensity);
+    gl.uniform3f(locations.directionalLightDirection, ...this.directionalLightDirection);
+    gl.uniform3f(locations.directionalLightColor, ...this.directionalLightColor);
+    gl.uniform1f(locations.directionalLightIntensity, this.directionalLightIntensity);
+    const pointLightPositions = new Float32Array(8 * 3);
+    const pointLightColors = new Float32Array(8 * 3);
+    const pointLightIntensities = new Float32Array(8);
+    const pointLightDistances = new Float32Array(8);
+    this.pointLights.forEach((light, index) => {
+      pointLightPositions.set(light.position, index * 3);
+      pointLightColors.set(light.color, index * 3);
+      pointLightIntensities[index] = light.intensity;
+      pointLightDistances[index] = light.distance;
+    });
+    gl.uniform3fv(locations.pointLightPositions, pointLightPositions);
+    gl.uniform3fv(locations.pointLightColors, pointLightColors);
+    gl.uniform1fv(locations.pointLightIntensities, pointLightIntensities);
+    gl.uniform1fv(locations.pointLightDistances, pointLightDistances);
+    gl.uniform1i(locations.pointLightCount, this.pointLights.length);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.enableVertexAttribArray(locations.normal);
@@ -383,6 +430,7 @@ export class RenderSystem {
         gl.uniform1f(locations.isEnemyArea, enemyArea ? 1 : 0);
         const textured = Boolean(texture && mesh.uvs);
         gl.uniform1f(locations.useTexture, textured ? 1 : 0);
+        gl.uniform1i(locations.uTexture, 0);
         gl.uniform1f(locations.isWater, water ? 1 : 0);
         gl.uniform1f(locations.time, time);
         gl.bindBuffer(gl.ARRAY_BUFFER, mesh.positionBuffer);
@@ -395,9 +443,14 @@ export class RenderSystem {
         if (textured) {
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
-          gl.uniform1i(locations.uTexture, 0);
+          gl.enableVertexAttribArray(locations.uv);
           gl.bindBuffer(gl.ARRAY_BUFFER, mesh.uvBuffer);
           gl.vertexAttribPointer(locations.uv, 2, gl.FLOAT, false, 0, 0);
+        } else {
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, null);
+          gl.disableVertexAttribArray(locations.uv);
+          gl.vertexAttrib2f(locations.uv, 0, 0);
         }
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
@@ -407,7 +460,9 @@ export class RenderSystem {
 
     for (const entity of world.query(LineRenderer)) {
       gl.disableVertexAttribArray(locations.normal);
+      gl.disableVertexAttribArray(locations.uv);
       gl.vertexAttrib3f(locations.normal, 0, 1, 0);
+      gl.vertexAttrib2f(locations.uv, 0, 0);
       const line = world.getComponent(entity, LineRenderer);
       this.prepareLine(line);
       if (line.indices.length === 0) continue;
@@ -426,7 +481,9 @@ export class RenderSystem {
 
     for (const entity of world.query(Transform, OutlineRenderer)) {
       gl.disableVertexAttribArray(locations.normal);
+      gl.disableVertexAttribArray(locations.uv);
       gl.vertexAttrib3f(locations.normal, 0, 1, 0);
+      gl.vertexAttrib2f(locations.uv, 0, 0);
       const transform = world.getComponent(entity, Transform);
       const outline = world.getComponent(entity, OutlineRenderer);
       this.prepareOutline(outline, transform, time);

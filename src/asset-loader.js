@@ -159,8 +159,9 @@ export async function loadGLTF(url, textureManager = null, dependencies = null) 
     const uvAttribute = nonIndexed.getAttribute('uv');
     const indexAttribute = nonIndexed.getIndex();
 
-    const texture = material && material.map && material.map.image
-      ? new Texture({ image: material.map.image, name: material.name ?? 'gltf-material' })
+    const textureImage = material?.map?.image ?? material?.map?.source?.data;
+    const texture = textureImage
+      ? new Texture({ image: textureImage, name: material.name ?? `gltf-material-${meshData.length}` })
       : null;
     if (texture && textureManager) texture.glTexture = textureManager.ensure(texture.image, texture.name);
     const vertices = [];
