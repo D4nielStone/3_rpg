@@ -10,6 +10,8 @@ import { loadGameAssets } from './asset-loader.js';
 import { createUiController } from './ui-controller.js';
 import { createAccountController } from './account-controller.js';
 import { getMultiplayerHttpUrl, getMultiplayerUrl } from './multiplayer-url.js';
+import { DEFAULT_MAP_CONFIG } from './map-customization.js';
+import { readSavedMapConfig } from './map-config.js';
 import {
   addMovementMarker,
   addPlayerNameTag,
@@ -60,8 +62,9 @@ async function loadPublishedMapConfig() {
     const config = await response.json();
     return Array.isArray(config.enemyAreas) ? config : null;
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith('Servidor multiplayer')) throw error;
-    throw new Error(`Não foi possível conectar ao servidor multiplayer em ${httpUrl}.`, { cause: error });
+    const savedConfig = readSavedMapConfig();
+    if (Array.isArray(savedConfig?.enemyAreas)) return savedConfig;
+    return DEFAULT_MAP_CONFIG;
   }
 }
 
@@ -204,8 +207,15 @@ async function start() {
   };
 
   updateLoading('Aguardando conexão com o multiplayer...', 'Conectando ao jogo');
-  await multiplayerSystem.connect();
-  status.textContent = usedFallback
+  let multiplayerConnected = true;
+  try {
+    await multiplayerSystem.connect({ retry: false });
+  } catch {
+    multiplayerConnected = false;
+  }
+  status.textContent = !multiplayerConnected
+    ? 'Modo local: multiplayer indisponível.'
+    : usedFallback
     ? 'Modelo 3D indisponível; usando modelo de fallback.'
     : 'WebGL ativo: clique para mover. Space cancela o destino.';
   finishLoading();

@@ -64,6 +64,11 @@ const entityLightIntensityValue = document.querySelector('#entity-light-intensit
 const entityLightDistanceInput = document.querySelector('#entity-light-distance');
 const entityLightDistanceValue = document.querySelector('#entity-light-distance-value');
 const skyColorInput = document.querySelector('#sky-color');
+const fogColorInput = document.querySelector('#fog-color');
+const fogNearInput = document.querySelector('#fog-near');
+const fogNearValue = document.querySelector('#fog-near-value');
+const fogFarInput = document.querySelector('#fog-far');
+const fogFarValue = document.querySelector('#fog-far-value');
 const panelToggles = [
   ['assets-toggle', 'assets-panel'],
   ['inspector-toggle', 'inspector-panel'],
@@ -82,6 +87,7 @@ let lighting = {
   point: { position: [0, 8, 0], color: [1, 0.72, 0.45], intensity: 2, distance: 18 },
 };
 let skyColor = [0.039, 0.051, 0.047];
+let fog = { color: [0.63, 0.69, 0.68], near: 180, far: 850 };
 let player = {
   model: '', modelFormat: 'glb',
   position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1], speed: 3,
@@ -162,7 +168,28 @@ function normalizeLighting(value = {}) {
   return lighting;
 }
 function normalizeSkyColor(value) { skyColor = normalizeVector(value, [0.039, 0.051, 0.047]).map((channel) => Math.min(1, Math.max(0, channel))); return skyColor; }
-function updateSkyColor() { renderer.setClearColor(new THREE.Color(...skyColor)); scene.fog.color.setRGB(...skyColor); skyColorInput.value = colorToHex(skyColor); }
+function normalizeFog(value = {}) {
+  fog = {
+    color: normalizeColor(value.color, [0.63, 0.69, 0.68]),
+    near: Math.max(0, Number(value.near ?? 180) || 0),
+    far: Math.max(Number(value.far ?? 850) || 850, Number(value.near ?? 180) + 1),
+  };
+  return fog;
+}
+function updateSceneAtmosphere() {
+  renderer.setClearColor(new THREE.Color(...skyColor));
+  if (!scene.fog) scene.fog = new THREE.Fog(new THREE.Color(...fog.color), fog.near, fog.far);
+  scene.fog.color.setRGB(...fog.color);
+  scene.fog.near = fog.near;
+  scene.fog.far = fog.far;
+  skyColorInput.value = colorToHex(skyColor);
+  fogColorInput.value = colorToHex(fog.color);
+  fogNearInput.value = fog.near;
+  fogNearValue.textContent = fog.near.toFixed(2);
+  fogFarInput.value = fog.far;
+  fogFarValue.textContent = fog.far.toFixed(2);
+}
+const updateSkyColor = () => updateSceneAtmosphere();
 function updateSceneAmbientLight() {
   ambientLight.color.setRGB(...lighting.ambientColor);
   ambientLight.intensity = lighting.ambientIntensity;
@@ -192,7 +219,7 @@ editorGl.cullFace(editorGl.BACK);
 editorGl.frontFace(editorGl.CCW);
 renderer.setClearColor(new THREE.Color(...skyColor));
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(new THREE.Color(...skyColor), 180, 850);
+scene.fog = new THREE.Fog(new THREE.Color(...fog.color), fog.near, fog.far);
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1600);
 camera.position.set(42, 64, 58);
 const orbit = new OrbitControls(camera, canvas);
@@ -735,7 +762,7 @@ function updateVector(input) {
   const entity = selectedEntity(); if (!entity) return; normalizeEntityTransform(entity); const vector = input.dataset.vector; const index = Number(input.dataset.index); const value = Number(input.value); const safeValue = Number.isFinite(value) ? value : 0; entity[vector][index] = vector === 'rotation' ? THREE.MathUtils.degToRad(safeValue) : safeValue; applyEntityTransform(entity); updateCollisionVisual(entity); gizmos.update(entity.object); if (entity.isPlayerPreview) syncPlayerFromPreview(entity); updateInspector(); updateSummary();
 }
 function setMode(next) { mode = next; document.querySelectorAll('.mode-button').forEach((button) => button.classList.toggle('mode-button-active', button.dataset.mode === mode)); orbit.enabled = true; gizmos.setMode(mode); canvas.style.cursor = 'default'; }
-function exportConfig() { return { format: 'webrpg.world', version: 2, scene: { name: 'main-world', units: 'world', skyColor: [...skyColor] }, lighting: { ambientColor: [...lighting.ambientColor], ambientIntensity: lighting.ambientIntensity, directional: { ...lighting.directional, direction: [...lighting.directional.direction], color: [...lighting.directional.color] }, point: { ...lighting.point, position: [...lighting.point.position], color: [...lighting.point.color] } }, player: { ...player, position: [...player.position], rotation: [...player.rotation], scale: [...player.scale], materials: player.materials?.map((material) => ({ ...material, diffuseColor: [...material.diffuseColor], texture: material.texture ?? null })) ?? [], status: { ...player.status }, inventory: [...player.inventory], collision: { ...player.collision }, animation: { ...player.animation } }, assets: assets.map(({ id, name, url, source, format, dependencies }) => ({ id, name, url, source, format, dependencies })), entities: entities.filter((entity) => !entity.isPlayerPreview).map(({ object, ...entity }) => entitySnapshot(entity)), enemyTypes: enemyTypes.map((type, index) => normalizeEnemyType({ ...type, gold: { ...type.gold }, itemDrops: [...type.itemDrops] }, index)), enemyAreas: enemyAreas.map((area) => ({ ...normalizeEnemyArea(area), center: [...area.center] })) }; }
+function exportConfig() { return { format: 'webrpg.world', version: 2, scene: { name: 'main-world', units: 'world', skyColor: [...skyColor], fog: { color: [...fog.color], near: fog.near, far: fog.far } }, lighting: { ambientColor: [...lighting.ambientColor], ambientIntensity: lighting.ambientIntensity, directional: { ...lighting.directional, direction: [...lighting.directional.direction], color: [...lighting.directional.color] }, point: { ...lighting.point, position: [...lighting.point.position], color: [...lighting.point.color] } }, player: { ...player, position: [...player.position], rotation: [...player.rotation], scale: [...player.scale], materials: player.materials?.map((material) => ({ ...material, diffuseColor: [...material.diffuseColor], texture: material.texture ?? null })) ?? [], status: { ...player.status }, inventory: [...player.inventory], collision: { ...player.collision }, animation: { ...player.animation } }, assets: assets.map(({ id, name, url, source, format, dependencies }) => ({ id, name, url, source, format, dependencies })), entities: entities.filter((entity) => !entity.isPlayerPreview).map(({ object, ...entity }) => entitySnapshot(entity)), enemyTypes: enemyTypes.map((type, index) => normalizeEnemyType({ ...type, gold: { ...type.gold }, itemDrops: [...type.itemDrops] }, index)), enemyAreas: enemyAreas.map((area) => ({ ...normalizeEnemyArea(area), center: [...area.center] })) }; }
 function updateSummary() {
   const config = exportConfig();
   document.querySelector('#entity-summary-count').textContent = String(config.entities.length);
@@ -796,7 +823,8 @@ async function applyToGame() { readPlayerInspector(); const config = exportConfi
 // Carrega o mundo a partir de uma configuração JSON, normalizando os dados e atualizando a cena.
 async function loadWorld(config) {
   normalizeSkyColor(config?.scene?.skyColor);
-  updateSkyColor();
+  normalizeFog(config?.scene?.fog);
+  updateSceneAtmosphere();
   normalizeLighting(config?.lighting); 
   updateLightingInspector();   player = { ...player, ...(config?.player ?? {}), position: normalizeVector(config?.player?.position, [0, 0, 0]), rotation: normalizeVector(config?.player?.rotation, [0, 0, 0]), scale: normalizeVector(config?.player?.scale, [1, 1, 1]), status: { ...player.status, ...(config?.player?.status ?? {}) }, inventory: Array.isArray(config?.player?.inventory) ? config.player.inventory : [], collision: { ...player.collision, ...(config?.player?.collision ?? {}) }, animation: { ...player.animation, ...(config?.player?.animation ?? {}) } };
   removePlayerPreview(); assets = []; entities = []; enemyTypes = (Array.isArray(config?.enemyTypes) ? config.enemyTypes : [{ id: 'rat', name: 'Rato', model: '', level: 1, maxHp: 3, speed: 1.2, defense: 1, damage: 1, experience: 2, scale: 0.35, gold: { min: 3, max: 5 }, itemDrops: [] }]).map((type, index) => normalizeEnemyType({ ...type, gold: { ...type.gold }, itemDrops: [...(type.itemDrops ?? [])] }, index)); selectedEnemyTypeId = null; enemyAreas = (Array.isArray(config?.enemyAreas) ? config.enemyAreas : []).map((area) => normalizeEnemyArea({ ...area })); entityGroup.clear(); selectedEntityId = null; selectedEnemyAreaId = null;
@@ -936,7 +964,10 @@ document.querySelector('#redo-button').addEventListener('click', redo);
 ambientColorInput.addEventListener('input', () => { const hex = ambientColorInput.value.slice(1); lighting.ambientColor = [0, 2, 4].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255); updateSceneAmbientLight(); updateSummary(); });
 ambientIntensityInput.addEventListener('input', () => { lighting.ambientIntensity = Number(ambientIntensityInput.value); ambientIntensityValue.textContent = lighting.ambientIntensity.toFixed(2); updateSceneAmbientLight(); updateSummary(); });
 directionalIntensityInput.addEventListener('input', () => { lighting.directional.intensity = Number(directionalIntensityInput.value); directionalIntensityValue.textContent = lighting.directional.intensity.toFixed(2); updateSceneAmbientLight(); updateSummary(); });
-skyColorInput.addEventListener('input', () => { const hex = skyColorInput.value.slice(1); skyColor = [0, 2, 4].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255); updateSkyColor(); updateSummary(); });
+skyColorInput.addEventListener('input', () => { const hex = skyColorInput.value.slice(1); skyColor = [0, 2, 4].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255); updateSceneAtmosphere(); updateSummary(); });
+fogColorInput.addEventListener('input', () => { const hex = fogColorInput.value.slice(1); fog.color = [0, 2, 4].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255); updateSceneAtmosphere(); updateSummary(); });
+fogNearInput.addEventListener('input', () => { fog.near = Number(fogNearInput.value) || 0; if (fog.near >= fog.far) fog.far = fog.near + 1; updateSceneAtmosphere(); updateSummary(); });
+fogFarInput.addEventListener('input', () => { fog.far = Number(fogFarInput.value) || 0; if (fog.far <= fog.near) fog.near = Math.max(0, fog.far - 1); updateSceneAtmosphere(); updateSummary(); });
 panelToggles.forEach(([toggleId, panelId]) => { const toggle = document.querySelector(`#${toggleId}`); toggle.addEventListener('click', () => setPanelOpen(panelId, !document.querySelector(`#${panelId}`).classList.contains('panel-open'), toggle)); });
 inspectorTabs.forEach((tab) => tab.addEventListener('click', () => setInspectorTab(tab.dataset.inspectorTab)));
 document.querySelectorAll('[data-close-panel]').forEach((button) => { button.addEventListener('click', () => { const panelId = button.dataset.closePanel; setPanelOpen(panelId, false, document.querySelector(`[aria-controls="${panelId}"]`)); }); });
@@ -954,7 +985,7 @@ canvas.addEventListener('pointerdown', (event) => {
 canvas.addEventListener('pointermove', (event) => { const rect = canvas.getBoundingClientRect(); pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1; pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1; raycaster.setFromCamera(pointer, camera); const hit = raycaster.intersectObject(ground, false)[0]; if (hit) coordinates.textContent = `x: ${hit.point.x.toFixed(1)}, y: 0, z: ${hit.point.z.toFixed(1)}`; });
 canvas.addEventListener('pointerleave', () => { hover.visible = false; });
 window.addEventListener('resize', resize);
-makeVectorFields(); makeAreaVectorFields(); normalizeSkyColor(); updateSkyColor(); normalizeLighting(); updateLightingInspector(); renderEnemyAreas(); await loadSavedWorld(); resize(); setMode('select');
+makeVectorFields(); makeAreaVectorFields(); normalizeSkyColor(); normalizeFog(); updateSceneAtmosphere(); normalizeLighting(); updateLightingInspector(); renderEnemyAreas(); await loadSavedWorld(); resize(); setMode('select');
 let lastFrameTime = performance.now();
 function animate() { requestAnimationFrame(animate); const now = performance.now(); const delta = Math.min(0.1, (now - lastFrameTime) / 1000); lastFrameTime = now; entities.forEach((entity) => entity.animationMixer?.update(delta)); orbit.update(); renderer.render(scene, camera); }
 animate();

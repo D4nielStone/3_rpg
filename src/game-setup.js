@@ -75,6 +75,9 @@ const fragmentShaderSource = `
 
   uniform vec3 ambientColor;
   uniform float ambientIntensity;
+  uniform vec3 fogColor;
+  uniform float fogNear;
+  uniform float fogFar;
   uniform vec3 diffuseColor;
   uniform vec3 directionalLightDirection;
   uniform vec3 directionalLightColor;
@@ -168,6 +171,10 @@ const fragmentShaderSource = `
       }
       finalColor = baseColor * diffuseColor * light;
     }
+
+    float depth = max(0.0, gl_FragCoord.z / max(gl_FragCoord.w, 0.0001));
+    float fogFactor = clamp((depth - fogNear) / max(fogFar - fogNear, 0.0001), 0.0, 1.0);
+    finalColor = mix(finalColor, fogColor, fogFactor);
 
     gl_FragColor = vec4(finalColor, alpha);
   }
@@ -266,6 +273,11 @@ export function createGame(canvas, status, mapConfig = null) {
   const lighting = {
     ...(mapConfig?.lighting ?? {}),
     pointLights: pointLights.length ? pointLights : undefined,
+  };
+  const fog = {
+    color: mapConfig?.scene?.fog?.color ?? [0.63, 0.69, 0.68],
+    near: Number(mapConfig?.scene?.fog?.near ?? 180),
+    far: Number(mapConfig?.scene?.fog?.far ?? 850),
   };
   const input = new InputState();
 
@@ -370,6 +382,21 @@ export function createGame(canvas, status, mapConfig = null) {
     ambientIntensity: gl.getUniformLocation(
       program,
       'ambientIntensity'
+    ),
+
+    fogColor: gl.getUniformLocation(
+      program,
+      'fogColor'
+    ),
+
+    fogNear: gl.getUniformLocation(
+      program,
+      'fogNear'
+    ),
+
+    fogFar: gl.getUniformLocation(
+      program,
+      'fogFar'
     ),
 
     directionalLightDirection: gl.getUniformLocation(
@@ -515,7 +542,8 @@ export function createGame(canvas, status, mapConfig = null) {
         camera,
         lighting,
         shadowProgram,
-        shadowLocations
+        shadowLocations,
+        { fog }
       ),
   };
 }

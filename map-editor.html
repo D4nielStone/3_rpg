@@ -192,6 +192,12 @@
           <h2>Cena</h2>
           <div class="transform-heading"><strong>Cor do céu</strong><span>fundo</span></div>
           <label for="sky-color">Cor</label><input id="sky-color" type="color" value="#0a0d0c" />
+          <div class="transform-heading"><strong>Neblina</strong><span>atmosfera</span></div>
+          <label for="fog-color">Cor</label><input id="fog-color" type="color" value="#a8b3af" />
+          <label for="fog-near">Distância perto <output id="fog-near-value">180.00</output></label>
+          <input id="fog-near" type="range" min="0" max="500" value="180" step="1" />
+          <label for="fog-far">Distância longe <output id="fog-far-value">850.00</output></label>
+          <input id="fog-far" type="range" min="20" max="1200" value="850" step="1" />
           <div class="transform-heading"><strong>Luz ambiente</strong><span>global</span></div>
           <label for="ambient-color">Cor</label><input id="ambient-color" type="color" value="#ffffff" />
           <label for="ambient-intensity">Intensidade <output id="ambient-intensity-value">1.00</output></label>

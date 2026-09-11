@@ -222,13 +222,14 @@ export class PlayerPathSystem {
 }
 
 export class RenderSystem {
-  constructor(gl, program, locations, camera, lighting = null, shadowProgram = null, shadowLocations = null) {
+  constructor(gl, program, locations, camera, lighting = null, shadowProgram = null, shadowLocations = null, sceneConfig = null) {
     this.gl = gl;
     this.program = program;
     this.locations = locations;
     this.camera = camera;
     this.shadowProgram = shadowProgram;
     this.shadowLocations = shadowLocations;
+    this.sceneConfig = sceneConfig ?? {};
     this.shadowSize = 1024;
     this.shadowFramebuffer = gl.createFramebuffer();
     this.shadowTexture = gl.createTexture();
@@ -254,6 +255,11 @@ export class RenderSystem {
     });
     const intensity = Number(lighting?.ambientIntensity);
     this.ambientIntensity = Number.isFinite(intensity) ? Math.min(2, Math.max(0, intensity)) : 1;
+    const fog = this.sceneConfig.fog ?? {};
+    this.fogColor = this.normalizeColor(fog.color, [0.63, 0.69, 0.68]);
+    this.fogNear = Number.isFinite(Number(fog.near)) ? Number(fog.near) : 180;
+    this.fogFar = Number.isFinite(Number(fog.far)) ? Number(fog.far) : 850;
+    if (this.fogFar <= this.fogNear) this.fogFar = this.fogNear + 1;
     this.directionalLightDirection = this.normalizeVector(
       lighting?.directional?.direction,
       [-0.45, 0.85, 0.35],
@@ -459,6 +465,9 @@ export class RenderSystem {
     const projection = this.camera.getProjectionMatrix();
     gl.uniform3f(locations.ambientColor, ...this.ambientColor);
     gl.uniform1f(locations.ambientIntensity, this.ambientIntensity);
+    gl.uniform3f(locations.fogColor, ...this.fogColor);
+    gl.uniform1f(locations.fogNear, this.fogNear);
+    gl.uniform1f(locations.fogFar, this.fogFar);
     gl.uniform3f(locations.directionalLightDirection, ...this.directionalLightDirection);
     gl.uniform3f(locations.directionalLightColor, ...this.directionalLightColor);
     gl.uniform1f(locations.directionalLightIntensity, this.directionalLightIntensity);
