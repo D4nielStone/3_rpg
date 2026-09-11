@@ -71,17 +71,36 @@ export function createAccountController({
   startGame,
 }) {
   let started = false;
+  let beginPromise = null;
+
+  function setBusy(isBusy) {
+    [guestButton, ...accountForm.querySelectorAll('button, input')].forEach((element) => {
+      element.disabled = isBusy;
+    });
+  }
 
   async function begin(nickname, password = null, mode = 'login') {
     if (started) return;
-    if (password) {
-      nickname = await authenticate(nickname, password, mode, messageElement);
-      if (!nickname) return;
-    }
-    started = true;
-    window.localStorage.setItem('webgl-rpg-nickname', nickname);
-    startScreen.classList.add('start-screen-hidden');
-    startGame();
+    if (beginPromise) return beginPromise;
+
+    beginPromise = (async () => {
+      setBusy(true);
+      try {
+        if (password) {
+          nickname = await authenticate(nickname, password, mode, messageElement);
+          if (!nickname) return;
+        }
+        started = true;
+        window.localStorage.setItem('webgl-rpg-nickname', nickname);
+        startScreen.classList.add('start-screen-hidden');
+        await startGame();
+      } finally {
+        beginPromise = null;
+        if (!started) setBusy(false);
+      }
+    })();
+
+    return beginPromise;
   }
 
   accountForm.addEventListener('submit', (event) => {

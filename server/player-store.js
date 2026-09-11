@@ -84,6 +84,21 @@ export class PlayerStore {
   async get(guestId, peerId, nickname = 'Guest', playerDefinition = {}) {
     await this.ready;
 
+    const initialPlayer = new Player({
+      peerId,
+      nickname,
+      ...(playerDefinition.status ?? {}),
+      inventory: playerDefinition.inventory,
+    });
+
+    // A criacao e atomica: conexoes simultaneas para o mesmo jogador
+    // disputam a mesma chave primaria e reutilizam a primeira linha.
+    await this.pool.query(`
+      INSERT INTO players (guest_id, state, updated_at)
+      VALUES ($1, $2::jsonb, NOW())
+      ON CONFLICT (guest_id) DO NOTHING
+    `, [guestId, JSON.stringify(initialPlayer.toPersistence())]);
+
     // Procura o estado persistente do jogador pelo seu UUID.
     const result = await this.pool.query(
       'SELECT state FROM players WHERE guest_id = $1',

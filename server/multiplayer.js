@@ -1146,6 +1146,16 @@ socketServer.on(
   }
 );
 
+server.listen(
+  port,
+  host,
+  () => {
+    logger.info(
+      `Multiplayer relay ouvindo em ws://${host}:${port}`
+    );
+  }
+);
+
 playerStore.ready
   .then(async () => {
     gameState.databaseReady = true;
@@ -1253,15 +1263,6 @@ playerStore.ready
       50
     );
 
-    server.listen(
-      port,
-      host,
-      () => {
-        logger.info(
-          `Multiplayer relay ouvindo em ws://${host}:${port}`
-        );
-      }
-    );
   })
   .catch((error) => {
     logger.error(
