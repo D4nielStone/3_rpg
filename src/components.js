@@ -58,6 +58,11 @@ export class SoundPlayer {
 
   async load(name, source = this.sounds.get(name)) {
     if (!this.context || !source) return null;
+    if (typeof source === 'function') {
+      const buffer = source(this.context);
+      this.sounds.set(name, buffer);
+      return buffer;
+    }
     if (source?.duration !== undefined && source?.getChannelData) return source;
     const response = await fetch(source);
     if (!response.ok) throw new Error(`Nao foi possivel carregar o som ${name}.`);

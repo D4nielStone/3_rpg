@@ -34,6 +34,21 @@
           <p class="panel-note">GLB, GLTF e OBJ. Para OBJ, selecione também o MTL e as texturas.</p>
           <div id="asset-list" class="asset-list" aria-label="Biblioteca de assets"></div>
         </div>
+        <div class="panel-section">
+          <div class="section-heading"><h2>Sons de combate</h2><span>3 canais</span></div>
+          <label for="sound-type">Canal</label>
+          <select id="sound-type">
+            <option value="slash">Corte</option>
+            <option value="pulse">Pulso</option>
+            <option value="arc">Arco</option>
+          </select>
+          <label for="sound-url">URL do áudio</label>
+          <div class="asset-url-row"><input id="sound-url" type="url" placeholder="/sounds/ataque.ogg" /><button id="sound-url-button" type="button" title="Usar áudio por URL">+</button></div>
+          <label class="upload-button" for="sound-file">Importar áudio</label>
+          <input id="sound-file" type="file" accept="audio/*,.mp3,.ogg,.wav,.m4a" hidden />
+          <p class="panel-note">Configure cada canal com URL ou arquivo de áudio.</p>
+          <div id="sound-list" class="asset-list" aria-label="Sons configurados"></div>
+        </div>
       </aside>
 
       <section class="canvas-stage">

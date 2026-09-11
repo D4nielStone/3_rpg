@@ -30,6 +30,9 @@ const status = document.querySelector('#map-status');
 const coordinates = document.querySelector('#map-coordinates');
 const preview = document.querySelector('#json-preview');
 const assetList = document.querySelector('#asset-list');
+const soundType = document.querySelector('#sound-type');
+const soundUrl = document.querySelector('#sound-url');
+const soundList = document.querySelector('#sound-list');
 const entityList = document.querySelector('#entity-list');
 const entityInspector = document.querySelector('#entity-inspector');
 const emptyInspector = document.querySelector('#empty-inspector');
@@ -78,6 +81,7 @@ const inspectorTabs = [...document.querySelectorAll('[data-inspector-tab]')];
 let mode = 'select';
 let entities = [];
 let assets = [];
+let sounds = { slash: '', pulse: '', arc: '' };
 let enemyAreas = [];
 let enemyTypes = [];
 let lighting = {
@@ -104,6 +108,20 @@ const history = [];
 const future = [];
 
 function newId(prefix) { let id; do { id = `${prefix}-${nextId++}`; } while ([...assets, ...entities, ...enemyAreas].some((item) => item.id === id)); return id; }
+function normalizeSounds(value) { return ['slash', 'pulse', 'arc'].reduce((result, name) => ({ ...result, [name]: typeof value?.[name] === 'string' ? value[name] : '' }), {}); }
+function renderSounds() {
+  soundList.replaceChildren(...Object.entries(sounds).map(([name, source]) => {
+    const item = document.createElement('div');
+    item.className = 'asset-item';
+    const label = document.createElement('span');
+    label.className = 'asset-icon';
+    label.textContent = name[0].toUpperCase();
+    const value = document.createElement('span');
+    value.textContent = source ? `${name}: ${source.startsWith('data:') ? 'arquivo importado' : source}` : `${name}: padrão do jogo`;
+    item.append(label, value);
+    return item;
+  }));
+}
 function selectedEntity() { return entities.find((entity) => entity.id === selectedEntityId) ?? null; }
 function normalizeVector(value, fallback) { return Array.from({ length: 3 }, (_, index) => { const item = value?.[index]; return item === null || item === undefined || !Number.isFinite(Number(item)) ? fallback[index] : Number(item); }); }
 function normalizeEntityTransform(entity) { entity.position = normalizeVector(entity.position, [0, 0, 0]); entity.rotation = normalizeVector(entity.rotation, [0, 0, 0]); entity.scale = normalizeVector(entity.scale, [1, 1, 1]); return entity; }
@@ -762,7 +780,7 @@ function updateVector(input) {
   const entity = selectedEntity(); if (!entity) return; normalizeEntityTransform(entity); const vector = input.dataset.vector; const index = Number(input.dataset.index); const value = Number(input.value); const safeValue = Number.isFinite(value) ? value : 0; entity[vector][index] = vector === 'rotation' ? THREE.MathUtils.degToRad(safeValue) : safeValue; applyEntityTransform(entity); updateCollisionVisual(entity); gizmos.update(entity.object); if (entity.isPlayerPreview) syncPlayerFromPreview(entity); updateInspector(); updateSummary();
 }
 function setMode(next) { mode = next; document.querySelectorAll('.mode-button').forEach((button) => button.classList.toggle('mode-button-active', button.dataset.mode === mode)); orbit.enabled = true; gizmos.setMode(mode); canvas.style.cursor = 'default'; }
-function exportConfig() { return { format: 'webrpg.world', version: 2, scene: { name: 'main-world', units: 'world', skyColor: [...skyColor], fog: { color: [...fog.color], near: fog.near, far: fog.far } }, lighting: { ambientColor: [...lighting.ambientColor], ambientIntensity: lighting.ambientIntensity, directional: { ...lighting.directional, direction: [...lighting.directional.direction], color: [...lighting.directional.color] }, point: { ...lighting.point, position: [...lighting.point.position], color: [...lighting.point.color] } }, player: { ...player, position: [...player.position], rotation: [...player.rotation], scale: [...player.scale], materials: player.materials?.map((material) => ({ ...material, diffuseColor: [...material.diffuseColor], texture: material.texture ?? null })) ?? [], status: { ...player.status }, inventory: [...player.inventory], collision: { ...player.collision }, animation: { ...player.animation } }, assets: assets.map(({ id, name, url, source, format, dependencies }) => ({ id, name, url, source, format, dependencies })), entities: entities.filter((entity) => !entity.isPlayerPreview).map(({ object, ...entity }) => entitySnapshot(entity)), enemyTypes: enemyTypes.map((type, index) => normalizeEnemyType({ ...type, gold: { ...type.gold }, itemDrops: [...type.itemDrops] }, index)), enemyAreas: enemyAreas.map((area) => ({ ...normalizeEnemyArea(area), center: [...area.center] })) }; }
+function exportConfig() { return { format: 'webrpg.world', version: 2, scene: { name: 'main-world', units: 'world', skyColor: [...skyColor], fog: { color: [...fog.color], near: fog.near, far: fog.far } }, lighting: { ambientColor: [...lighting.ambientColor], ambientIntensity: lighting.ambientIntensity, directional: { ...lighting.directional, direction: [...lighting.directional.direction], color: [...lighting.directional.color] }, point: { ...lighting.point, position: [...lighting.point.position], color: [...lighting.point.color] } }, sounds: { ...sounds }, player: { ...player, position: [...player.position], rotation: [...player.rotation], scale: [...player.scale], materials: player.materials?.map((material) => ({ ...material, diffuseColor: [...material.diffuseColor], texture: material.texture ?? null })) ?? [], status: { ...player.status }, inventory: [...player.inventory], collision: { ...player.collision }, animation: { ...player.animation } }, assets: assets.map(({ id, name, url, source, format, dependencies }) => ({ id, name, url, source, format, dependencies })), entities: entities.filter((entity) => !entity.isPlayerPreview).map(({ object, ...entity }) => entitySnapshot(entity)), enemyTypes: enemyTypes.map((type, index) => normalizeEnemyType({ ...type, gold: { ...type.gold }, itemDrops: [...type.itemDrops] }, index)), enemyAreas: enemyAreas.map((area) => ({ ...normalizeEnemyArea(area), center: [...area.center] })) }; }
 function updateSummary() {
   const config = exportConfig();
   document.querySelector('#entity-summary-count').textContent = String(config.entities.length);
@@ -825,7 +843,9 @@ async function loadWorld(config) {
   normalizeSkyColor(config?.scene?.skyColor);
   normalizeFog(config?.scene?.fog);
   updateSceneAtmosphere();
-  normalizeLighting(config?.lighting); 
+  normalizeLighting(config?.lighting);
+  sounds = normalizeSounds(config?.sounds);
+  renderSounds();
   updateLightingInspector();   player = { ...player, ...(config?.player ?? {}), position: normalizeVector(config?.player?.position, [0, 0, 0]), rotation: normalizeVector(config?.player?.rotation, [0, 0, 0]), scale: normalizeVector(config?.player?.scale, [1, 1, 1]), status: { ...player.status, ...(config?.player?.status ?? {}) }, inventory: Array.isArray(config?.player?.inventory) ? config.player.inventory : [], collision: { ...player.collision, ...(config?.player?.collision ?? {}) }, animation: { ...player.animation, ...(config?.player?.animation ?? {}) } };
   removePlayerPreview(); assets = []; entities = []; enemyTypes = (Array.isArray(config?.enemyTypes) ? config.enemyTypes : [{ id: 'rat', name: 'Rato', model: '', level: 1, maxHp: 3, speed: 1.2, defense: 1, damage: 1, experience: 2, scale: 0.35, gold: { min: 3, max: 5 }, itemDrops: [] }]).map((type, index) => normalizeEnemyType({ ...type, gold: { ...type.gold }, itemDrops: [...(type.itemDrops ?? [])] }, index)); selectedEnemyTypeId = null; enemyAreas = (Array.isArray(config?.enemyAreas) ? config.enemyAreas : []).map((area) => normalizeEnemyArea({ ...area })); entityGroup.clear(); selectedEntityId = null; selectedEnemyAreaId = null;
   for (const asset of config?.assets ?? []) { if (asset.url && !asset.url.startsWith('blob:')) assets.push({ ...asset, format: asset.format ?? assetFormat(asset.name ?? asset.url) }); }
@@ -866,6 +886,46 @@ async function loadSavedWorld() {
 document.querySelectorAll('.mode-button').forEach((button) => button.addEventListener('click', () => setMode(button.dataset.mode)));
 document.querySelector('#model-file').addEventListener('change', async (event) => { const files = [...event.target.files]; const model = files.find((file) => /\.(glb|gltf|obj)$/i.test(file.name)); if (!model) return; try { const dependencies = Object.fromEntries(await Promise.all(files.filter((file) => file !== model).map(async (file) => [file.name, await readFileAsDataUrl(file)]))); const url = await readFileAsDataUrl(model); await registerAsset(url, model.name, `local:${model.name}`, assetFormat(model.name), dependencies); } catch (error) { setStatus(`Falha ao ler ${model.name}: ${error.message}`); } event.target.value = ''; });
 document.querySelector('#add-url-button').addEventListener('click', async () => { const input = document.querySelector('#model-url'); const url = input.value.trim(); if (!url) return; await registerAsset(url, url.split('/').pop() || 'Modelo 3D'); input.value = ''; });
+function syncSoundInput() { const source = sounds[soundType.value] ?? ''; soundUrl.value = source.startsWith('data:') ? '' : source; }
+soundType.addEventListener('change', syncSoundInput);
+async function verifySoundSource(source) {
+  if (source.startsWith('data:') || source.startsWith('blob:')) return true;
+  try {
+    let response = await fetch(source, { method: 'HEAD' });
+    if (response.status === 405 || response.status === 501) response = await fetch(source, { headers: { Range: 'bytes=0-0' } });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+document.querySelector('#sound-url-button').addEventListener('click', async () => {
+  const source = soundUrl.value.trim();
+  if (!source) return;
+  if (!(await verifySoundSource(source))) {
+    setStatus('Arquivo de som não encontrado ou indisponível');
+    return;
+  }
+  pushHistory();
+  sounds[soundType.value] = source;
+  renderSounds();
+  updateSummary();
+  setStatus(`Som ${soundType.value} configurado`);
+});
+document.querySelector('#sound-file').addEventListener('change', async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    pushHistory();
+    sounds[soundType.value] = await readFileAsDataUrl(file);
+    renderSounds();
+    syncSoundInput();
+    updateSummary();
+    setStatus(`Som ${soundType.value} importado`);
+  } catch (error) {
+    setStatus(`Falha ao ler ${file.name}: ${error.message}`);
+  }
+  event.target.value = '';
+});
 document.querySelector('#create-empty-button').addEventListener('click', () => { pushHistory(); addEntity(createEntity()); setMode('translate'); setStatus('Entidade vazia criada'); });
 document.querySelector('#duplicate-entity-button').addEventListener('click', duplicateSelectedEntity);
 document.querySelector('#create-point-light-button').addEventListener('click', createPointLight);

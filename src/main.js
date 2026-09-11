@@ -1,4 +1,4 @@
-import { EnemyIdentity, SoundListener } from './components.js';
+import { EnemyIdentity, SoundListener, SoundPlayer } from './components.js';
 import { MultiplayerSystem } from './multiplayer.js';
 import { addRemotePlayer } from './player-factory.js';
 import { createGame } from './game-setup.js';
@@ -49,48 +49,6 @@ function updateLoading(message, title = 'Carregando cena') {
 function finishLoading() {
   loadingScreen.classList.add('loading-screen-hidden');
   loadingScreen.setAttribute('aria-hidden', 'true');
-}
-
-function checkMultiplayerConnection(timeoutMs = 8000) {
-  const multiplayerUrl = getMultiplayerUrl();
-  if (!multiplayerUrl) {
-    return Promise.reject(new Error('URL do relay multiplayer não configurada.'));
-  }
-  if (!('WebSocket' in window)) {
-    return Promise.reject(new Error('Este navegador não oferece suporte ao multiplayer WebSocket.'));
-  }
-
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const url = new URL(multiplayerUrl);
-    url.searchParams.set('guestId', `connection-check-${window.crypto.randomUUID()}`);
-    url.searchParams.set('nickname', 'ConnectionCheck');
-    const socket = new WebSocket(url.toString());
-    const timeout = window.setTimeout(() => {
-      finish(new Error('Tempo esgotado ao conectar ao multiplayer. Verifique o relay e tente novamente.'));
-    }, timeoutMs);
-
-    const finish = (error = null) => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      socket.close();
-      if (error) reject(error);
-      else resolve();
-    };
-
-    socket.addEventListener('open', () => finish());
-    socket.addEventListener('error', () => {
-      finish(new Error('Não foi possível conectar ao multiplayer. Verifique o endereço do relay e sua conexão.'));
-    });
-    socket.addEventListener('close', (event) => {
-      if (!settled) finish(new Error(
-        event.code === 4001
-          ? 'O relay recusou a identidade do jogador.'
-          : 'O multiplayer está offline. Inicie o relay e tente novamente.',
-      ));
-    });
-  });
 }
 
 // Retorna o json do mapa
@@ -150,8 +108,34 @@ function updatePlayerAttributes({ strength = 1, strengthXp = 0, maxStrengthXp = 
   ui.updateAttributes({ strength, strengthXp, maxStrengthXp, accuracy, magic });
 }
 
+let combatMode = 'melee';
 function updateCombatMode(mode = 'melee') {
+  combatMode = mode;
   ui.updateCombatMode(mode);
+}
+
+function createAttackSound(type) {
+  return (context) => {
+    const duration = type === 'pulse' ? 0.22 : 0.14;
+    const buffer = context.createBuffer(1, Math.ceil(context.sampleRate * duration), context.sampleRate);
+    const samples = buffer.getChannelData(0);
+    const settings = {
+      slash: { start: 620, end: 120, noise: 0.18 },
+      pulse: { start: 180, end: 520, noise: 0.04 },
+      arc: { start: 260, end: 920, noise: 0.08 },
+    }[type];
+    if (!settings) return buffer;
+    for (let index = 0; index < samples.length; index += 1) {
+      const progress = index / samples.length;
+      const envelope = Math.pow(1 - progress, 2);
+      const frequency = settings.start + (settings.end - settings.start) * progress;
+      samples[index] = (
+        Math.sin(2 * Math.PI * frequency * index / context.sampleRate)
+        + (Math.random() * 2 - 1) * settings.noise
+      ) * envelope * 0.35;
+    }
+    return buffer;
+  };
 }
 
 updatePlayerAttributes();
@@ -193,13 +177,20 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
     onOnlinePlayers: ui.renderOnlinePlayers,
     onMapAccess: (path) => window.open(new URL(path, window.location.origin), '_blank', 'noopener'),
     onChat: (message) => chat.addMessage(message),
+    onAttackHit: () => {
+      const soundName = { melee: 'slash', ranged: 'pulse', magic: 'arc' }[combatMode] ?? 'slash';
+      soundPlayer?.play(soundName).catch(() => {});
+    },
     createRemoteEntity: (peerId, nickname, level) => addRemotePlayer(game.world, playerEntity, peerId, nickname, level),
     createEnemyEntity: (enemy) => addRemoteEnemy(game.world, enemyAssets, enemy),
     onAttackTargetChanged: (entity) => game.PlayerPathSystem.setCombatTarget(entity),
   });
   chat.connect((message) => multiplayer.sendChat(message));
   combatModeButtons.forEach((button) => {
-    button.addEventListener('click', () => multiplayer.setCombatMode(button.dataset.combatMode));
+    button.addEventListener('click', () => {
+      updateCombatMode(button.dataset.combatMode);
+      multiplayer.setCombatMode(button.dataset.combatMode);
+    });
   });
   rankingButton.addEventListener('click', () => {
     if (ui.toggleRanking()) multiplayer.requestRanking();
@@ -231,7 +222,6 @@ async function start(identity = {}) {
   });
   updateLoading('Verificando conexão com o multiplayer...', 'Conectando ao jogo');
   status.textContent = 'Verificando conexão com o multiplayer...';
-  await checkMultiplayerConnection();
 
   updateLoading('Preparando o mundo...');
   status.textContent = 'Carregando cena...';
@@ -239,7 +229,17 @@ async function start(identity = {}) {
   const game = createGame(canvas, status, mapConfig);
   updateLoading('Carregando cenário e personagem...');
   const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game, mapConfig?.player, mapConfig?.assets);
-  game.world.addComponent(playerEntity, new SoundListener());
+  const soundListener = new SoundListener();
+  game.world.addComponent(playerEntity, soundListener);
+  game.world.addComponent(playerEntity, new SoundPlayer({
+    sounds: {
+        slash: mapConfig?.sounds?.slash || createAttackSound('slash'),
+        pulse: mapConfig?.sounds?.pulse || createAttackSound('pulse'),
+        arc: mapConfig?.sounds?.arc || createAttackSound('arc'),
+    },
+    volume: 0.7,
+  }));
+  const soundPlayer = game.world.getComponent(playerEntity, SoundPlayer);
   const { enemyAssets } = await loadSceneAssets(game.textureManager, mapConfig?.enemyTypes, mapConfig?.assets);
   addPlayerNameTag(game.world, playerEntity);
 

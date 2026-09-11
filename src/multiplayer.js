@@ -28,6 +28,7 @@ export class MultiplayerSystem {
     onOnlinePlayers = () => {},
     onMapAccess = () => {},
     onAttackTargetChanged = () => {},
+    onAttackHit = () => {},
   }) {
     this.url = url;
     this.world = world;
@@ -43,6 +44,7 @@ export class MultiplayerSystem {
     this.onOnlinePlayers = onOnlinePlayers;
     this.onMapAccess = onMapAccess;
     this.onAttackTargetChanged = onAttackTargetChanged;
+    this.onAttackHit = onAttackHit;
     this.socket = null;
     this.localEntity = null;
     this.localPeerId = null;
@@ -146,6 +148,11 @@ export class MultiplayerSystem {
     if (message.type === 'death') {
       this.localPlayerDead = true;
       this.onDeath();
+      return;
+    }
+
+    if (message.type === 'attack-hit') {
+      this.onAttackHit(message);
       return;
     }
 

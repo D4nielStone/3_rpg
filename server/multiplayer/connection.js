@@ -168,6 +168,11 @@ export function registerConnectionHandler({
                 `Sua força subiu para ${player.strength}! Progresso corpo-a-corpo reiniciado.`,
               );
             }
+            socket.send(JSON.stringify({
+              type: 'attack-hit',
+              damage: attackResult.damage,
+              sentAt: Date.now(),
+            }));
             broadcastSnapshot();
           }
           return;
