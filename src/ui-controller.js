@@ -93,11 +93,18 @@ export function createUiController({
 
   function renderRanking(players = []) {
     rankingList.replaceChildren();
-    players.forEach((player, index) => {
+    const seenNames = new Set();
+    let rank = 0;
+    players.forEach((player) => {
+      const nickname = String(player.nickname ?? 'Guest');
+      const normalizedName = nickname.trim().toLocaleLowerCase();
+      if (seenNames.has(normalizedName)) return;
+      seenNames.add(normalizedName);
+      rank += 1;
       const item = document.createElement('li');
       const name = document.createElement('span');
       const score = document.createElement('strong');
-      name.textContent = `${index + 1}. ${player.nickname ?? 'Guest'}`;
+      name.textContent = `${rank}. ${nickname}`;
       score.textContent = `LVL ${player.level} | XP ${player.xp}`;
       item.append(name, score);
       rankingList.append(item);

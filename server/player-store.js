@@ -205,11 +205,20 @@ export class PlayerStore {
     // Extrai os dados necessários diretamente do JSONB.
     // O ranking é ordenado primeiro pelo nível e depois pela XP.
     const result = await this.pool.query(`
-      SELECT
-        state->>'nickname' AS nickname,
-        COALESCE((state->>'level')::int, 1) AS level,
-        COALESCE((state->>'xp')::int, 0) AS xp
-      FROM players
+      SELECT nickname, level, xp
+      FROM (
+        SELECT DISTINCT ON (LOWER(state->>'nickname'))
+          state->>'nickname' AS nickname,
+          COALESCE((state->>'level')::int, 1) AS level,
+          COALESCE((state->>'xp')::int, 0) AS xp
+        FROM players
+        WHERE NULLIF(TRIM(state->>'nickname'), '') IS NOT NULL
+        ORDER BY
+          LOWER(state->>'nickname'),
+          COALESCE((state->>'level')::int, 1) DESC,
+          COALESCE((state->>'xp')::int, 0) DESC,
+          state->>'nickname' ASC
+      ) AS unique_players
       ORDER BY level DESC, xp DESC, nickname ASC
       LIMIT $1
     `, [limit]);
