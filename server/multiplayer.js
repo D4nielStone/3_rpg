@@ -679,6 +679,17 @@ commandManager
 socketServer.on(
   'connection',
   async (socket, request) => {
+    if (
+      socketServer.clients.size >
+      maxWebSocketConnections
+    ) {
+      socket.close(
+        1013,
+        'Server busy'
+      );
+      return;
+    }
+
     const peerId = randomUUID();
 
     const identity =
