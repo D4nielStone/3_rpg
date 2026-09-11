@@ -7,7 +7,7 @@ import {
   sendSystemMessage,
 } from './utils.js';
 import { isWaterPosition } from '../world/enemy-areas.js';
-import { promotePlayerToAreaTwo } from './commands.js';
+import { promotePlayerToAreaTwo } from './player-actions.js';
 import { createRateLimiter } from '../rate-limit.js';
 import { maxWebSocketConnections } from './config.js';
 
@@ -21,6 +21,8 @@ export function registerConnectionHandler({
   commandManager,
   broadcastSnapshot,
   broadcast,
+  queuePlayerSave,
+  savePlayer,
 }) {
   socketServer.on('connection', async (socket, request) => {
     if (socketServer.clients.size >= maxWebSocketConnections) {
@@ -86,11 +88,17 @@ export function registerConnectionHandler({
 
         if (message.type === 'chat' && isChatMessage(message.text)) {
           const text = message.text.trim();
+          let isAdmin = identity.isAdmin === true;
+          if (identity.isAdmin !== undefined) {
+            const account = await playerStore.findUser(identity.nickname);
+            isAdmin = account?.id === playerId && account.is_admin === true;
+            identity.isAdmin = isAdmin;
+          }
           if (await commandManager.execute(text, {
             socket,
             peerId,
             playerId,
-            isAdmin: identity.isAdmin === true,
+            isAdmin,
             sendSystem: (messageText) => sendSystemMessage(socket, messageText),
           })) return;
           logger.info('Mensagem de chat recebida', {
@@ -213,7 +221,7 @@ export function registerConnectionHandler({
           }
           : { id: 'open-world', name: 'Mundo aberto', level: 0 };
         player.setTransform(message.position, message.rotation);
-        await playerStore.save(playerId, player);
+        queuePlayerSave(playerId, player);
         broadcastSnapshot();
       } catch (error) {
         logger.warn('Falha ao processar mensagem do jogador', { peerId, error: error.message });
@@ -224,7 +232,7 @@ export function registerConnectionHandler({
       const activeSession = state.activeGuestSessions.get(playerId);
       if (activeSession?.peerId === peerId) state.activeGuestSessions.delete(playerId);
       const player = state.players.get(peerId);
-      if (player) playerStore.save(playerId, player).catch((error) => {
+      if (player) savePlayer(playerId, player).catch((error) => {
         logger.error('Falha ao salvar jogador', { peerId, error: error.message });
       });
       state.players.delete(peerId);

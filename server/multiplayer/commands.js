@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { CommandManager } from '../command-manager.js';
 import { sendSystemMessage, resolvePlayerTarget } from './utils.js';
+import { promotePlayerToAreaTwo } from './player-actions.js';
 
 export function createCommandManager({ state, playerStore, broadcastSnapshot }) {
   const commandManager = new CommandManager();
@@ -39,7 +40,6 @@ export function createCommandManager({ state, playerStore, broadcastSnapshot }) 
       },
     })
     .register('tp', {
-      scope: 'admin',
       description: 'Teletransporta um jogador: /tp [@jogador] x y z',
       execute: async ({ socket, peerId, playerId, command }) => {
         let targetName = '@p';
