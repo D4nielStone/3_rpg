@@ -103,15 +103,15 @@
 .player-speech-bubble {
   position: fixed;
   z-index: 4;
-  max-width: min(18rem, 42vw);
+  max-width: min(20rem, 44vw);
   box-sizing: border-box;
-  padding: 0.45rem 0.65rem;
-  border: 2px solid #20252a;
-  border-radius: 0.65rem;
-  color: #20252a;
-  background: #fff8df;
-  box-shadow: 3px 3px 0 rgb(0 0 0 / 38%);
-  font: 0.78rem/1.25 'Pixelify Sans', sans-serif;
+  padding: 0.5rem 0.7rem;
+  border: 3px solid #101820;
+  border-radius: 2px;
+  color: #e9e4d0;
+  background: #191c21;
+  box-shadow: 3px 3px 0 #050608, 0 0 0 1px #565a62;
+  font: 700 0.78rem/1.3 'Pixelify Sans', sans-serif;
   overflow-wrap: anywhere;
   pointer-events: none;
   transform: translate(-50%, -100%);
@@ -119,15 +119,23 @@
 
 .player-speech-bubble::after {
   position: absolute;
-  bottom: -0.55rem;
+  bottom: -0.5rem;
   left: 50%;
-  width: 0.85rem;
-  height: 0.85rem;
-  border-right: 2px solid #20252a;
-  border-bottom: 2px solid #20252a;
-  background: #fff8df;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-right: 3px solid #101820;
+  border-bottom: 3px solid #101820;
+  background: #191c21;
   content: '';
   transform: translateX(-50%) rotate(45deg);
+}
+
+.player-speech-bubble::before {
+  position: absolute;
+  inset: 0.22rem;
+  border: 1px solid #d6a83d;
+  content: '';
+  pointer-events: none;
 }
 
 @media (max-width: 640px) {

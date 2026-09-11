@@ -142,7 +142,7 @@ export class NameTag {
     this.element.classList.toggle('player-name-tag-alerted', this.alerted);
   }
 
-  showSpeech(text, durationMs = 4500) {
+  showSpeech(text, durationMs = 8000) {
     this.speechElement.textContent = text;
     this.speechElement.hidden = false;
     this.speechExpiresAt = Date.now() + durationMs;
