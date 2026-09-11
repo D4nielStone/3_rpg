@@ -854,6 +854,21 @@ socketServer.on(
             const text =
               message.text.trim();
 
+            let isAdmin =
+              identity.isAdmin === true;
+
+            if (identity.isAdmin !== undefined) {
+              const account =
+                await playerStore.findUser(
+                  identity.nickname
+                );
+
+              isAdmin =
+                account?.id === playerId &&
+                account.is_admin === true;
+              identity.isAdmin = isAdmin;
+            }
+
             if (
               await commandManager.execute(
                 text,
@@ -861,9 +876,7 @@ socketServer.on(
                   socket,
                   peerId,
                   playerId,
-                  isAdmin:
-                    identity.isAdmin ===
-                    true,
+                  isAdmin,
                   sendSystem:
                     (messageText) =>
                       sendSystemMessage(
