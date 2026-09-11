@@ -4,9 +4,7 @@ export function getMultiplayerUrl() {
   const configuredUrl = import.meta.env.VITE_MULTIPLAYER_URL?.trim();
   if (configuredUrl) return configuredUrl.replace(/\/$/, '');
   if (import.meta.env.PROD) return productionRelayUrl;
-  const localHost = window.location.hostname === 'localhost'
-    ? '127.0.0.1'
-    : window.location.hostname;
+  const localHost = window.location.hostname;
   return `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${localHost}:5174`;
 }
 

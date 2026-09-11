@@ -20,7 +20,14 @@ export function createBroadcaster(
   function sendSnapshot() {
     sendToClients(JSON.stringify({
       type: 'snapshot',
-      players: [...state.players.values()].map((player) => player.toSnapshot()),
+      players: [...state.players.values()].map((player) => {
+        const session = [...state.activeGuestSessions.values()]
+          .find((active) => active.peerId === player.peerId);
+        return {
+          ...player.toSnapshot(),
+          isAdmin: session?.isAdmin === true,
+        };
+      }),
       enemies: state.enemyAreas.flatMap((area) => area.toSnapshots()),
     }));
   }

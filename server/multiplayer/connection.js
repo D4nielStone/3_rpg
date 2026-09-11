@@ -34,12 +34,29 @@ export function registerConnectionHandler({
     }
     const playerId = identity.id;
     const userLabel = getUserLabel(peerId, identity.nickname);
+
+    if (identity.isAdmin !== undefined) {
+      try {
+        const account = await playerStore.findUser(identity.nickname);
+        identity.isAdmin = account?.id === playerId && account.is_admin === true;
+      } catch (error) {
+        logger.warn('Nao foi possivel atualizar permissao administrativa', {
+          peerId,
+          error: error.message,
+        });
+      }
+    }
+
     if (state.activeGuestSessions.has(playerId)) {
       logger.warn('Conexao duplicada recusada', { peerId, playerId });
       socket.close(4008, 'Guest already connected');
       return;
     }
-    state.activeGuestSessions.set(playerId, { peerId, socket });
+    state.activeGuestSessions.set(playerId, {
+      peerId,
+      socket,
+      isAdmin: identity.isAdmin === true,
+    });
 
     let player;
     try {
@@ -86,6 +103,8 @@ export function registerConnectionHandler({
             const account = await playerStore.findUser(identity.nickname);
             isAdmin = account?.id === playerId && account.is_admin === true;
             identity.isAdmin = isAdmin;
+            const activeSession = state.activeGuestSessions.get(playerId);
+            if (activeSession) activeSession.isAdmin = isAdmin;
           }
           if (await commandManager.execute(text, {
             socket,
@@ -103,6 +122,7 @@ export function registerConnectionHandler({
             peerId,
             nickname: player.nickname,
             text,
+            isAdmin,
             sentAt: Date.now(),
           });
           return;

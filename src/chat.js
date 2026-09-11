@@ -20,7 +20,7 @@ export class ChatPanel {
     this.sendMessage = sendMessage;
   }
 
-  addMessage({ type = 'chat', peerId, nickname, text, sentAt = Date.now() }) {
+  addMessage({ type = 'chat', peerId, nickname, isAdmin = false, text, sentAt = Date.now() }) {
     // textContent impede que mensagens recebidas sejam interpretadas como HTML.
     const item = document.createElement('li');
     const author = document.createElement('strong');
@@ -28,6 +28,14 @@ export class ChatPanel {
 
     item.classList.toggle('system-message', type === 'system');
     author.textContent = nickname || (peerId ? peerId.slice(0, 6) : '');
+    if (isAdmin && author.textContent) {
+      const badge = document.createElement('span');
+      badge.className = 'admin-badge admin-badge-chat';
+      badge.textContent = 'ADM';
+      badge.title = 'Administrador';
+      badge.setAttribute('aria-label', 'Administrador');
+      author.append(' ', badge);
+    }
     if (author.textContent) author.textContent += ': ';
     time.textContent = new Date(sentAt).toLocaleTimeString([], {
       hour: '2-digit',

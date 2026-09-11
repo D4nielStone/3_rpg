@@ -77,6 +77,14 @@ export function createUiController({
       const nickname = document.createElement('span');
       const level = document.createElement('strong');
       nickname.textContent = player.nickname ?? 'Guest';
+      if (player.isAdmin) {
+        const badge = document.createElement('span');
+        badge.className = 'admin-badge admin-badge-online';
+        badge.textContent = 'ADM';
+        badge.title = 'Administrador';
+        badge.setAttribute('aria-label', 'Administrador');
+        nickname.append(' ', badge);
+      }
       level.textContent = `LVL ${player.level ?? 1}`;
       item.append(nickname, level);
       onlinePlayersList.append(item);

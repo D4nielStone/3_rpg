@@ -13,6 +13,39 @@
   background: rgb(255 255 255 / 3%);
 }
 
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.1rem;
+  box-sizing: border-box;
+  padding: 0.08rem 0.3rem;
+  border: 1px solid #f0c54a;
+  border-radius: 2px;
+  color: #17130a;
+  background: #f0c54a;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.admin-badge::before {
+  content: '♛';
+  margin-right: 0.2rem;
+  color: #fff4b0;
+  font-size: 0.78rem;
+  line-height: 0.8;
+}
+
+.admin-badge-chat {
+  margin-left: 0.25rem;
+}
+
+.admin-badge-online {
+  margin-left: 0.3rem;
+}
+
 #chat-messages .system-message {
   border-color: rgb(255 255 255 / 22%);
   color: #fff;

@@ -90,6 +90,7 @@ const ui = createUiController({
 const playerStatus = new PlayerStatus({
   root: document.querySelector('#player-status'),
   nicknameValue: document.querySelector('#player-nickname-value'),
+  adminBadge: document.querySelector('#player-admin-badge'),
   hpValue: document.querySelector('#player-hp-value'),
   hpBar: document.querySelector('#player-hp-bar'),
   manaBar: document.querySelector('#player-mana-bar'),
@@ -181,7 +182,11 @@ function getGuestId() {
   return guestId;
 }
 
-async function start() {
+async function start(identity = {}) {
+  playerStatus.update({
+    nickname: identity.nickname ?? 'Guest',
+    isAdmin: identity.isAdmin === true,
+  });
   updateLoading('Preparando o mundo...');
   status.textContent = 'Carregando cena...';
   const mapConfig = await loadPublishedMapConfig();
@@ -238,5 +243,5 @@ createAccountController({
   passwordInput: document.querySelector('#password'),
   messageElement: accountMessage,
   logoutButton,
-  startGame: () => start().catch(handleStartError),
+  startGame: (identity) => start(identity).catch(handleStartError),
 });

@@ -236,6 +236,7 @@ export class MultiplayerSystem {
         type: 'chat',
         peerId: message.peerId,
         nickname: message.nickname,
+        isAdmin: message.isAdmin === true,
         text: message.text,
         sentAt: message.sentAt,
       });

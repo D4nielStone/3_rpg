@@ -25,6 +25,19 @@
 
 .status-health { color: #fff; }
 
+.status-player-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  text-align: right;
+}
+
+.status-player-name strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .status-bar {
   height: 0.55rem;
   margin: 0.25rem 0 0.55rem;

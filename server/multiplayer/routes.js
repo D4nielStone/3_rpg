@@ -237,6 +237,7 @@ export function createRequestHandler({
             201,
             {
               nickname,
+              isAdmin: false,
             },
             {
               'set-cookie': createSessionCookie(
@@ -276,6 +277,7 @@ export function createRequestHandler({
           200,
           {
             nickname: user.nickname,
+            isAdmin: user.is_admin === true,
           },
           {
             'set-cookie': createSessionCookie(

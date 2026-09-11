@@ -2,6 +2,7 @@ export class PlayerStatus {
   constructor({
     root,
     nicknameValue,
+    adminBadge,
     levelValue,
     hpValue,
     hpBar,
@@ -16,6 +17,7 @@ export class PlayerStatus {
   }) {
     this.root = root;
     this.nicknameValue = nicknameValue;
+    this.adminBadge = adminBadge;
     this.levelValue = levelValue;
     this.hpValue = hpValue;
     this.hpBar = hpBar;
@@ -45,6 +47,7 @@ export class PlayerStatus {
     accuracy = 1,
     magic = 1,
     combatMode = 'melee',
+    isAdmin = false,
   } = {}) {
     const currentHp = Math.max(0, Number(hp));
     const currentMaxHp = Math.max(1, Number(maxHp));
@@ -59,6 +62,7 @@ export class PlayerStatus {
     this.manaBar.style.width = `${Math.min(100, currentMana / currentMaxMana * 100)}%`;
     this.xpBar.style.width = `${Math.min(100, currentXp / currentMaxXp * 100)}%`;
     this.nicknameValue.textContent = nickname;
+    this.adminBadge.hidden = !isAdmin;
     this.levelValue.textContent = String(Math.max(1, Number(level)));
     this.xpValue.textContent = `${currentXp}/${currentMaxXp}`;
     this.goldValue.textContent = currentMoney.toLocaleString('pt-BR');

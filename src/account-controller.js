@@ -39,7 +39,10 @@ async function authenticate(nickname, password, mode, messageElement) {
       window.localStorage.removeItem('webgl-rpg-guest-id');
       window.localStorage.removeItem('webgl-rpg-guest-nickname');
     }
-    return result.nickname;
+    return {
+      nickname: result.nickname,
+      isAdmin: result.isAdmin === true,
+    };
   } catch (error) {
     messageElement.textContent = error.message;
     return null;
@@ -53,7 +56,9 @@ async function restoreSession() {
     });
     if (!response.ok) return null;
     const session = await response.json();
-    return session.authenticated ? session.nickname : null;
+    return session.authenticated
+      ? { nickname: session.nickname, isAdmin: session.isAdmin === true }
+      : null;
   } catch {
     return null;
   }
@@ -79,7 +84,7 @@ export function createAccountController({
     });
   }
 
-  async function begin(nickname, password = null, mode = 'login') {
+  async function begin(identity, password = null, mode = 'login') {
     if (started) return;
     if (beginPromise) return beginPromise;
 
@@ -87,13 +92,17 @@ export function createAccountController({
       setBusy(true);
       try {
         if (password) {
-          nickname = await authenticate(nickname, password, mode, messageElement);
-          if (!nickname) return;
+          identity = await authenticate(identity, password, mode, messageElement);
+          if (!identity) return;
         }
+        const nickname = identity.nickname ?? identity;
         started = true;
         window.localStorage.setItem('webgl-rpg-nickname', nickname);
         startScreen.classList.add('start-screen-hidden');
-        await startGame();
+        await startGame({
+          nickname,
+          isAdmin: identity.isAdmin === true,
+        });
       } finally {
         beginPromise = null;
         if (!started) setBusy(false);
@@ -116,7 +125,7 @@ export function createAccountController({
     const nickname = window.localStorage.getItem(storageKey)
       ?? `Guest-${window.crypto.randomUUID().slice(0, 4).toUpperCase()}`;
     window.localStorage.setItem(storageKey, nickname);
-    begin(nickname);
+    begin({ nickname, isAdmin: false });
   });
 
   registerButton.addEventListener('click', () => {
@@ -135,8 +144,8 @@ export function createAccountController({
     window.location.reload();
   });
 
-  restoreSession().then((nickname) => {
-    if (nickname) begin(nickname);
+  restoreSession().then((identity) => {
+    if (identity) begin(identity);
   });
 }
 import { getMultiplayerHttpUrl } from './multiplayer-url.js';
