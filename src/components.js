@@ -124,10 +124,14 @@ export class NameTag {
     this.text = text;
     this.level = level;
     this.alerted = alerted;
+    this.speechExpiresAt = 0;
     this.element = document.createElement('span');
     this.element.className = 'player-name-tag';
+    this.speechElement = document.createElement('span');
+    this.speechElement.className = 'player-speech-bubble';
+    this.speechElement.hidden = true;
     this.update(text, level, alerted);
-    document.body.append(this.element);
+    document.body.append(this.element, this.speechElement);
   }
 
   update(text = this.text, level = this.level, alerted = this.alerted) {
@@ -138,8 +142,20 @@ export class NameTag {
     this.element.classList.toggle('player-name-tag-alerted', this.alerted);
   }
 
+  showSpeech(text, durationMs = 4500) {
+    this.speechElement.textContent = text;
+    this.speechElement.hidden = false;
+    this.speechExpiresAt = Date.now() + durationMs;
+  }
+
+  hideSpeech() {
+    this.speechElement.hidden = true;
+    this.speechExpiresAt = 0;
+  }
+
   dispose() {
     this.element.remove();
+    this.speechElement.remove();
   }
 }
 

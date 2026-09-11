@@ -25,8 +25,8 @@
 #attributes-menu.attributes-menu-hidden { display: none !important; }
 #attributes-menu h2 { width: auto !important; margin: 0 0 .65rem !important; padding-bottom: .65rem !important; border-bottom: 1px solid rgb(255 255 255 / 14%) !important; color: var(--ui-gold) !important; font-size: .95rem !important; letter-spacing: .04em !important; text-align: left !important; }
 #attributes-menu .attribute-row { width: auto !important; min-height: 0 !important; margin: 0 !important; padding: .55rem 0 !important; border-bottom: 1px solid rgb(255 255 255 / 10%) !important; color: var(--ui-text) !important; font-size: .78rem !important; }
-#attributes-menu .attribute-row span, #attributes-menu .attribute-row strong { color: inherit !important; }
-#attributes-menu .attribute-row strong { color: var(--ui-gold) !important; }
+#attributes-menu .attribute-row span, #attributes-menu .attribute-row { color: inherit !important; }
+#attributes-menu .attribute-row { color: var(--ui-gold) !important; }
 #attributes-menu .attribute-meter { height: .42rem !important; margin-top: .35rem !important; border-color: rgb(255 255 255 / 18%) !important; background: rgb(255 255 255 / 10%) !important; }
 #attributes-menu .attribute-meter span { background: var(--ui-gold) !important; }
 #attributes-menu .combat-mode-title { width: auto !important; margin: .9rem 0 .5rem !important; padding-top: .75rem !important; border-top: 1px solid rgb(255 255 255 / 10%) !important; color: var(--ui-gold) !important; font-size: .72rem !important; text-align: left !important; }

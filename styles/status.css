@@ -23,7 +23,10 @@
   letter-spacing: 0.08em;
 }
 
-.status-health { color: #fff; }
+.status-health { 
+  color: #fff; 
+  font-weight: 400;
+}
 
 .status-player-name {
   display: inline-flex;

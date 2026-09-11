@@ -232,6 +232,10 @@ export class MultiplayerSystem {
     }
 
     if (message.type === 'chat' && typeof message.text === 'string') {
+      const entity = message.peerId === this.localPeerId
+        ? this.localEntity
+        : this.remoteEntities.get(message.peerId);
+      if (entity) this.world.getComponent(entity, NameTag)?.showSpeech(message.text);
       this.onChat({
         type: 'chat',
         peerId: message.peerId,

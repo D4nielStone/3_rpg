@@ -100,6 +100,36 @@
   text-shadow: 0 0 0.35rem rgb(168 59 59 / 90%);
 }
 
+.player-speech-bubble {
+  position: fixed;
+  z-index: 4;
+  max-width: min(18rem, 42vw);
+  box-sizing: border-box;
+  padding: 0.45rem 0.65rem;
+  border: 2px solid #20252a;
+  border-radius: 0.65rem;
+  color: #20252a;
+  background: #fff8df;
+  box-shadow: 3px 3px 0 rgb(0 0 0 / 38%);
+  font: 0.78rem/1.25 'Pixelify Sans', sans-serif;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+}
+
+.player-speech-bubble::after {
+  position: absolute;
+  bottom: -0.55rem;
+  left: 50%;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-right: 2px solid #20252a;
+  border-bottom: 2px solid #20252a;
+  background: #fff8df;
+  content: '';
+  transform: translateX(-50%) rotate(45deg);
+}
+
 @media (max-width: 640px) {
   #player-status,
   #player-status .status-health,

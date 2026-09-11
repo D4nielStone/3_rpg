@@ -1,4 +1,5 @@
 import * as CANNON from 'cannon-es';
+import { normalizePlayerScale } from '../../shared/player-size.js';
 
 function addCapsule(body, scale = [1, 1, 1]) {
   const radius = Math.max(0.25, Math.min(Math.abs(scale[0] ?? 1), Math.abs(scale[2] ?? 1)) * 0.5);
@@ -15,6 +16,7 @@ export class PhysicsWorld {
   constructor(mapConfig = null) {
     this.world = new CANNON.World({ gravity: new CANNON.Vec3(0, 0, 0) });
     this.bodies = new Map();
+    this.playerScale = normalizePlayerScale(mapConfig?.player?.scale);
     for (const entity of mapConfig?.entities ?? []) {
       if (!entity.collision?.enabled) continue;
       const scale = entity.scale ?? [1, 1, 1];
@@ -38,7 +40,7 @@ export class PhysicsWorld {
     let body = this.bodies.get(id);
     if (!body) {
       body = new CANNON.Body({ mass: 1, fixedRotation: true });
-      addCapsule(body, [0.7, 1.4, 0.7]);
+      addCapsule(body, this.playerScale);
       this.world.addBody(body);
       this.bodies.set(id, body);
     }

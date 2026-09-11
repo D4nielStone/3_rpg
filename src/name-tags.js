@@ -29,9 +29,20 @@ export class NameTagSystem {
       const clipW = viewProjection[3] * x + viewProjection[7] * y + viewProjection[11] * z + viewProjection[15];
       const visible = clipW > 0 && clipZ > -clipW && clipZ < clipW;
       nameTag.element.hidden = !visible;
-      if (!visible) continue;
-      nameTag.element.style.left = `${bounds.left + (clipX / clipW * 0.5 + 0.5) * bounds.width}px`;
-      nameTag.element.style.top = `${bounds.top + (-clipY / clipW * 0.5 + 0.5) * bounds.height - 40}px`;
+      if (nameTag.speechExpiresAt && nameTag.speechExpiresAt <= Date.now()) {
+        nameTag.hideSpeech();
+      }
+      if (!visible) {
+        nameTag.speechElement.hidden = true;
+        continue;
+      }
+      const screenX = bounds.left + (clipX / clipW * 0.5 + 0.5) * bounds.width;
+      const screenY = bounds.top + (-clipY / clipW * 0.5 + 0.5) * bounds.height;
+      nameTag.element.style.left = `${screenX}px`;
+      nameTag.element.style.top = `${screenY - 40}px`;
+      nameTag.speechElement.hidden = !nameTag.speechExpiresAt;
+      nameTag.speechElement.style.left = `${screenX}px`;
+      nameTag.speechElement.style.top = `${screenY - 76}px`;
     }
 
     for (const entity of world.query(Transform, EnemyHealthBar)) {

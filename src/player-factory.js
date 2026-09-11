@@ -12,6 +12,7 @@ import {
   Transform,
 } from './components.js';
 import { cubeColors, cubeIndices, cubeUVs, cubeVertices } from './cube.js';
+import { normalizePlayerScale } from '../shared/player-size.js';
 
 export class Player {}
 
@@ -42,7 +43,11 @@ function addController(world, entity) {
 
 export function spawnFallbackPlayer(world, definition = {}) {
   const entity = world.createEntity();
-  world.addComponent(entity, new Transform({ position: definition.position, rotation: definition.rotation, scale: definition.scale }));
+  world.addComponent(entity, new Transform({
+    position: definition.position,
+    rotation: definition.rotation,
+    scale: normalizePlayerScale(definition.scale),
+  }));
   world.addComponent(entity, new AnimationPlayer());
   world.addComponent(entity, new PlayerController({ speed: definition.speed }));
   world.addComponent(entity, new MoveTarget());
@@ -79,7 +84,11 @@ export async function loadPlayer(world, textureManager, definition = {}, assetDe
   );
 
   const entity = world.createEntity();
-  world.addComponent(entity, new Transform({ position: definition.position, rotation: definition.rotation, scale: definition.scale }));
+  world.addComponent(entity, new Transform({
+    position: definition.position,
+    rotation: definition.rotation,
+    scale: normalizePlayerScale(definition.scale),
+  }));
   world.addComponent(entity, new AnimationPlayer());
   world.addComponent(entity, new PlayerController({ speed: definition.speed }));
   world.addComponent(entity, new MoveTarget());
