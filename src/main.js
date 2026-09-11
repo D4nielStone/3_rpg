@@ -1,4 +1,4 @@
-import { EnemyIdentity } from './components.js';
+import { EnemyIdentity, SoundListener } from './components.js';
 import { MultiplayerSystem } from './multiplayer.js';
 import { addRemotePlayer } from './player-factory.js';
 import { createGame } from './game-setup.js';
@@ -49,6 +49,48 @@ function updateLoading(message, title = 'Carregando cena') {
 function finishLoading() {
   loadingScreen.classList.add('loading-screen-hidden');
   loadingScreen.setAttribute('aria-hidden', 'true');
+}
+
+function checkMultiplayerConnection(timeoutMs = 8000) {
+  const multiplayerUrl = getMultiplayerUrl();
+  if (!multiplayerUrl) {
+    return Promise.reject(new Error('URL do relay multiplayer não configurada.'));
+  }
+  if (!('WebSocket' in window)) {
+    return Promise.reject(new Error('Este navegador não oferece suporte ao multiplayer WebSocket.'));
+  }
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const url = new URL(multiplayerUrl);
+    url.searchParams.set('guestId', `connection-check-${window.crypto.randomUUID()}`);
+    url.searchParams.set('nickname', 'ConnectionCheck');
+    const socket = new WebSocket(url.toString());
+    const timeout = window.setTimeout(() => {
+      finish(new Error('Tempo esgotado ao conectar ao multiplayer. Verifique o relay e tente novamente.'));
+    }, timeoutMs);
+
+    const finish = (error = null) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      socket.close();
+      if (error) reject(error);
+      else resolve();
+    };
+
+    socket.addEventListener('open', () => finish());
+    socket.addEventListener('error', () => {
+      finish(new Error('Não foi possível conectar ao multiplayer. Verifique o endereço do relay e sua conexão.'));
+    });
+    socket.addEventListener('close', (event) => {
+      if (!settled) finish(new Error(
+        event.code === 4001
+          ? 'O relay recusou a identidade do jogador.'
+          : 'O multiplayer está offline. Inicie o relay e tente novamente.',
+      ));
+    });
+  });
 }
 
 // Retorna o json do mapa
@@ -187,12 +229,17 @@ async function start(identity = {}) {
     nickname: identity.nickname ?? 'Guest',
     isAdmin: identity.isAdmin === true,
   });
+  updateLoading('Verificando conexão com o multiplayer...', 'Conectando ao jogo');
+  status.textContent = 'Verificando conexão com o multiplayer...';
+  await checkMultiplayerConnection();
+
   updateLoading('Preparando o mundo...');
   status.textContent = 'Carregando cena...';
   const mapConfig = await loadPublishedMapConfig();
   const game = createGame(canvas, status, mapConfig);
   updateLoading('Carregando cenário e personagem...');
   const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game, mapConfig?.player, mapConfig?.assets);
+  game.world.addComponent(playerEntity, new SoundListener());
   const { enemyAssets } = await loadSceneAssets(game.textureManager, mapConfig?.enemyTypes, mapConfig?.assets);
   addPlayerNameTag(game.world, playerEntity);
 
@@ -212,15 +259,8 @@ async function start(identity = {}) {
   };
 
   updateLoading('Aguardando conexão com o multiplayer...', 'Conectando ao jogo');
-  let multiplayerConnected = true;
-  try {
-    await multiplayerSystem.connect({ retry: false });
-  } catch {
-    multiplayerConnected = false;
-  }
-  status.textContent = !multiplayerConnected
-    ? 'Modo local: multiplayer indisponível.'
-    : usedFallback
+  await multiplayerSystem.connect({ retry: false });
+  status.textContent = usedFallback
     ? 'Modelo 3D indisponível; usando modelo de fallback.'
     : 'WebGL ativo: clique para mover. Space cancela o destino.';
   finishLoading();

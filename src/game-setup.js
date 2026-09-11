@@ -7,6 +7,8 @@ import {
   MovementSystem,
   NetworkInterpolationSystem,
   RenderSystem,
+  SoundListenerSystem,
+  SoundPlayerSystem,
 } from './systems.js';
 
 import { InputState } from './input.js';
@@ -515,6 +517,12 @@ export function createGame(canvas, status, mapConfig = null) {
 
     networkInterpolationSystem:
       new NetworkInterpolationSystem(),
+
+    soundListenerSystem:
+      new SoundListenerSystem(),
+
+    soundPlayerSystem:
+      new SoundPlayerSystem(),
 
     PlayerPathSystem:
       new PlayerPathSystem(

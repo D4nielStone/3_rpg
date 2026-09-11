@@ -1,9 +1,13 @@
+import { SoundListener } from './components.js';
+
 export function startGameLoop({
   gl,
   world,
   movementSystem,
   animationSystem,
   networkInterpolationSystem,
+  soundListenerSystem,
+  soundPlayerSystem,
   multiplayerSystem,
   PlayerPathSystem,
   nameTagSystem,
@@ -24,6 +28,10 @@ export function startGameLoop({
     movementSystem.update(world, deltaSeconds);
     multiplayerSystem.update(world, time);
     networkInterpolationSystem.update(world, deltaSeconds);
+    soundListenerSystem.update(world);
+    const listener = world.query(SoundListener)[0];
+    const listenerComponent = listener ? world.getComponent(listener, SoundListener) : null;
+    soundPlayerSystem.update(world, listenerComponent?.context ?? null);
     PlayerPathSystem.update(world, time);
     nameTagSystem.update(world);
     enemyHoverSystem.update(world);

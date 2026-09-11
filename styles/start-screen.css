@@ -104,3 +104,43 @@
   content: 'Carregando';
   font-size: 1.15rem;
 }
+
+#loading-screen.loading-screen-error {
+  background: #180b0b;
+}
+
+#loading-screen.loading-screen-error .loading-card {
+  width: min(32rem, calc(100% - 2rem));
+  padding: 1.5rem;
+  border: 1px solid #7f1d1d;
+  background: #2a1010;
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 45%);
+}
+
+#loading-screen.loading-screen-error .loading-eyebrow,
+#loading-screen.loading-screen-error #loading-title {
+  display: block;
+}
+
+#loading-screen.loading-screen-error .loading-eyebrow {
+  margin: 0 0 0.5rem;
+  color: #fca5a5;
+  font-size: 0.75rem;
+}
+
+#loading-screen.loading-screen-error #loading-title {
+  margin: 0 0 0.75rem;
+  color: #fee2e2;
+  font-size: 1.35rem;
+}
+
+#loading-screen.loading-screen-error #loading-message {
+  color: #fecaca;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+#loading-screen.loading-screen-error #loading-message::before,
+#loading-screen.loading-screen-error #loading-message::after {
+  content: none;
+}

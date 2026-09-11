@@ -22,6 +22,8 @@ import {
   Transform,
   Water,
   EnemyAreaRenderer,
+  SoundListener,
+  SoundPlayer,
 } from './components.js';
 import { PhysicsWorld } from './physics-world.js';
 import { Camera } from './camera.js';
@@ -39,6 +41,45 @@ export class AnimationSystem {
       animationPlayer.update(deltaSeconds, transform, updatedMixers);
     }
   }
+}
+
+export class SoundListenerSystem {
+  update(world) {
+    for (const entity of world.query(Transform, SoundListener)) {
+      const transform = world.getComponent(entity, Transform);
+      const listener = world.getComponent(entity, SoundListener);
+      const audioListener = listener.context?.listener;
+      if (!audioListener) continue;
+      setAudioParam(audioListener.positionX, transform.position[0]);
+      setAudioParam(audioListener.positionY, transform.position[1]);
+      setAudioParam(audioListener.positionZ, transform.position[2]);
+      const forward = [-Math.sin(transform.rotation[1]), 0, -Math.cos(transform.rotation[1])];
+      setAudioParam(audioListener.forwardX, forward[0]);
+      setAudioParam(audioListener.forwardY, forward[1]);
+      setAudioParam(audioListener.forwardZ, forward[2]);
+      setAudioParam(audioListener.upX, 0);
+      setAudioParam(audioListener.upY, 1);
+      setAudioParam(audioListener.upZ, 0);
+      audioListener.setPosition?.(...transform.position);
+      audioListener.setOrientation?.(...forward, 0, 1, 0);
+    }
+  }
+}
+
+export class SoundPlayerSystem {
+  update(world, listenerContext = null) {
+    for (const entity of world.query(Transform, SoundPlayer)) {
+      const transform = world.getComponent(entity, Transform);
+      const player = world.getComponent(entity, SoundPlayer);
+      player.setContext(listenerContext);
+      player.setPosition(transform.position);
+    }
+  }
+}
+
+function setAudioParam(param, value) {
+  param?.setValueAtTime?.(value, param.context?.currentTime ?? 0);
+  if (param && !param.setValueAtTime) param.value = value;
 }
 
 export class NetworkInterpolationSystem {
