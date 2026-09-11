@@ -35,12 +35,13 @@
           <div id="asset-list" class="asset-list" aria-label="Biblioteca de assets"></div>
         </div>
         <div class="panel-section">
-          <div class="section-heading"><h2>Sons de combate</h2><span>3 canais</span></div>
+          <div class="section-heading"><h2>Sons do jogo</h2><span>4 canais</span></div>
           <label for="sound-type">Canal</label>
           <select id="sound-type">
             <option value="slash">Corte</option>
             <option value="pulse">Pulso</option>
             <option value="arc">Arco</option>
+            <option value="level-up">Promoção de nível</option>
           </select>
           <label for="sound-url">URL do áudio</label>
           <div class="asset-url-row"><input id="sound-url" type="url" placeholder="/sounds/ataque.ogg" /><button id="sound-url-button" type="button" title="Usar áudio por URL">+</button></div>
@@ -143,6 +144,8 @@
               <label for="player-asset">Asset do modelo</label><select id="player-asset"><option value="">Modelo padrão</option></select>
               <label for="player-model-format">Formato</label><select id="player-model-format"><option value="glb">GLB</option><option value="gltf">glTF</option><option value="obj">OBJ</option></select>
               <label for="player-speed">Velocidade inicial</label><input id="player-speed" type="number" min="0" step="0.1" />
+              <label for="player-hp">Vida inicial</label><input id="player-hp" type="number" min="0" step="1" />
+              <label for="player-max-hp">Vida máxima inicial</label><input id="player-max-hp" type="number" min="1" step="1" />
               <label for="player-animation">Animação</label><input id="player-animation" type="text" placeholder="nome do clip" />
               <label for="player-status">Status iniciais (JSON)</label><textarea id="player-status" rows="3"></textarea>
               <label for="player-inventory">Itens iniciais (JSON)</label><textarea id="player-inventory" rows="3"></textarea>

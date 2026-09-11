@@ -6,7 +6,7 @@ import {
   getUserLabel,
   sendSystemMessage,
 } from './utils.js';
-import { isWaterPosition } from '../world/enemy-areas.js';
+import { isValidMapConfig, isWaterPosition } from '../world/enemy-areas.js';
 import { promotePlayerToAreaTwo } from './player-actions.js';
 import { maxWebSocketConnections } from './config.js';
 
@@ -34,6 +34,14 @@ export function registerConnectionHandler({
     }
     const playerId = identity.id;
     const userLabel = getUserLabel(peerId, identity.nickname);
+
+    await playerStore.ready;
+    if (!state.publishedMapConfig) {
+      const savedMapConfig = await playerStore.getMapConfig();
+      if (savedMapConfig && isValidMapConfig(savedMapConfig)) {
+        state.setMapConfig(savedMapConfig);
+      }
+    }
 
     if (identity.isAdmin !== undefined) {
       try {
@@ -151,6 +159,11 @@ export function registerConnectionHandler({
                 `Rato derrotado: +${attackResult.rewards.gold} ouro e +${attackResult.rewards.experience} XP${leveledUp ? '.' : '.'}`,
               );
               if (leveledUp) {
+                socket.send(JSON.stringify({
+                  type: 'level-up',
+                  level: player.level,
+                  sentAt: Date.now(),
+                }));
                 sendSystemMessage(
                   socket,
                   `Você subiu para o level ${player.level}! Vida e mana restauradas para 100%.`,

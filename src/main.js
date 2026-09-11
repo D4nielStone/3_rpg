@@ -1,4 +1,4 @@
-import { EnemyIdentity, SoundListener, SoundPlayer } from './components.js';
+import { EnemyIdentity, SoundListener, SoundPlayer, Transform } from './components.js';
 import { MultiplayerSystem } from './multiplayer.js';
 import { addRemotePlayer } from './player-factory.js';
 import { createGame } from './game-setup.js';
@@ -123,6 +123,7 @@ function createAttackSound(type) {
       slash: { start: 620, end: 120, noise: 0.18 },
       pulse: { start: 180, end: 520, noise: 0.04 },
       arc: { start: 260, end: 920, noise: 0.08 },
+      'level-up': { start: 440, end: 880, noise: 0.02 },
     }[type];
     if (!settings) return buffer;
     for (let index = 0; index < samples.length; index += 1) {
@@ -151,7 +152,7 @@ chatToggle.addEventListener('click', () => {
   ui.toggleChat();
 });
 
-function createMultiplayer(game, playerEntity, enemyAssets) {
+function createMultiplayer(game, playerEntity, enemyAssets, soundPlayer) {
   // Em producao, a URL vem do Render; localmente usamos o relay na porta 5174.
   const multiplayerUrl = getMultiplayerUrl();
   const guestId = getGuestId();
@@ -180,6 +181,11 @@ function createMultiplayer(game, playerEntity, enemyAssets) {
     onAttackHit: () => {
       const soundName = { melee: 'slash', ranged: 'pulse', magic: 'arc' }[combatMode] ?? 'slash';
       soundPlayer?.play(soundName).catch(() => {});
+    },
+    onLevelUp: () => {
+      soundPlayer?.play('level-up').catch(() => {});
+      const transform = game.world.getComponent(playerEntity, Transform);
+      if (transform) game.nameTagSystem.spawnLevelUp(transform.position);
     },
     createRemoteEntity: (peerId, nickname, level) => addRemotePlayer(game.world, playerEntity, peerId, nickname, level),
     createEnemyEntity: (enemy) => addRemoteEnemy(game.world, enemyAssets, enemy),
@@ -226,7 +232,7 @@ async function start(identity = {}) {
   updateLoading('Preparando o mundo...');
   status.textContent = 'Carregando cena...';
   const mapConfig = await loadPublishedMapConfig();
-  const game = createGame(canvas, status, mapConfig);
+  const game = await createGame(canvas, status, mapConfig);
   updateLoading('Carregando cenário e personagem...');
   const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game, mapConfig?.player, mapConfig?.assets);
   const soundListener = new SoundListener();
@@ -236,6 +242,7 @@ async function start(identity = {}) {
         slash: mapConfig?.sounds?.slash || createAttackSound('slash'),
         pulse: mapConfig?.sounds?.pulse || createAttackSound('pulse'),
         arc: mapConfig?.sounds?.arc || createAttackSound('arc'),
+        'level-up': mapConfig?.sounds?.['level-up'] || createAttackSound('level-up'),
     },
     volume: 0.7,
   }));
@@ -247,7 +254,7 @@ async function start(identity = {}) {
   followPlayer(game, playerEntity);
   addMovementMarker(game.world, playerEntity);
 
-  const multiplayerSystem = createMultiplayer(game, playerEntity, enemyAssets);
+  const multiplayerSystem = createMultiplayer(game, playerEntity, enemyAssets, soundPlayer);
   respawnButton.addEventListener('click', () => multiplayerSystem.sendRespawn());
   game.enemyHoverSystem.onSelect = (entity) => {
     if (entity && game.world.getComponent(entity, EnemyIdentity)) {

@@ -195,13 +195,13 @@ async function createWorldEntities(world, config, textureManager) {
   }
 }
 
-export function customizeMap(world, config = null, textureManager = null) {
+export async function customizeMap(world, config = null, textureManager = null) {
   const activeConfig = config ?? readSavedMapConfig() ?? DEFAULT_MAP_CONFIG;
   createTerrain(world, activeConfig.terrain);
   if (activeConfig.water?.enabled && !activeConfig.terrain?.cells) {
     createWater(world, activeConfig.water);
   }
   if (textureManager && Array.isArray(activeConfig.entities)) {
-    createWorldEntities(world, activeConfig, textureManager);
+    await createWorldEntities(world, activeConfig, textureManager);
   }
 }

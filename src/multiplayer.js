@@ -29,6 +29,7 @@ export class MultiplayerSystem {
     onMapAccess = () => {},
     onAttackTargetChanged = () => {},
     onAttackHit = () => {},
+    onLevelUp = () => {},
   }) {
     this.url = url;
     this.world = world;
@@ -45,6 +46,7 @@ export class MultiplayerSystem {
     this.onMapAccess = onMapAccess;
     this.onAttackTargetChanged = onAttackTargetChanged;
     this.onAttackHit = onAttackHit;
+    this.onLevelUp = onLevelUp;
     this.socket = null;
     this.localEntity = null;
     this.localPeerId = null;
@@ -54,6 +56,7 @@ export class MultiplayerSystem {
     this.pendingState = null;
     this.localStateRestored = false;
     this.localPlayerDead = false;
+    this.deathScreenShown = false;
     this.respawnPending = false;
     this.attackTargetEntity = null;
     this.onAttackTargetChanged(null);
@@ -147,12 +150,16 @@ export class MultiplayerSystem {
 
     if (message.type === 'death') {
       this.localPlayerDead = true;
-      this.onDeath();
       return;
     }
 
     if (message.type === 'attack-hit') {
       this.onAttackHit(message);
+      return;
+    }
+
+    if (message.type === 'level-up') {
+      this.onLevelUp(message);
       return;
     }
 
@@ -172,6 +179,7 @@ export class MultiplayerSystem {
       this.localStateRestored = false;
       this.localPlayerDead = false;
       this.respawnPending = false;
+      this.deathScreenShown = false;
       this.onRespawn();
       return;
     }
@@ -366,7 +374,7 @@ export class MultiplayerSystem {
       if (player.peerId === this.localPeerId) {
         this.localPlayerDead = Boolean(player.dead);
         this.combatMode = player.combatMode ?? 'melee';
-        if (!this.localStateRestored && Array.isArray(player.position) && Array.isArray(player.rotation)) {
+        if ((!this.localStateRestored || player.dead) && Array.isArray(player.position) && Array.isArray(player.rotation)) {
           const transform = world.getComponent(this.localEntity, Transform);
           if (transform) {
             transform.position = [...player.position];
@@ -377,6 +385,10 @@ export class MultiplayerSystem {
         const localNameTag = world.getComponent(this.localEntity, NameTag);
         localNameTag?.update(player.nickname, player.level);
         this.onPlayerState(player);
+        if (player.dead && !this.deathScreenShown) {
+          this.deathScreenShown = true;
+          this.onDeath();
+        }
         continue;
       }
       if (!player.peerId) continue;

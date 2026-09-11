@@ -6,6 +6,7 @@ export class NameTagSystem {
     this.canvas = canvas;
     this.camera = camera;
     this.floatingDamages = [];
+    this.floatingLevelUps = [];
     this.lastUpdateAt = performance.now();
   }
 
@@ -66,6 +67,18 @@ export class NameTagSystem {
       damage.element.style.opacity = `${1 - damage.age / 0.8}`;
       return true;
     });
+
+    this.floatingLevelUps = this.floatingLevelUps.filter((levelUp) => {
+      levelUp.age += deltaSeconds;
+      if (levelUp.age >= 1.2) {
+        levelUp.element.remove();
+        return false;
+      }
+      levelUp.position[1] += deltaSeconds * 0.9;
+      this.updateOverlayPosition(levelUp.element, levelUp.position, viewProjection, bounds, 0);
+      levelUp.element.style.opacity = `${1 - levelUp.age / 1.2}`;
+      return true;
+    });
   }
 
   spawnDamage(position, amount) {
@@ -76,6 +89,18 @@ export class NameTagSystem {
     this.floatingDamages.push({
       element,
       position: [position[0], position[1] + 0.6, position[2]],
+      age: 0,
+    });
+  }
+
+  spawnLevelUp(position) {
+    const element = document.createElement('span');
+    element.className = 'floating-level-up';
+    element.textContent = 'LEVEL UP';
+    document.body.append(element);
+    this.floatingLevelUps.push({
+      element,
+      position: [position[0], position[1] + 0.8, position[2]],
       age: 0,
     });
   }

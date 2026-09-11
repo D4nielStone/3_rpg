@@ -237,7 +237,7 @@ function resizeCanvas(gl, camera, canvas) {
   camera.setAspect(width / height);
 }
 
-export function createGame(canvas, status, mapConfig = null) {
+export async function createGame(canvas, status, mapConfig = null) {
   const gl = canvas.getContext('webgl');
 
   if (!gl) {
@@ -263,7 +263,7 @@ export function createGame(canvas, status, mapConfig = null) {
   const camera = new Camera();
   const world = new World();
   const textureManager = new TextureManager(gl);
-  customizeMap(world, mapConfig, textureManager);
+  await customizeMap(world, mapConfig, textureManager);
   const pointLights = (mapConfig?.entities ?? [])
     .filter((entity) => entity.type === 'pointLight')
     .map((entity) => ({

@@ -138,6 +138,17 @@
   pointer-events: none;
 }
 
+.floating-level-up {
+  position: fixed;
+  z-index: 5;
+  color: #ffe36e;
+  font: 700 1.15rem/1 'Pixelify Sans', sans-serif;
+  pointer-events: none;
+  text-shadow: 3px 3px 0 #6f3c18, 0 0 0.45rem rgb(255 206 63 / 75%);
+  transform: translate(-50%, -100%);
+  white-space: nowrap;
+}
+
 @media (max-width: 640px) {
   #player-status,
   #player-status .status-health,

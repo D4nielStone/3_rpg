@@ -96,7 +96,7 @@ let player = {
   model: '', modelFormat: 'glb',
   position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1], speed: 3,
   materials: [],
-  status: { level: 1, hp: 20, mana: 20, xp: 0, strength: 1, accuracy: 1, magic: 1, money: 0 },
+  status: { level: 1, hp: 20, maxHp: 20, mana: 20, xp: 0, strength: 1, accuracy: 1, magic: 1, money: 0 },
   inventory: [], collision: { enabled: false, shape: 'model' }, animation: { name: '', loop: true, speed: 1 },
 };
 let selectedEntityId = null;
@@ -108,7 +108,7 @@ const history = [];
 const future = [];
 
 function newId(prefix) { let id; do { id = `${prefix}-${nextId++}`; } while ([...assets, ...entities, ...enemyAreas].some((item) => item.id === id)); return id; }
-function normalizeSounds(value) { return ['slash', 'pulse', 'arc'].reduce((result, name) => ({ ...result, [name]: typeof value?.[name] === 'string' ? value[name] : '' }), {}); }
+function normalizeSounds(value) { return ['slash', 'pulse', 'arc', 'level-up'].reduce((result, name) => ({ ...result, [name]: typeof value?.[name] === 'string' ? value[name] : '' }), {}); }
 function renderSounds() {
   soundList.replaceChildren(...Object.entries(sounds).map(([name, source]) => {
     const item = document.createElement('div');
@@ -797,7 +797,8 @@ function updatePlayerInspector() {
   }
   const selectedAsset = assets.find((asset) => asset.id === player.assetId);
   set('player-model-format', selectedAsset?.format ?? player.modelFormat);
-  set('player-speed', player.speed); set('player-animation', player.animation.name); set('player-status', JSON.stringify(player.status)); set('player-inventory', JSON.stringify(player.inventory));
+  const maxHp = Math.max(1, Number(player.status?.maxHp ?? 20) || 20);
+  set('player-speed', player.speed); set('player-hp', Math.min(maxHp, Math.max(0, Number(player.status?.hp ?? maxHp)))); set('player-max-hp', maxHp); set('player-animation', player.animation.name); set('player-status', JSON.stringify(player.status)); set('player-inventory', JSON.stringify(player.inventory));
 }
 function readPlayerInspector() {
   const json = (id, fallback) => { try { const value = JSON.parse(document.querySelector(`#${id}`).value); return value && typeof value === 'object' ? value : fallback; } catch { return fallback; } };
@@ -812,7 +813,10 @@ function readPlayerInspector() {
   }
   player.speed = Math.max(0, Number(document.querySelector('#player-speed').value) || 0);
   player.animation.name = document.querySelector('#player-animation').value.trim();
-  player.status = json('player-status', player.status); player.inventory = Array.isArray(json('player-inventory', [])) ? json('player-inventory', []) : [];
+  player.status = json('player-status', player.status);
+  player.status.maxHp = Math.max(1, Number(document.querySelector('#player-max-hp').value) || 1);
+  player.status.hp = Math.min(player.status.maxHp, Math.max(0, Number(document.querySelector('#player-hp').value) || 0));
+  player.inventory = Array.isArray(json('player-inventory', [])) ? json('player-inventory', []) : [];
   const previewEntity = playerPreview;
   if (previewEntity) {
     player.position = [...previewEntity.position];
@@ -1013,7 +1017,7 @@ document.querySelector('#player-asset').addEventListener('change', async () => {
   await refreshPlayerPreview();
   setStatus('Preview do player atualizado');
 });
-['player-model-format', 'player-speed', 'player-animation', 'player-status', 'player-inventory'].forEach((id) => {
+['player-model-format', 'player-speed', 'player-hp', 'player-max-hp', 'player-animation', 'player-status', 'player-inventory'].forEach((id) => {
   const input = document.querySelector(`#${id}`);
   input.addEventListener('input', readPlayerInspector);
   input.addEventListener('change', readPlayerInspector);

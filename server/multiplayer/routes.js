@@ -66,6 +66,16 @@ export function createRequestHandler({
     }
 
     if (request.method === 'GET' && requestPath === '/api/map-config') {
+      if (!state.databaseReady) {
+        try {
+          await playerStore.ready;
+        } catch {
+          sendJson(response, 503, {
+            error: 'Banco de dados indisponível.',
+          });
+          return;
+        }
+      }
       sendJson(
         response,
         200,
