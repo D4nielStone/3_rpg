@@ -62,6 +62,45 @@ const socketServer = new WebSocketServer({
   maxPayload: webSocketMaxPayload,
 });
 
+const playerSaveTimers = new Map();
+const pendingPlayerSaves = new Map();
+let snapshotTimer = null;
+let snapshotPending = false;
+
+function queuePlayerSave(playerId, player) {
+  pendingPlayerSaves.set(playerId, player);
+
+  if (playerSaveTimers.has(playerId)) {
+    return;
+  }
+
+  const timer = setTimeout(async () => {
+    playerSaveTimers.delete(playerId);
+    const pendingPlayer = pendingPlayerSaves.get(playerId);
+    pendingPlayerSaves.delete(playerId);
+
+    if (!pendingPlayer) {
+      return;
+    }
+
+    try {
+      await playerStore.save(playerId, pendingPlayer);
+    } catch (error) {
+      logger.error('Falha ao salvar jogador', {
+        playerId,
+        error: error.message,
+      });
+      queuePlayerSave(playerId, pendingPlayer);
+    }
+
+    if (pendingPlayerSaves.has(playerId)) {
+      queuePlayerSave(playerId, pendingPlayerSaves.get(playerId));
+    }
+  }, 500);
+
+  playerSaveTimers.set(playerId, timer);
+}
+
 function findPlayerArea(position) {
   return enemyAreas.find((area) => area.contains(position)) ?? null;
 }
@@ -268,7 +307,7 @@ function sendSystemMessage(socket, text) {
   );
 }
 
-function broadcastSnapshot() {
+function sendSnapshot() {
   const snapshot = JSON.stringify({
     type: 'snapshot',
 
@@ -287,9 +326,32 @@ function broadcastSnapshot() {
     const client of socketServer.clients
   ) {
     if (client.readyState === 1) {
+      if (client.bufferedAmount > 256 * 1024) {
+        client.close(1013, 'Client too slow');
+        continue;
+      }
       client.send(snapshot);
     }
   }
+}
+
+function broadcastSnapshot() {
+  snapshotPending = true;
+
+  if (snapshotTimer) {
+    return;
+  }
+
+  snapshotTimer = setTimeout(() => {
+    snapshotTimer = null;
+
+    if (!snapshotPending) {
+      return;
+    }
+
+    snapshotPending = false;
+    sendSnapshot();
+  }, 50);
 }
 
 function broadcast(message) {
@@ -1065,7 +1127,7 @@ socketServer.on(
             message.rotation
           );
 
-          await playerStore.save(
+          queuePlayerSave(
             playerId,
             player
           );
