@@ -8,10 +8,7 @@ import {
 } from './utils.js';
 import { isWaterPosition } from '../world/enemy-areas.js';
 import { promotePlayerToAreaTwo } from './player-actions.js';
-import { createRateLimiter } from '../rate-limit.js';
 import { maxWebSocketConnections } from './config.js';
-
-const messagesPerWindow = createRateLimiter({ limit: 40, windowMs: 10_000 });
 
 export function registerConnectionHandler({
   socketServer,
@@ -72,10 +69,6 @@ export function registerConnectionHandler({
 
     socket.on('message', async (rawMessage) => {
       try {
-        if (!messagesPerWindow(peerId)) {
-          socket.close(1008, 'Rate limit exceeded');
-          return;
-        }
         const message = JSON.parse(rawMessage.toString());
         const player = state.players.get(peerId);
         if (!player) return;
