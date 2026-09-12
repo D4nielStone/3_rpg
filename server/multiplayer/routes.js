@@ -14,6 +14,14 @@ import {
   verifyPassword,
 } from '../auth.js';
 
+export function isMapAccessAuthorized({ access, session, user }) {
+  if (!access || !session) return false;
+  if (access.expiresAt <= Date.now()) return false;
+  if (session.userId !== access.userId) return false;
+  if (user) return user.is_admin === true;
+  return session.isAdmin === true;
+}
+
 export function createRequestHandler({
   state,
   playerStore,
@@ -54,6 +62,11 @@ export function createRequestHandler({
           authenticated: false,
         });
         return;
+      }
+
+      const user = await playerStore.findUserById(session.userId).catch(() => null);
+      if (user) {
+        session.isAdmin = user.is_admin === true;
       }
 
       sendJson(response, 200, {
@@ -130,19 +143,18 @@ export function createRequestHandler({
 
     if (request.method === 'GET' && requestPath === '/api/map-access') {
       const ticket = requestUrl.searchParams.get('ticket');
-
       const access = state.mapAccessTickets.get(ticket);
+      const session = getSessionFromRequest(request, state.sessions);
 
-      const session = getSessionFromRequest(
-        request,
-        state.sessions
-      );
+      let user = null;
+      if (session?.userId) {
+        user = await playerStore.findUserById(session.userId).catch(() => null);
+        if (user) {
+          session.isAdmin = user.is_admin === true;
+        }
+      }
 
-      const authorized =
-        access &&
-        access.expiresAt > Date.now() &&
-        session?.isAdmin &&
-        session.userId === access.userId;
+      const authorized = isMapAccessAuthorized({ access, session, user });
 
       if (!authorized) {
         sendJson(response, 403, {

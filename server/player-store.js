@@ -199,6 +199,17 @@ export class PlayerStore {
     return result.rows[0] ?? null;
   }
 
+  async findUserById(userId) {
+    await this.ready;
+
+    const result = await this.pool.query(
+      'SELECT id, nickname, password_hash, is_admin FROM users WHERE id = $1',
+      [userId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   async getRanking(limit = 10) {
     await this.ready;
 
