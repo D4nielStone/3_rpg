@@ -54,6 +54,7 @@ export class MultiplayerSystem {
     this.enemyEntities = new Map();
     this.lastSentAt = 0;
     this.pendingState = null;
+    this.welcomeReceived = false;
     this.localStateRestored = false;
     this.localPlayerDead = false;
     this.deathScreenShown = false;
@@ -84,31 +85,32 @@ export class MultiplayerSystem {
       return Promise.reject(new Error('Multiplayer indisponível neste navegador.'));
     }
 
-    if (this.socket?.readyState === WebSocket.OPEN) return Promise.resolve();
+    if (this.socket?.readyState === WebSocket.OPEN && this.welcomeReceived) {
+      return Promise.resolve();
+    }
     if (this.connectionPromise) return this.connectionPromise;
 
     this.connectionPromise = new Promise((resolve, reject) => {
+      this.resolveConnection = resolve;
       const attempt = () => {
         this.onStatus('Aguardando conexão com o multiplayer...');
         this.localStateRestored = false;
+        this.welcomeReceived = false;
         const socket = new WebSocket(this.url);
         this.socket = socket;
-        socket.addEventListener('open', () => {
-          this.connectionPromise = null;
-          this.onStatus('Multiplayer conectado.');
-          resolve();
-        }, { once: true });
         socket.addEventListener('message', (event) => this.handleMessage(event.data));
         socket.addEventListener('close', (event) => {
           if (this.socket === socket) this.socket = null;
           if (event.code === 4008) {
             this.connectionPromise = null;
+            this.resolveConnection = null;
             this.onStatus('Este jogador já está aberto em outra aba.');
             reject(new Error('Este jogador já está aberto em outra aba.'));
             return;
           }
           if (event.code === 4001) {
             this.connectionPromise = null;
+            this.resolveConnection = null;
             this.onStatus('O relay recusou a identidade do jogador.');
             reject(new Error('O relay recusou a identidade do jogador.'));
             return;
@@ -124,6 +126,7 @@ export class MultiplayerSystem {
             window.setTimeout(attempt, 3000);
           } else {
             this.connectionPromise = null;
+            this.resolveConnection = null;
             reject(new Error('Multiplayer indisponível.'));
           }
         }, { once: true });
@@ -145,6 +148,11 @@ export class MultiplayerSystem {
     if (message.type === 'welcome') {
       this.localPeerId = message.peerId;
       if (this.localEntity) this.setLocalEntity(this.localEntity);
+      this.welcomeReceived = true;
+      this.connectionPromise = null;
+      this.resolveConnection?.();
+      this.resolveConnection = null;
+      this.onStatus('Multiplayer conectado.');
       return;
     }
 
