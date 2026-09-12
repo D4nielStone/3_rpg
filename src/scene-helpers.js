@@ -37,7 +37,7 @@ export async function loadLocalPlayer(game, definition = {}, assetDefinitions = 
     return { entity: spawnFallbackPlayer(game.world, definition), usedFallback: true };
   }
 }
-
+// Adiciona o sistema de câmera para seguir o jogador, com configurações salvas no armazenamento local.
 export function followPlayer(game, playerEntity) {
   const transform = game.world.getComponent(playerEntity, Transform);
   const settings = readCameraSettings();
@@ -52,12 +52,14 @@ export function followPlayer(game, playerEntity) {
   saveCameraSettings(game.camera.getOrbitSettings());
 }
 
+// Adiciona uma tag de nome acima do jogador, usando o nickname salvo no armazenamento local ou "Guest" como padrão.
 export function addPlayerNameTag(world, playerEntity) {
   world.addComponent(playerEntity, new NameTag({
     text: window.localStorage.getItem('webgl-rpg-nickname') ?? 'Guest',
   }));
 }
 
+// Adiciona um marcador de movimento (linha) que segue o jogador, indicando a direção do movimento.
 export function addMovementMarker(world, playerEntity) {
   const lineEntity = world.createEntity();
   world.addComponent(lineEntity, new LineRenderer({

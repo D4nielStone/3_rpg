@@ -41,11 +41,12 @@ const chatToggle = document.querySelector('#chat-toggle');
 const chatElement = document.querySelector('#chat');
 const logoutButton = document.querySelector('#logout-button');
 
+// Atualiza o texto do loading screen
 function updateLoading(message, title = 'Carregando cena') {
   loadingTitle.textContent = title;
   loadingMessage.textContent = message;
 }
-
+// Esconde o loading screen
 function finishLoading() {
   loadingScreen.classList.add('loading-screen-hidden');
   loadingScreen.setAttribute('aria-hidden', 'true');
@@ -68,6 +69,7 @@ async function loadPublishedMapConfig() {
   }
 }
 
+// Cria o controlador de UI, que gerencia menus, atributos e ranking
 const ui = createUiController({
   menuButton,
   attributesMenu,
@@ -87,6 +89,7 @@ const ui = createUiController({
   magicBar: document.querySelector('#player-magic-bar'),
 });
 
+// Cria o painel de status do jogador, que mostra HP, mana, XP, nível e ouro
 const playerStatus = new PlayerStatus({
   root: document.querySelector('#player-status'),
   nicknameValue: document.querySelector('#player-nickname-value'),
@@ -103,17 +106,22 @@ const playerStatus = new PlayerStatus({
   magicValue: document.querySelector('#player-status-magic-value'),
   combatModeValue: document.querySelector('#player-combat-mode-value'),
 });
+
+// Inicializa o status do jogador com valores padrão
 playerStatus.update({ level: 1, hp: 20, maxHp: 20, mana: 20, maxMana: 20, xp: 0, maxXp: 4 });
 function updatePlayerAttributes({ strength = 1, strengthXp = 0, maxStrengthXp = 1, accuracy = 1, magic = 1 } = {}) {
   ui.updateAttributes({ strength, strengthXp, maxStrengthXp, accuracy, magic });
 }
 
+
+// Inicializa o modo de combate com valor padrão
 let combatMode = 'melee';
 function updateCombatMode(mode = 'melee') {
   combatMode = mode;
   ui.updateCombatMode(mode);
 }
 
+// Cria sons de ataque para diferentes tipos de ataques
 function createAttackSound(type) {
   return (context) => {
     const duration = type === 'pulse' ? 0.22 : 0.14;
@@ -205,6 +213,12 @@ function createMultiplayer(game, playerEntity, enemyAssets, soundPlayer) {
   return multiplayer;
 }
 
+/**
+ * @param {import('./texture-manager.js').TextureManager} - textureManager
+ * @param {Array} - enemyTypes
+ * @param {Object} - assetDefinitions
+ * @returns {Promise<{enemyAssets: Object}>}
+ */
 async function loadSceneAssets(textureManager, enemyTypes, assetDefinitions) {
   // O main controla apenas o estado visual; o catálogo fica no asset-loader.
   updateLoading('Carregando modelos de inimigos...');
@@ -221,11 +235,20 @@ function getGuestId() {
   return guestId;
 }
 
+// Inicia o jogo, carregando a cena, o jogador local e conectando ao multiplayer
+/**
+ * @param {Object} identity - Objeto contendo informações do jogador (nickname e isAdmin).
+ * @param {string} identity.nickname - O nickname do jogador.
+ * @param {boolean} identity.isAdmin - Indica se o jogador é administrador.
+ */
 async function start(identity = {}) {
+  // Atualiza o status do jogador com o nickname e se é admin
   playerStatus.update({
     nickname: identity.nickname ?? 'Guest',
     isAdmin: identity.isAdmin === true,
   });
+
+  // Atualiza o loading screen para indicar que está verificando a conexão com o multiplayer
   updateLoading('Verificando conexão com o multiplayer...', 'Conectando ao jogo');
   status.textContent = 'Verificando conexão com o multiplayer...';
 
@@ -251,9 +274,13 @@ async function start(identity = {}) {
   addPlayerNameTag(game.world, playerEntity);
 
   updateLoading('Finalizando cena...');
+  // Configura o sistema de seguir o jogador e adiciona um marcador de movimento
   followPlayer(game, playerEntity);
   addMovementMarker(game.world, playerEntity);
 
+
+
+  // Configura o sistema de multiplayer, incluindo respawn e ataque a inimigos
   const multiplayerSystem = createMultiplayer(game, playerEntity, enemyAssets, soundPlayer);
   respawnButton.addEventListener('click', () => multiplayerSystem.sendRespawn());
   game.enemyHoverSystem.onSelect = (entity) => {
@@ -266,10 +293,10 @@ async function start(identity = {}) {
   };
 
   updateLoading('Aguardando conexão com o multiplayer...', 'Conectando ao jogo');
-  await multiplayerSystem.connect({ retry: false });
+  await multiplayerSystem.connect();
   status.textContent = usedFallback
     ? 'Modelo 3D indisponível; usando modelo de fallback.'
-    : 'WebGL ativo: clique para mover. Space cancela o destino.';
+    : 'WebGL ativo: clique para mover. Espaço cancela o destino.';
   finishLoading();
   startGameLoop({ ...game, multiplayerSystem });
 }
