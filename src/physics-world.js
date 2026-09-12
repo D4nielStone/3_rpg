@@ -25,9 +25,9 @@ function getStaticColliderBounds(entity) {
   const scale = entity.scale ?? [1, 1, 1];
   const collisionScale = getCollisionScale(entity);
   const offset = entity.collision.offset ?? [0, 0, 0];
-  const halfX = Math.max(0.25, Math.abs(Number(scale[0]) || 1) * collisionScale[0] * 0.5);
+  const halfX = Math.max(0.05, Math.abs(Number(scale[0]) || 1) * collisionScale[0] * 0.5);
   const halfY = isGroundSurface(entity) ? 0.05 : Math.max(0.05, Math.abs(Number(scale[1]) || 1) * collisionScale[1] * 0.5);
-  const halfZ = Math.max(0.25, Math.abs(Number(scale[2]) || 1) * collisionScale[2] * 0.5);
+  const halfZ = Math.max(0.05, Math.abs(Number(scale[2]) || 1) * collisionScale[2] * 0.5);
   return {
     minX: entity.position[0] + (Number(offset[0]) || 0) - halfX,
     maxX: entity.position[0] + (Number(offset[0]) || 0) + halfX,
@@ -121,9 +121,9 @@ function addStaticColliders(world, mapConfig, playerMaterial) {
       addCapsule(body, scale.map((value, index) => value * collisionScale[index]));
     } else {
       body.addShape(new CANNON.Box(new CANNON.Vec3(
-        Math.max(0.25, Math.abs(scale[0] ?? 1) * collisionScale[0] * 0.5),
+        Math.max(0.05, Math.abs(scale[0] ?? 1) * collisionScale[0] * 0.5),
         isGroundSurface(entity) ? 0.05 : Math.max(0.05, Math.abs(scale[1] ?? 1) * collisionScale[1] * 0.5),
-        Math.max(0.25, Math.abs(scale[2] ?? 1) * collisionScale[2] * 0.5),
+        Math.max(0.05, Math.abs(scale[2] ?? 1) * collisionScale[2] * 0.5),
       )));
     }
     const offset = entity.collision.offset ?? [0, 0, 0];
@@ -196,21 +196,19 @@ export class PhysicsWorld {
 
   stepPlayer(id, position, velocity = [0, 0, 0], deltaSeconds = 1 / 60) {
     const body = this.bodies.get(id) ?? this.addPlayer(id, position);
+    const step = Math.max(0, Math.min(Number(deltaSeconds) || 0, 0.1));
     body.position.set(...position);
     body.wakeUp();
     body.velocity.x = Number(velocity[0]) || 0;
     body.velocity.z = Number(velocity[2]) || 0;
     body.velocity.y = Number(body.velocity.y) || 0;
-    const step = Math.max(0, Math.min(Number(deltaSeconds) || 0, 0.1));
-    if (step > 0) this.world.step(step);
+    if (step > 0) this.world.step(1 / 60, step, 8);
     return [body.position.x, body.position.y, body.position.z];
   }
 
   movePlayer(id, from, to, deltaSeconds = 1 / 30) {
-    const playerRadius = Math.max(0.28, Math.min(0.7, 0.35));
-    const blocked = collidesWithStaticColliders(from, to, playerRadius, this.staticColliders);
     const step = Math.max(Number(deltaSeconds) || 0, 1 / 60);
-    const velocity = blocked ? [0, 0, 0] : [
+    const velocity = [
       (to[0] - from[0]) / Math.max(deltaSeconds, 1 / 60),
       0,
       (to[2] - from[2]) / Math.max(deltaSeconds, 1 / 60),
