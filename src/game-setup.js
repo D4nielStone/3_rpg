@@ -158,7 +158,7 @@ const fragmentShaderSource = `
         shadow /= 9.0;
       }
       float directionalDiffuse = max(dot(normal, normalize(directionalLightDirection)), 0.0);
-      vec3 light = receiveLight > 0.5 ? ambientColor * ambientIntensity : vec3(0.0);
+      vec3 light = receiveLight > 0.5 ? ambientColor * ambientIntensity : vec3(1.0);
       if (receiveLight > 0.5) {
         light += directionalLightColor * directionalDiffuse * directionalLightIntensity * shadow;
       }

@@ -86,11 +86,19 @@ export function createCommandManager({ state, playerStore, broadcastSnapshot }) 
           [x, y, z],
           target.player.rotation
         );
+        state.physics.teleportPlayer(target.playerId, [x, y, z]);
 
         await playerStore.save(
           target.playerId,
           target.player
         );
+
+        const targetSession = state.activeGuestSessions.get(target.playerId);
+        targetSession?.socket?.send(JSON.stringify({
+          type: 'teleported',
+          position: [x, y, z],
+          rotation: [...target.player.rotation],
+        }));
 
         sendSystemMessage(
           socket,

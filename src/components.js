@@ -216,6 +216,7 @@ export class PlayerController {
 export class MoveTarget {
   constructor() {
     this.position = null;
+    this.path = null;
   }
 }
 
@@ -424,13 +425,17 @@ export class LineRenderer {
   // radius controla o tamanho; thickness controla a largura do anel.
   constructor({
     sourceEntity,
-    color = [0.1, 0.45, 1],
-    radius = 0.35,
-    thickness = 0.06,
-    segments = 32,
+    color = [0.12, 0.58, 1],
+    glowColor = [0.02, 0.2, 0.72],
+    highlightColor = [0.55, 0.9, 1],
+    radius = 0.4,
+    thickness = 0.07,
+    segments = 40,
   } = {}) {
     this.sourceEntity = sourceEntity;
     this.color = color;
+    this.glowColor = glowColor;
+    this.highlightColor = highlightColor;
     this.radius = radius;
     this.thickness = thickness;
     this.segments = segments;

@@ -63,13 +63,17 @@ export class Camera {
       forward[2] + right[2] * normalizedX * halfWidth + up[2] * normalizedY * halfHeight,
     ];
 
-    if (Math.abs(direction[1]) < 0.0001) {
-      return null;
-    }
+    const horizontalLength = Math.hypot(direction[0], direction[2]);
+    if (Math.abs(direction[1]) < 0.0001 || horizontalLength < 0.0001) return null;
 
     const distance = (groundY - this.position[1]) / direction[1];
     if (distance <= 0) {
-      return null;
+      const fallbackDistance = Math.max(4, this.orbit?.distance ?? 6);
+      return [
+        this.position[0] + direction[0] / horizontalLength * fallbackDistance,
+        groundY,
+        this.position[2] + direction[2] / horizontalLength * fallbackDistance,
+      ];
     }
 
     return [

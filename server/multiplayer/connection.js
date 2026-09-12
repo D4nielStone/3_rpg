@@ -235,12 +235,15 @@ export function registerConnectionHandler({
           physicsPosition[0] - message.position[0],
           physicsPosition[2] - message.position[2],
         ) > 0.05) {
+          const collider = state.physics.lastCollision;
+          const colliderName = collider?.name ?? collider?.id ?? 'objeto sem nome';
           socket.send(JSON.stringify({
             type: 'collision-blocked',
             position: [...player.position],
             rotation: [...player.rotation],
+            collider: collider ? { id: collider.id, name: collider.name } : null,
           }));
-          sendSystemMessage(socket, 'Não é possível atravessar um objeto.');
+          sendSystemMessage(socket, `Não é possível atravessar "${colliderName}".`);
           return;
         }
         const destinationArea = state.findPlayerArea(message.position);

@@ -192,6 +192,20 @@ export class MultiplayerSystem {
       return;
     }
 
+    if (message.type === 'teleported') {
+      const transform = this.localEntity
+        ? this.world.getComponent(this.localEntity, Transform)
+        : null;
+      const moveTarget = this.localEntity
+        ? this.world.getComponent(this.localEntity, MoveTarget)
+        : null;
+      if (transform && Array.isArray(message.position)) transform.position = [...message.position];
+      if (transform && Array.isArray(message.rotation)) transform.rotation = [...message.rotation];
+      if (moveTarget) moveTarget.position = null;
+      this.localStateRestored = true;
+      return;
+    }
+
     if (message.type === 'area-blocked') {
       const transform = this.localEntity
         ? this.world.getComponent(this.localEntity, Transform)
@@ -233,6 +247,11 @@ export class MultiplayerSystem {
       if (transform && Array.isArray(message.position)) transform.position = [...message.position];
       if (transform && Array.isArray(message.rotation)) transform.rotation = [...message.rotation];
       if (moveTarget) moveTarget.position = null;
+      this.onChat({
+        type: 'system',
+        text: `Colisão com: ${message.collider?.name ?? message.collider?.id ?? 'objeto sem nome'}.`,
+        sentAt: Date.now(),
+      });
       return;
     }
 

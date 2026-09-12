@@ -111,7 +111,7 @@ export class MovementSystem {
   }
 
   update(world, deltaSeconds) {
-    // So entidades com MoveTarget podem se mover; WASD nao participa mais deste fluxo.
+    const step = Math.max(0, Math.min(Number(deltaSeconds) || 0, 0.1));
     for (const entity of world.query(Transform, PlayerController, MoveTarget)) {
       const transform = world.getComponent(entity, Transform);
       const controller = world.getComponent(entity, PlayerController);
@@ -119,34 +119,77 @@ export class MovementSystem {
       if (this.input.consumePressed(' ')) {
         // Space cancela o destino; o PlayerPathSystem remove o marcador no mesmo frame.
         moveTarget.position = null;
+        moveTarget.path = null;
         continue;
       }
-      if (!moveTarget.position) continue;
 
-      const deltaX = moveTarget.position[0] - transform.position[0];
-      const deltaZ = moveTarget.position[2] - transform.position[2];
-      const distanceToTarget = Math.hypot(deltaX, deltaZ);
-      if (distanceToTarget <= 0.05) {
-        transform.position[0] = moveTarget.position[0];
-        transform.position[2] = moveTarget.position[2];
+      const deltaX = Number(this.input.isPressed('d', 'arrowright'))
+        - Number(this.input.isPressed('a', 'arrowleft'));
+      const deltaZ = Number(this.input.isPressed('s', 'arrowdown'))
+        - Number(this.input.isPressed('w', 'arrowup'));
+      const hasKeyboardMovement = deltaX !== 0 || deltaZ !== 0;
+      if (hasKeyboardMovement) {
         moveTarget.position = null;
-        continue;
+        moveTarget.path = null;
       }
 
-      const x = deltaX / distanceToTarget;
-      const z = deltaZ / distanceToTarget;
-      const distance = controller.speed * deltaSeconds;
-      const step = Math.min(distance, distanceToTarget);
-      const candidate = [
-        transform.position[0] + x * step,
-        transform.position[1],
-        transform.position[2] + z * step,
-      ];
-      const next = this.physics.movePlayer(entity, transform.position, candidate, deltaSeconds);
-      transform.position[0] = next[0];
-      transform.position[2] = next[2];
-      if (Math.hypot(next[0] - candidate[0], next[2] - candidate[2]) > 0.05) moveTarget.position = null;
-      transform.rotation[1] = Math.atan2(x, z);
+      if (!hasKeyboardMovement && moveTarget.position && !Array.isArray(moveTarget.path)) {
+        moveTarget.path = this.physics.findPath(transform.position, moveTarget.position);
+        if (moveTarget.path.length === 0) {
+          moveTarget.position = null;
+        }
+      }
+
+      let target = null;
+      if (!hasKeyboardMovement && moveTarget.position && Array.isArray(moveTarget.path)) {
+        while (moveTarget.path.length > 0) {
+          const waypoint = moveTarget.path[0];
+          const distance = Math.hypot(
+            waypoint[0] - transform.position[0],
+            waypoint[2] - transform.position[2],
+          );
+          if (distance > 0.08) {
+            target = waypoint;
+            break;
+          }
+          moveTarget.path.shift();
+        }
+        if (!target) {
+          moveTarget.position = null;
+          moveTarget.path = null;
+        }
+      }
+
+      const targetDeltaX = hasKeyboardMovement
+        ? deltaX
+        : (target?.[0] ?? transform.position[0]) - transform.position[0];
+      const targetDeltaZ = hasKeyboardMovement
+        ? deltaZ
+        : (target?.[2] ?? transform.position[2]) - transform.position[2];
+      const distanceToTarget = Math.hypot(targetDeltaX, targetDeltaZ);
+      const directionX = distanceToTarget > 0 ? targetDeltaX / distanceToTarget : 0;
+      const directionZ = distanceToTarget > 0 ? targetDeltaZ / distanceToTarget : 0;
+      const speed = Math.min(
+        controller.speed,
+        step > 0 && !hasKeyboardMovement ? distanceToTarget / step : controller.speed,
+      );
+      const velocity = [directionX * speed, 0, directionZ * speed];
+      const previousPosition = [...transform.position];
+      const next = this.physics.stepPlayer(entity, transform.position, velocity, step);
+      transform.position = next;
+      const moved = Math.hypot(next[0] - previousPosition[0], next[2] - previousPosition[2]);
+      if (distanceToTarget > 0 && (hasKeyboardMovement || moved > 0.001)) {
+        transform.rotation[1] = Math.atan2(directionX, directionZ);
+      }
+
+      if (!hasKeyboardMovement && target && moveTarget.path?.[0] === target) {
+        const remaining = Math.hypot(target[0] - next[0], target[2] - next[2]);
+        if (remaining <= 0.08) moveTarget.path.shift();
+        if (moveTarget.path.length === 0) {
+          moveTarget.position = null;
+          moveTarget.path = null;
+        }
+      }
     }
   }
 }
@@ -161,7 +204,8 @@ export class PlayerPathSystem {
     this.combatTarget = null;
     // Pointer Events funcionam para mouse, toque e caneta com a mesma implementacao.
     const updateTarget = (event) => {
-      this.lastClick = camera.screenToGround(event.clientX, event.clientY, canvas);
+      const target = camera.screenToGround(event.clientX, event.clientY, canvas);
+      if (target) this.lastClick = target;
     };
 
     canvas.addEventListener('pointerdown', (event) => {
@@ -179,8 +223,10 @@ export class PlayerPathSystem {
     });
     canvas.addEventListener('pointerup', (event) => {
       if (event.button !== 0) return;
+      updateTarget(event);
       this.pointerHeld = false;
     });
+    canvas.addEventListener('click', updateTarget);
     canvas.addEventListener('pointercancel', () => {
       this.pointerHeld = false;
     });
@@ -211,6 +257,7 @@ export class PlayerPathSystem {
 
       if (this.lastClick && this.lastClick !== line.target) {
         moveTarget.position = this.lastClick;
+        moveTarget.path = null;
         line.target = this.lastClick;
       }
       if (!moveTarget.position) {
@@ -228,31 +275,34 @@ export class PlayerPathSystem {
       const indices = [];
       // O marcador permanece no destino; apenas o raio pulsa visualmente.
       const height = target[1] + 0.04;
-      const visualScale = 1 + Math.sin(time * 0.006) * 0.2;
-      const outerRadius = line.radius * visualScale;
-      // O anel usa triangulos para que a espessura seja consistente no WebGL.
-      const innerRadius = Math.max(0, outerRadius - line.thickness);
+      const pulse = 1 + Math.sin(time * 0.006) * 0.12;
+      const outerRadius = line.radius * pulse;
+      const rings = [
+        { radius: outerRadius + 0.1, thickness: line.thickness * 0.55, color: line.glowColor },
+        { radius: outerRadius, thickness: line.thickness, color: line.color },
+        { radius: outerRadius - 0.09, thickness: line.thickness * 0.35, color: line.highlightColor },
+      ];
 
-      for (let index = 0; index < line.segments; index += 1) {
-        const angle = (index / line.segments) * Math.PI * 2;
-        const nextAngle = ((index + 1) / line.segments) * Math.PI * 2;
-        const first = vertices.length / 3;
-        vertices.push(
-          target[0] + Math.cos(angle) * outerRadius, height,
-          target[2] + Math.sin(angle) * line.radius,
-          target[0] + Math.cos(angle) * innerRadius, height,
-          target[2] + Math.sin(angle) * innerRadius,
-          target[0] + Math.cos(nextAngle) * outerRadius, height,
-          target[2] + Math.sin(nextAngle) * line.radius,
-          target[0] + Math.cos(nextAngle) * innerRadius, height,
-          target[2] + Math.sin(nextAngle) * innerRadius,
-        );
-        colors.push(...line.color, ...line.color, ...line.color, ...line.color);
-        indices.push(
-          first, first + 1, first + 2,
-          first + 1, first + 3, first + 2,
-        );
-      }
+      rings.forEach(({ radius, thickness, color }) => {
+        const innerRadius = Math.max(0, radius - thickness);
+        for (let index = 0; index < line.segments; index += 1) {
+          const angle = (index / line.segments) * Math.PI * 2;
+          const nextAngle = ((index + 1) / line.segments) * Math.PI * 2;
+          const first = vertices.length / 3;
+          vertices.push(
+            target[0] + Math.cos(angle) * radius, height,
+            target[2] + Math.sin(angle) * radius,
+            target[0] + Math.cos(angle) * innerRadius, height,
+            target[2] + Math.sin(angle) * innerRadius,
+            target[0] + Math.cos(nextAngle) * radius, height,
+            target[2] + Math.sin(nextAngle) * radius,
+            target[0] + Math.cos(nextAngle) * innerRadius, height,
+            target[2] + Math.sin(nextAngle) * innerRadius,
+          );
+          colors.push(...color, ...color, ...color, ...color);
+          indices.push(first, first + 1, first + 2, first + 1, first + 3, first + 2);
+        }
+      });
 
       line.vertices = new Float32Array(vertices);
       line.colors = new Float32Array(colors);
@@ -598,6 +648,9 @@ export class RenderSystem {
 
       gl.uniformMatrix4fv(locations.matrix, false, multiplyMatrices(projection, view));
       gl.uniform1f(locations.isShadow, 0);
+      gl.uniform1f(locations.receiveLight, 0);
+      gl.uniform1f(locations.isEnemyArea, 0);
+      gl.uniform3f(locations.diffuseColor, 1, 1, 1);
       gl.uniform1f(locations.useTexture, 0);
       gl.uniform1f(locations.isWater, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, line.positionBuffer);
@@ -621,6 +674,9 @@ export class RenderSystem {
 
       gl.uniformMatrix4fv(locations.matrix, false, multiplyMatrices(projection, view));
       gl.uniform1f(locations.isShadow, 0);
+      gl.uniform1f(locations.receiveLight, 0);
+      gl.uniform1f(locations.isEnemyArea, 0);
+      gl.uniform3f(locations.diffuseColor, 1, 1, 1);
       gl.uniform1f(locations.useTexture, 0);
       gl.uniform1f(locations.isWater, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, outline.positionBuffer);

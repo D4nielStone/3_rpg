@@ -21,6 +21,10 @@ function normalizeCollision(entity) {
   entity.collision = {
     enabled: collision.enabled === true,
     shape: ['model', 'box', 'convex', 'capsule'].includes(collision.shape) ? collision.shape : 'box',
+    offset: normalizeVector(collision.offset, [0, 0, 0]),
+    scale: normalizeVector(collision.scale, [1, 1, 1]).map((value) => Math.max(0.01, Math.abs(value))),
+    friction: Math.min(1, Math.max(0, Number(collision.friction ?? 0.3) || 0)),
+    restitution: Math.min(1, Math.max(0, Number(collision.restitution ?? 0) || 0)),
   };
   return entity;
 }
@@ -41,6 +45,10 @@ const entityDiffuseColorInput = document.querySelector('#entity-diffuse-color');
 const entityTextureFileInput = document.querySelector('#entity-texture-file');
 const entityReceiveLightInput = document.querySelector('#entity-receive-light');
 const entityCastShadowInput = document.querySelector('#entity-cast-shadow');
+const collisionFrictionInput = document.querySelector('#collision-friction');
+const collisionFrictionValue = document.querySelector('#collision-friction-value');
+const collisionRestitutionInput = document.querySelector('#collision-restitution');
+const collisionRestitutionValue = document.querySelector('#collision-restitution-value');
 const playerPreviewInspector = document.querySelector('#player-preview-inspector');
 const meshList = document.querySelector('#mesh-list');
 const meshCount = document.querySelector('#mesh-count');
@@ -278,6 +286,8 @@ function clearCollisionVisual(entity) {
 function updateCollisionVisual(entity) {
   clearCollisionVisual(entity);
   if (!entity?.object || !entity.collision?.enabled) return;
+  normalizeCollision(entity);
+  const collisionScale = entity.collision.scale;
   const group = new THREE.Group();
   group.name = `collision-${entity.id}`;
   const material = new THREE.LineBasicMaterial({ color: 0x42ff72, depthTest: false, transparent: true, opacity: 0.95 });
@@ -293,15 +303,18 @@ function updateCollisionVisual(entity) {
     const bounds = new THREE.Box3().setFromObject(entity.object);
     if (entity.collision.shape === 'box') {
       const box = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(
-        bounds.max.x - bounds.min.x,
-        bounds.max.y - bounds.min.y,
-        bounds.max.z - bounds.min.z,
+        (bounds.max.x - bounds.min.x) * collisionScale[0],
+        (bounds.max.y - bounds.min.y) * collisionScale[1],
+        (bounds.max.z - bounds.min.z) * collisionScale[2],
       )), material);
       box.position.copy(bounds.getCenter(new THREE.Vector3()));
       group.add(box);
     } else if (entity.collision.shape === 'capsule') {
-      const radius = Math.max(0.25, Math.min(bounds.max.x - bounds.min.x, bounds.max.z - bounds.min.z) * 0.5);
-      const height = Math.max(radius * 2, bounds.max.y - bounds.min.y);
+      const radius = Math.max(0.25, Math.min(
+        (bounds.max.x - bounds.min.x) * collisionScale[0],
+        (bounds.max.z - bounds.min.z) * collisionScale[2],
+      ) * 0.5);
+      const height = Math.max(radius * 2, (bounds.max.y - bounds.min.y) * collisionScale[1]);
       const capsule = new THREE.LineSegments(new THREE.EdgesGeometry(
         new THREE.CapsuleGeometry(radius, Math.max(0, height - radius * 2), 8, 16),
       ), material);
@@ -319,6 +332,8 @@ function updateCollisionVisual(entity) {
       if (points.length >= 4) group.add(new THREE.LineSegments(new THREE.EdgesGeometry(new ConvexGeometry(points)), material));
     }
   }
+  const offset = entity.collision.offset ?? [0, 0, 0];
+  group.position.set(Number(offset[0]) || 0, Number(offset[1]) || 0, Number(offset[2]) || 0);
   group.renderOrder = 20;
   collisionGroup.add(group);
 }
@@ -773,7 +788,15 @@ function updateInspector() {
   normalizeCollision(entity);
   document.querySelector('#collision-enabled').checked = entity.collision.enabled;
   document.querySelector('#collision-shape').value = entity.collision.shape;
-  entityInspector.querySelectorAll('.vector-fields input').forEach((input) => { const value = entity[input.dataset.vector][Number(input.dataset.index)]; input.value = input.dataset.vector === 'rotation' ? THREE.MathUtils.radToDeg(value).toFixed(1) : Number(value).toFixed(2); });
+  collisionFrictionInput.value = entity.collision.friction;
+  collisionFrictionValue.textContent = entity.collision.friction.toFixed(2);
+  collisionRestitutionInput.value = entity.collision.restitution;
+  collisionRestitutionValue.textContent = entity.collision.restitution.toFixed(2);
+  entityInspector.querySelectorAll('[data-collision-vector] input').forEach((input) => {
+    const vector = input.parentElement.parentElement.dataset.collisionVector;
+    input.value = Number(entity.collision[vector][Number(input.dataset.index)]).toFixed(2);
+  });
+  entityInspector.querySelectorAll('.vector-fields[data-vector] input').forEach((input) => { const value = entity[input.dataset.vector][Number(input.dataset.index)]; input.value = input.dataset.vector === 'rotation' ? THREE.MathUtils.radToDeg(value).toFixed(1) : Number(value).toFixed(2); });
   updateAnimationInspector();
 }
 function updateVector(input) {
@@ -967,6 +990,32 @@ document.querySelector('#entity-name').addEventListener('change', (event) => {
 });
 document.querySelector('#collision-enabled').addEventListener('change', (event) => { const entity = selectedEntity(); if (!entity) return; pushHistory(); entity.collision.enabled = event.target.checked; if (entity.isPlayerPreview) player.collision = { ...entity.collision }; updateCollisionVisual(entity); updateSummary(); });
 document.querySelector('#collision-shape').addEventListener('change', (event) => { const entity = selectedEntity(); if (!entity) return; pushHistory(); entity.collision.shape = event.target.value; if (entity.isPlayerPreview) player.collision = { ...entity.collision }; updateCollisionVisual(entity); updateSummary(); });
+function updateCollisionProperty(input, property) {
+  const entity = selectedEntity(); if (!entity) return;
+  pushHistory();
+  normalizeCollision(entity);
+  entity.collision[property] = Math.min(1, Math.max(0, Number(input.value) || 0));
+  if (entity.isPlayerPreview) player.collision = { ...entity.collision, offset: [...entity.collision.offset] };
+  document.querySelector(`#collision-${property}-value`).textContent = entity.collision[property].toFixed(2);
+  updateSummary();
+}
+collisionFrictionInput.addEventListener('input', () => updateCollisionProperty(collisionFrictionInput, 'friction'));
+collisionRestitutionInput.addEventListener('input', () => updateCollisionProperty(collisionRestitutionInput, 'restitution'));
+document.querySelectorAll('[data-collision-vector]').forEach((container) => container.replaceChildren(...['x', 'y', 'z'].map((axis, index) => {
+  const label = document.createElement('label');
+  label.textContent = axis.toUpperCase();
+  const input = document.createElement('input');
+  input.type = 'number'; input.step = '0.1'; input.min = container.dataset.collisionVector === 'scale' ? '0.01' : undefined; input.dataset.index = String(index);
+  input.addEventListener('change', () => {
+    const entity = selectedEntity(); if (!entity) return;
+    const vector = container.dataset.collisionVector;
+    pushHistory(); normalizeCollision(entity);
+    entity.collision[vector][index] = vector === 'scale' ? Math.max(0.01, Math.abs(Number(input.value) || 1)) : Number(input.value) || 0;
+    if (entity.isPlayerPreview) player.collision = { ...entity.collision, offset: [...entity.collision.offset], scale: [...entity.collision.scale] };
+    updateCollisionVisual(entity); updateInspector(); updateSummary();
+  });
+  label.append(input); return label;
+})));
 entityDiffuseColorInput.addEventListener('input', () => { const entity = selectedEntity(); if (!entity) return; const hex = entityDiffuseColorInput.value.slice(1); const color = [0, 2, 4].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255); normalizeEntityMaterials(entity); const material = entity.materials[selectedMaterialIndex]; if (!material) return; material.diffuseColor = [...color]; applyEntityMaterials(entity); if (entity.isPlayerPreview) syncPlayerFromPreview(entity); renderMeshList(entity); updateSummary(); });
 function updateEntityShadowSettings() {
  const entity = selectedEntity();

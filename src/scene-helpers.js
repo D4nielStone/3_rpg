@@ -64,7 +64,7 @@ export function addMovementMarker(world, playerEntity) {
   const lineEntity = world.createEntity();
   world.addComponent(lineEntity, new LineRenderer({
     sourceEntity: playerEntity,
-    radius: 0.35,
-    thickness: 0.06,
+    radius: 0.4,
+    thickness: 0.07,
   }));
 }
