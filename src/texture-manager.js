@@ -1,8 +1,5 @@
-import { createTexture } from './webgl.js';
-
 export class TextureManager {
-  constructor(gl) {
-    this.gl = gl;
+  constructor() {
     this.cache = new Map();
   }
 
@@ -34,9 +31,8 @@ export class TextureManager {
     }
 
     const image = await this.makeImageFromUrl(url);
-    const texture = createTexture(this.gl, image);
-    this.cache.set(key, texture);
-    return texture;
+    this.cache.set(key, image);
+    return image;
   }
 
   ensure(image, key = null) {
@@ -45,8 +41,7 @@ export class TextureManager {
       return this.cache.get(textureKey);
     }
 
-    const texture = createTexture(this.gl, image);
-    this.cache.set(textureKey, texture);
-    return texture;
+    this.cache.set(textureKey, image);
+    return image;
   }
 }

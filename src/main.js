@@ -1,7 +1,7 @@
 import { EnemyIdentity, SoundListener, SoundPlayer, Transform } from './components.js';
 import { MultiplayerSystem } from './multiplayer.js';
 import { addRemotePlayer } from './player-factory.js';
-import { createGame } from './game-setup.js';
+import { createGame } from './three-game-setup.js';
 import { startGameLoop } from './game-loop.js';
 import { ChatPanel } from './chat.js';
 import { PlayerStatus } from './player-status.js';
@@ -255,7 +255,7 @@ async function start(identity = {}) {
   updateLoading('Preparando o mundo...');
   status.textContent = 'Carregando cena...';
   const mapConfig = await loadPublishedMapConfig();
-  const game = await createGame(canvas, status, mapConfig);
+  const game = await createGame(canvas, mapConfig);
   updateLoading('Carregando cenário e personagem...');
   const { entity: playerEntity, usedFallback } = await loadLocalPlayer(game, mapConfig?.player, mapConfig?.assets);
   const soundListener = new SoundListener();
